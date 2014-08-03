@@ -50,9 +50,20 @@ type CadvisorInterface interface {
 	MachineInfo() (*info.MachineInfo, error)
 }
 
+const (
+	PodStarted = 1
+	PodFailed = 2
+)
+
+type Event struct {
+	Status int
+	Message string
+	Pod string
+}
+
 // SyncHandler is an interface implemented by Kubelet, for testability
 type SyncHandler interface {
-	SyncPods([]Pod) error
+	SyncPods([]Pod, chan<- Event) error
 }
 
 type volumeMap map[string]volume.Interface
@@ -105,7 +116,7 @@ type Kubelet struct {
 }
 
 // Run starts the kubelet reacting to config updates
-func (kl *Kubelet) Run(updates <-chan PodUpdate) {
+func (kl *Kubelet) Run(updates <-chan PodUpdate, events chan<- Event) {
 	if kl.logServer == nil {
 		kl.logServer = http.StripPrefix("/logs/", http.FileServer(http.Dir("/var/log/")))
 	}
@@ -115,7 +126,7 @@ func (kl *Kubelet) Run(updates <-chan PodUpdate) {
 	if kl.healthChecker == nil {
 		kl.healthChecker = health.NewHealthChecker()
 	}
-	kl.syncLoop(updates, kl)
+	kl.syncLoop(updates, events, kl)
 }
 
 // Per-pod workers.
@@ -440,7 +451,7 @@ type podContainer struct {
 }
 
 // SyncPods synchronizes the configured list of pods (desired state) with the host current state.
-func (kl *Kubelet) SyncPods(pods []Pod) error {
+func (kl *Kubelet) SyncPods(pods []Pod, events chan<- Event) error {
 	glog.Infof("Desired [%s]: %+v", kl.hostname, pods)
 	var err error
 	desiredContainers := make(map[podContainer]empty)
@@ -467,6 +478,7 @@ func (kl *Kubelet) SyncPods(pods []Pod) error {
 			err := kl.syncPod(pod, dockerContainers)
 			if err != nil {
 				glog.Errorf("Error syncing pod: %v skipping.", err)
+				events <- Event { Status: PodFailed, Message: err.Error()}
 			}
 		})
 	}
@@ -484,6 +496,7 @@ func (kl *Kubelet) SyncPods(pods []Pod) error {
 			err = kl.killContainer(*container)
 			if err != nil {
 				glog.Errorf("Error killing container: %v", err)
+				events <- Event { Status: PodFailed, Message: err.Error()}
 			}
 		}
 	}
@@ -491,13 +504,14 @@ func (kl *Kubelet) SyncPods(pods []Pod) error {
 }
 
 // filterHostPortConflicts removes pods that conflict on Port.HostPort values
-func filterHostPortConflicts(pods []Pod) []Pod {
+func filterHostPortConflicts(pods []Pod, events chan<- Event) []Pod {
 	filtered := []Pod{}
 	ports := map[int]bool{}
 	extract := func(p *api.Port) int { return p.HostPort }
 	for i := range pods {
 		pod := &pods[i]
 		if errs := api.AccumulateUniquePorts(pod.Manifest.Containers, ports, extract); len(errs) != 0 {
+			events <- Event { Status: PodFailed, Message: "Pod " + GetPodFullName(pod) + " has conflicting ports" }
 			glog.Warningf("Pod %s has conflicting ports, ignoring: %v", GetPodFullName(pod), errs)
 			continue
 		}
@@ -512,7 +526,7 @@ func filterHostPortConflicts(pods []Pod) []Pod {
 // any new change seen, will run a sync against desired state and running state. If
 // no changes are seen to the configuration, will synchronize the last known desired
 // state every sync_frequency seconds. Never returns.
-func (kl *Kubelet) syncLoop(updates <-chan PodUpdate, handler SyncHandler) {
+func (kl *Kubelet) syncLoop(updates <-chan PodUpdate, events chan<- Event, handler SyncHandler) {
 	for {
 		var pods []Pod
 		select {
@@ -532,11 +546,14 @@ func (kl *Kubelet) syncLoop(updates <-chan PodUpdate, handler SyncHandler) {
 			}
 		}
 
-		pods = filterHostPortConflicts(pods)
+		pods = filterHostPortConflicts(pods, events)
 
-		err := handler.SyncPods(pods)
+		err := handler.SyncPods(pods, events)
 		if err != nil {
 			glog.Errorf("Couldn't sync containers : %v", err)
+			events <- Event{ Status: PodFailed, Message: err.Error() }
+		} else {
+			events <- Event{ Status: PodStarted }
 		}
 	}
 }
