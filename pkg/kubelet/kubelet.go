@@ -53,13 +53,13 @@ type CadvisorInterface interface {
 
 const (
 	PodStarted = 1
-	PodFailed = 2
+	PodFailed  = 2
 )
 
 type Event struct {
-	Status int
+	Status  int
 	Message string
-	Pod string
+	Pod     string
 }
 
 // SyncHandler is an interface implemented by Kubelet, for testability
@@ -532,7 +532,7 @@ func (kl *Kubelet) SyncPods(pods []Pod, events chan<- Event) error {
 			err := kl.syncPod(pod, dockerContainers)
 			if err != nil {
 				glog.Errorf("Error syncing pod: %v skipping.", err)
-				events <- Event { Pod: podFullName, Status: PodFailed, Message: err.Error()}
+				events <- Event{Pod: podFullName, Status: PodFailed, Message: err.Error()}
 			}
 		})
 	}
@@ -550,7 +550,7 @@ func (kl *Kubelet) SyncPods(pods []Pod, events chan<- Event) error {
 			err = kl.killContainer(*container)
 			if err != nil {
 				glog.Errorf("Error killing container: %v", err)
-				events <- Event { Pod: podFullName, Status: PodFailed, Message: err.Error()}
+				events <- Event{Pod: podFullName, Status: PodFailed, Message: err.Error()}
 			}
 		}
 	}
@@ -570,7 +570,7 @@ func filterHostPortConflicts(pods []Pod, events chan<- Event) []Pod {
 		pod := &pods[i]
 		podFullName := GetPodFullName(pod)
 		if errs := api.AccumulateUniquePorts(pod.Manifest.Containers, ports, extract); len(errs) != 0 {
-			events <- Event { Pod: podFullName, Status: PodFailed, Message: "Pod " + podFullName + " has conflicting ports" }
+			events <- Event{Pod: podFullName, Status: PodFailed, Message: "Pod " + podFullName + " has conflicting ports"}
 			glog.Warningf("Pod %s has conflicting ports, ignoring: %v", podFullName, errs)
 			continue
 		}
@@ -594,7 +594,7 @@ func (kl *Kubelet) syncLoop(updates <-chan PodUpdate, events chan<- Event, handl
 			case SET:
 				glog.Infof("Containers changed [%s]", kl.hostname)
 				pods = u.Pods
-				pods = filterHostPortConflicts(pods)
+				pods = filterHostPortConflicts(pods, events)
 
 			case UPDATE:
 				//TODO: implement updates of containers
@@ -610,14 +610,12 @@ func (kl *Kubelet) syncLoop(updates <-chan PodUpdate, events chan<- Event, handl
 			}
 		}
 
-		pods = filterHostPortConflicts(pods, events)
-
 		err := handler.SyncPods(pods, events)
 		if err != nil {
 			glog.Errorf("Couldn't sync containers : %v", err)
-			events <- Event { Status: PodFailed, Message: err.Error() }
+			events <- Event{Status: PodFailed, Message: err.Error()}
 		} else {
-			events <- Event { Status: PodStarted }
+			events <- Event{Status: PodStarted}
 		}
 	}
 }
