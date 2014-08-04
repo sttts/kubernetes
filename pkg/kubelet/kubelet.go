@@ -60,7 +60,7 @@ type Event struct {
 	Status  int
 	Message string
 	Pod     string
-)
+}
 
 // SyncHandler is an interface implemented by Kubelet, for testability
 type SyncHandler interface {
@@ -532,11 +532,7 @@ func (kl *Kubelet) SyncPods(pods []Pod, events chan<- Event) error {
 			err := kl.syncPod(pod, dockerContainers)
 			if err != nil {
 				glog.Errorf("Error syncing pod: %v skipping.", err)
-<<<<<<< HEAD
 				events <- Event{Pod: podFullName, Status: PodFailed, Message: err.Error()}
-=======
-				events <- Event { Status: PodFailed, Message: err.Error()}
->>>>>>> Event channel in Kubelet
 			}
 		})
 	}
@@ -619,9 +615,9 @@ func (kl *Kubelet) syncLoop(updates <-chan PodUpdate, events chan<- Event, handl
 		err := handler.SyncPods(pods, events)
 		if err != nil {
 			glog.Errorf("Couldn't sync containers : %v", err)
-			events <- Event{ Status: PodFailed, Message: err.Error() }
+			events <- Event{Status: PodFailed, Message: err.Error()}
 		} else {
-			events <- Event{ Status: PodStarted }
+			events <- Event{Status: PodStarted}
 		}
 	}
 }
