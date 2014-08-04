@@ -478,7 +478,7 @@ func (kl *Kubelet) SyncPods(pods []Pod, events chan<- Event) error {
 			err := kl.syncPod(pod, dockerContainers)
 			if err != nil {
 				glog.Errorf("Error syncing pod: %v skipping.", err)
-				events <- Event { Status: PodFailed, Message: err.Error()}
+				events <- Event { Pod: podFullName, Status: PodFailed, Message: err.Error()}
 			}
 		})
 	}
@@ -496,7 +496,7 @@ func (kl *Kubelet) SyncPods(pods []Pod, events chan<- Event) error {
 			err = kl.killContainer(*container)
 			if err != nil {
 				glog.Errorf("Error killing container: %v", err)
-				events <- Event { Status: PodFailed, Message: err.Error()}
+				events <- Event { Pod: podFullName, Status: PodFailed, Message: err.Error()}
 			}
 		}
 	}
@@ -510,9 +510,10 @@ func filterHostPortConflicts(pods []Pod, events chan<- Event) []Pod {
 	extract := func(p *api.Port) int { return p.HostPort }
 	for i := range pods {
 		pod := &pods[i]
+		podFullName := GetPodFullName(pod)
 		if errs := api.AccumulateUniquePorts(pod.Manifest.Containers, ports, extract); len(errs) != 0 {
-			events <- Event { Status: PodFailed, Message: "Pod " + GetPodFullName(pod) + " has conflicting ports" }
-			glog.Warningf("Pod %s has conflicting ports, ignoring: %v", GetPodFullName(pod), errs)
+			events <- Event { Pod: podFullName, Status: PodFailed, Message: "Pod " + podFullName + " has conflicting ports" }
+			glog.Warningf("Pod %s has conflicting ports, ignoring: %v", podFullName, errs)
 			continue
 		}
 		filtered = append(filtered, *pod)
@@ -551,9 +552,9 @@ func (kl *Kubelet) syncLoop(updates <-chan PodUpdate, events chan<- Event, handl
 		err := handler.SyncPods(pods, events)
 		if err != nil {
 			glog.Errorf("Couldn't sync containers : %v", err)
-			events <- Event{ Status: PodFailed, Message: err.Error() }
+			events <- Event { Status: PodFailed, Message: err.Error() }
 		} else {
-			events <- Event{ Status: PodStarted }
+			events <- Event { Status: PodStarted }
 		}
 	}
 }
