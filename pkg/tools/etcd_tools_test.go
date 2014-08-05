@@ -21,7 +21,6 @@ import (
 	"reflect"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/conversion"
@@ -438,16 +437,12 @@ func TestWatch(t *testing.T) {
 		},
 	}
 
-	select {
-	case event := <-watching.ResultChan():
-		if e, a := watch.Added, event.Type; e != a {
-			t.Errorf("Expected %v, got %v", e, a)
-		}
-		if e, a := pod, event.Object; !reflect.DeepEqual(e, a) {
-			t.Errorf("Expected %v, got %v", e, a)
-		}
-	case <-time.After(10 * time.Millisecond):
-		t.Errorf("Expected 1 call but got 0")
+	event := <-watching.ResultChan()
+	if e, a := watch.Added, event.Type; e != a {
+		t.Errorf("Expected %v, got %v", e, a)
+	}
+	if e, a := pod, event.Object; !reflect.DeepEqual(e, a) {
+		t.Errorf("Expected %v, got %v", e, a)
 	}
 
 	// Test error case
