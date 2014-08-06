@@ -75,13 +75,15 @@ func NewMainKubelet(
 	dc DockerInterface,
 	cc CadvisorInterface,
 	ec tools.EtcdClient,
-	rd string) *Kubelet {
+	rd string,
+	ri time.Duration) *Kubelet {
 	return &Kubelet{
 		hostname:       hn,
 		dockerClient:   dc,
 		cadvisorClient: cc,
 		etcdClient:     ec,
 		rootDirectory:  rd,
+		resyncInterval: ri,
 		podWorkers:     newPodWorkers(),
 	}
 }
@@ -90,19 +92,21 @@ func NewMainKubelet(
 // TODO: add more integration tests, and expand parameter list as needed.
 func NewIntegrationTestKubelet(hn string, dc DockerInterface) *Kubelet {
 	return &Kubelet{
-		hostname:     hn,
-		dockerClient: dc,
-		dockerPuller: &FakeDockerPuller{},
-		podWorkers:   newPodWorkers(),
+		hostname:       hn,
+		dockerClient:   dc,
+		dockerPuller:   &FakeDockerPuller{},
+		resyncInterval: 3 * time.Second,
+		podWorkers:     newPodWorkers(),
 	}
 }
 
 // Kubelet is the main kubelet implementation.
 type Kubelet struct {
-	hostname      string
-	dockerClient  DockerInterface
-	rootDirectory string
-	podWorkers    podWorkers
+	hostname       string
+	dockerClient   DockerInterface
+	rootDirectory  string
+	podWorkers     podWorkers
+	resyncInterval time.Duration
 
 	// Optional, no events will be sent without it
 	etcdClient tools.EtcdClient
@@ -576,14 +580,15 @@ func filterHostPortConflicts(pods []Pod, events chan<- Event) []Pod {
 // no changes are seen to the configuration, will synchronize the last known desired
 // state every sync_frequency seconds. Never returns.
 func (kl *Kubelet) syncLoop(updates <-chan PodUpdate, events chan<- Event, handler SyncHandler) {
+	var pods []Pod
 	for {
-		var pods []Pod
 		select {
 		case u := <-updates:
 			switch u.Op {
 			case SET:
 				glog.Infof("Containers changed [%s]", kl.hostname)
 				pods = u.Pods
+				pods = filterHostPortConflicts(pods)
 
 			case UPDATE:
 				//TODO: implement updates of containers
@@ -592,6 +597,10 @@ func (kl *Kubelet) syncLoop(updates <-chan PodUpdate, events chan<- Event, handl
 
 			default:
 				panic("syncLoop does not support incremental changes")
+			}
+		case <-time.After(kl.resyncInterval):
+			if pods == nil {
+				continue
 			}
 		}
 
