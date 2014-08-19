@@ -14,10 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Set the default provider of Kubernetes cluster to know where to load provider-specific scripts
-# You can override the default provider by exporting the KUBERNETES_PROVIDER
-# variable in your bashrc
-#
-# The valid values: 'gce', 'azure', 'vagrant', 'local', 'mesos'
+## Contains configuration values for interacting with the Vagrant cluster
 
-KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER:-mesos}
+# NUMBER OF MINIONS IN THE CLUSTER
+NUM_MINIONS=${KUBERNETES_NUM_MINIONS-"3"}
+
+# IP LOCATIONS FOR INTERACTING WITH THE MASTER
+# export KUBE_MASTER_IP="192.241.223.6"
+export KUBERNETES_MASTER="http://$KUBE_MASTER_IP:8085"
+
+# IP LOCATIONS FOR INTERACTING WITH THE MINIONS
+MINION_IP_BASE="10.245.2."
+for (( i=0; i <${NUM_MINIONS}; i++)) do
+	KUBE_MINION_IP_ADDRESSES[$i]="${MINION_IP_BASE}$[$i+2]"
+done

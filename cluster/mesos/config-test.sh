@@ -14,10 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Set the default provider of Kubernetes cluster to know where to load provider-specific scripts
-# You can override the default provider by exporting the KUBERNETES_PROVIDER
-# variable in your bashrc
-#
-# The valid values: 'gce', 'azure', 'vagrant', 'local', 'mesos'
-
-KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER:-mesos}
+## Contains configuration values for interacting with the Vagrant cluster in test mode
+source $(dirname ${BASH_SOURCE})/config-default.sh
