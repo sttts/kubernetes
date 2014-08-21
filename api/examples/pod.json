@@ -14,19 +14,20 @@
           "hostPort": 32000
         }],
         "livenessProbe": {
-          "enabled": true,
+          "enabled": false,
           "type": "http",
           "initialDelaySeconds": 30,
           "httpGet": {
             "path": "/index.html",
-            "port": "8080"
+            "port": "32000"
           }
         }
       }]
     }
   },
   "labels": {
-    "name": "foo"
+    "name": "foo",
+    "cluster": "gce"
   }
 }
 

@@ -1,0 +1,24 @@
+{
+  "kind": "Pod",
+  "apiVersion": "v1beta1",
+  "id": "pod-do",
+  "desiredState": {
+    "manifest": {
+      "version": "v1beta1",
+      "id": "ascii",
+      "containers": [{
+        "name": "ascii",
+        "image": "thomasr/ascii",
+        "ports": [{
+          "containerPort": 80,
+          "hostPort": 31005
+        }]
+      }]
+    }
+  },
+  "labels": {
+    "name": "pod-do",
+    "cluster": "do"
+  }
+}
+

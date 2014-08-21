@@ -32,7 +32,6 @@ import (
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/tools"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/watch"
-	"github.com/golang/glog"
 )
 
 // specialParams lists parameters that are handled specially and which users of Request
@@ -284,7 +283,8 @@ func (r *Request) Do() Result {
 					if statusErr.Status.Details != nil {
 						id := statusErr.Status.Details.ID
 						if len(id) > 0 {
-							glog.Infof("Waiting for completion of /operations/%s", id)
+							// glog.Infof("Waiting for completion of /operations/%s", id)
+							fmt.Printf(".")
 							time.Sleep(r.pollPeriod)
 							// Make a poll request
 							pollOp := r.c.PollFor(id).PollPeriod(r.pollPeriod)
