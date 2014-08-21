@@ -365,7 +365,8 @@ func (kl *Kubelet) runContainer(pod *Pod, container *api.Container, podVolumes v
 	go func() {
 		path := "/bin/bash"
 		arg1 := "-c"
-		cmdStr := "echo -e 'GET /containers/" + dockerContainer.ID + "/logs?stdout=true&follow=true HTTP/1.0\\r\\n' | sudo /bin/nc -U /var/run/docker.sock | tail -n +4 > " + dockerContainer.Name + ".out"
+		//cmdStr := "echo -e 'GET /containers/" + dockerContainer.ID + "/logs?stdout=true&follow=true HTTP/1.0\\r\\n' | sudo /bin/nc -U /var/run/docker.sock | tail -n+4 > " + dockerContainer.Name + ".out"
+		cmdStr := "echo -e 'GET /containers/" + dockerContainer.ID + "/logs?stdout=true&follow=true HTTP/1.0\\r\\n' | sudo /bin/nc -U /var/run/docker.sock > " + dockerContainer.Name + ".out"
 		cmd := exec.Command(path, arg1, cmdStr)	
 		err := cmd.Start()
 		if err != nil {
