@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"runtime/debug"
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/apiserver"
@@ -97,17 +98,24 @@ func (rs *RegistryStorage) Delete(id string) (<-chan interface{}, error) {
 
 func (rs *RegistryStorage) Get(id string) (interface{}, error) {
 	pod, err := rs.registry.GetPod(id)
+	glog.V(2).Infof("pod: %v -- %v", pod, err)
 	if err != nil {
+		glog.V(2).Infof("Returning pod: %v", pod)
 		return pod, err
 	}
 	if pod == nil {
 		return pod, nil
 	}
 	if rs.podCache != nil || rs.podInfoGetter != nil {
+		glog.V(2).Infof("Fill pod info")
+
 		rs.fillPodInfo(pod)
+
+		glog.V(2).Infof("Overwriting pod status")
 		pod.CurrentState.Status = makePodStatus(pod)
 	}
-	pod.CurrentState.HostIP = getInstanceIP(rs.cloudProvider, pod.CurrentState.Host)
+	glog.V(2).Infof("Overwriting host ip")
+	//pod.CurrentState.HostIP = getInstanceIP(rs.cloudProvider, pod.CurrentState.Host)
 	return pod, err
 }
 
@@ -212,6 +220,7 @@ func getInstanceIP(cloud cloudprovider.Interface, host string) string {
 
 func makePodStatus(pod *api.Pod) api.PodStatus {
 	if pod.CurrentState.Info == nil || pod.CurrentState.Host == "" {
+		glog.V(2).Infof("Pod is waiting due to missing info: %v / host: %v", pod.CurrentState.Info, pod.CurrentState.Host)
 		return api.PodWaiting
 	}
 	running := 0
@@ -220,22 +229,28 @@ func makePodStatus(pod *api.Pod) api.PodStatus {
 	for _, container := range pod.DesiredState.Manifest.Containers {
 		if info, ok := pod.CurrentState.Info[container.Name]; ok {
 			if info.State.Running {
+				glog.V(2).Infof("%s is running: ", container.Name)
 				running++
 			} else {
 				stopped++
 			}
 		} else {
+			glog.V(2).Infof("Info for container %s unknown", container.Name)
 			unknown++
 		}
 	}
 	switch {
 	case running > 0 && stopped == 0 && unknown == 0:
+		glog.V(2).Infof("Running")
 		return api.PodRunning
 	case running == 0 && stopped > 0 && unknown == 0:
+		glog.V(2).Infof("Terminated")
 		return api.PodTerminated
 	case running == 0 && stopped == 0 && unknown > 0:
+		glog.V(2).Infof("Unknown")
 		return api.PodWaiting
 	default:
+		glog.V(2).Infof("Don't know what to do: pod waiting")
 		return api.PodWaiting
 	}
 }
@@ -253,21 +268,28 @@ func (rs *RegistryStorage) scheduleAndCreatePod(pod api.Pod) error {
 
 func (rs *RegistryStorage) waitForPodRunning(pod api.Pod) (interface{}, error) {
 	for {
+		debug.PrintStack()
 		podObj, err := rs.Get(pod.ID)
 		if err != nil || podObj == nil {
+			glog.V(2).Infof("Pod not found!")
 			return nil, err
 		}
 		podPtr, ok := podObj.(*api.Pod)
 		if !ok {
 			// This should really never happen.
+			glog.V(2).Infof("!podPtr")
 			return nil, fmt.Errorf("Error %#v is not an api.Pod!", podObj)
 		}
+
 		switch podPtr.CurrentState.Status {
 		case api.PodRunning, api.PodTerminated:
+			glog.V(2).Infof("Pod running!")
 			return pod, nil
 		default:
+			glog.V(2).Infof("Pod _not_ running: %v", podPtr)
 			time.Sleep(rs.podPollPeriod)
 		}
 	}
+	glog.V(2).Infof("Pod running!")
 	return pod, nil
 }

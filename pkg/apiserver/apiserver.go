@@ -80,6 +80,7 @@ type APIGroup struct {
 // prefixes onto a server.
 // TODO: add multitype codec serialization
 func NewAPIGroup(storage map[string]RESTStorage, codec Codec) *APIGroup {
+	//debug.PrintStack()
 	return &APIGroup{RESTHandler{
 		storage: storage,
 		codec:   codec,

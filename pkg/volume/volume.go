@@ -172,10 +172,8 @@ func GetCurrentVolumes(rootDirectory string) map[string]Cleaner {
 		}
 		podID := podIDDir.Name()
 		podIDPath := path.Join(mountPath, podID, "volumes")
-		volumeKindDirs, err := ioutil.ReadDir(podIDPath)
-		if err != nil {
-			glog.Errorf("Could not read directory: %s, (%s)", podIDPath, err)
-		}
+		volumeKindDirs, _ := ioutil.ReadDir(podIDPath)
+		//if err != nil { glog.Errorf("Could not read directory: %s, (%s)", podIDPath, err) }
 		for _, volumeKindDir := range volumeKindDirs {
 			volumeKind := volumeKindDir.Name()
 			volumeKindPath := path.Join(podIDPath, volumeKind)

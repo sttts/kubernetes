@@ -17,10 +17,14 @@ limitations under the License.
 package kubelet
 
 import (
+	//"bufio"
+	//"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	//"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -309,6 +313,7 @@ func (kl *Kubelet) runContainer(pod *Pod, container *api.Container, podVolumes v
 	}
 	dockerContainer, err := kl.dockerClient.CreateContainer(opts)
 	if err != nil {
+		glog.V(2).Infof("Create container error: %v", err)
 		return "", err
 	}
 	err = kl.dockerClient.StartContainer(dockerContainer.ID, &docker.HostConfig{
@@ -316,6 +321,76 @@ func (kl *Kubelet) runContainer(pod *Pod, container *api.Container, podVolumes v
 		Binds:        binds,
 		NetworkMode:  netMode,
 	})
+	if err != nil {
+		glog.V(2).Infof("Start container error: %v", err)
+	}
+
+	// http://stackoverflow.com/questions/1821811/how-to-read-write-from-to-file
+/*TODO: Actually close the file sometime?
+	glog.V(2).Infof("Creating output file: %v.out", dockerContainer.ID)
+	fo, err := os.Create(dockerContainer.ID + ".out")
+        if err != nil {
+		glog.V(2).Infof("Error creating output file: %v", err)
+        }
+	glog.V(2).Infof("Creating error file: %v.err", dockerContainer.ID)
+	fe, err := os.Create(dockerContainer.ID + ".err")
+        if err != nil {
+		glog.V(2).Infof("Error creating error file: %v", err)
+        }
+	defer func() {
+		glog.V(2).Infof("Closing output file: output.txt")
+		if err := fo.Close(); err != nil {
+			glog.V(2).Infof("Error closing output file: %v", err)
+		}
+	}()
+	buf := bufio.NewWriter(fo)
+	ebuf := bufio.NewWriter(fe)
+        copts := docker.AttachToContainerOptions{
+                Container:    dockerContainer.ID,
+                OutputStream: &stdout,
+                ErrorStream:  &stderr,
+                Stdout:       true,
+                Stderr:       true,
+                Logs:         true,
+		Stream:	      true,
+        }
+	glog.V(2).Infof("Attaching to Container %v, options: %v", dockerContainer.ID, copts)
+        err = kl.dockerClient.AttachToContainer(copts)
+        if err != nil {
+		glog.V(2).Infof("Attach To Container error: %v", err)
+        }
+*/
+	glog.V(2).Infof("Pulling stdout/stderr from container %v", dockerContainer.ID)
+	//echo -e "GET /containers/24019a9c6e3d/logs?stdout=true&follow=true HTTP/1.0\r\n" | sudo nc -U /var/run/docker.sock
+	go func() {
+		path := "/bin/bash"
+		arg1 := "-c"
+		cmdStr := "echo -e 'GET /containers/" + dockerContainer.ID + "/logs?stdout=true&follow=true HTTP/1.0\\r\\n' | sudo /bin/nc -U /var/run/docker.sock | tail -n +4 > " + dockerContainer.Name + ".out"
+		cmd := exec.Command(path, arg1, cmdStr)	
+		err := cmd.Start()
+		if err != nil {
+			glog.V(2).Infof("Error executing command: %v", err)
+		}
+		err = cmd.Wait()
+		glog.V(2).Infof("Command finished with error: %v", err)
+	}()
+/*
+	var buf bytes.Buffer
+	lopts := docker.LogsOptions{
+		Container:    dockerContainer.ID,
+		OutputStream: &buf,
+		Follow:       true,
+		Stdout:       true,
+		Stderr:       true,
+		Timestamps:   true,
+	}
+	err = kl.dockerClient.Logs(lopts)
+	if err != nil {
+		glog.V(2).Infof("Logs error: %v", err)
+	}
+	glog.Infof("Log %s", buf.String())
+*/
+
 	return DockerID(dockerContainer.ID), err
 }
 
@@ -463,6 +538,8 @@ func (kl *Kubelet) syncPod(pod *Pod, dockerContainers DockerContainers) error {
 					continue
 				}
 				glog.V(1).Infof("pod %s container %s is unhealthy.", podFullName, container.Name, healthy)
+				// TODO: Get some real health checks, then fall thorugh and kill.
+				continue
 			} else {
 				glog.V(1).Infof("container hash changed %d vs %d.", hash, expectedHash)
 			}

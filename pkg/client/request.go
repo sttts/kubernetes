@@ -284,7 +284,7 @@ func (r *Request) Do() Result {
 					if statusErr.Status.Details != nil {
 						id := statusErr.Status.Details.ID
 						if len(id) > 0 {
-							glog.Infof("Waiting for completion of /operations/%s", id)
+							glog.V(2).Infof("Waiting for completion of /operations/%s", id)
 							time.Sleep(r.pollPeriod)
 							// Make a poll request
 							pollOp := r.c.PollFor(id).PollPeriod(r.pollPeriod)
