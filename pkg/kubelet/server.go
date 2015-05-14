@@ -43,12 +43,15 @@ import (
 	"github.com/golang/glog"
 	cadvisorApi "github.com/google/cadvisor/info/v1"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/mesosphere/kubernetes-mesos/pkg/profile"
 )
 
 // Server is a http.Handler which exposes kubelet functionality over HTTP.
 type Server struct {
 	host HostInterface
 	mux  *http.ServeMux
+	profiling bool
 }
 
 type TLSOptions struct {
@@ -58,9 +61,9 @@ type TLSOptions struct {
 }
 
 // ListenAndServeKubeletServer initializes a server to respond to HTTP network requests on the Kubelet.
-func ListenAndServeKubeletServer(host HostInterface, address net.IP, port uint, tlsOptions *TLSOptions, enableDebuggingHandlers bool) {
+func ListenAndServeKubeletServer(host HostInterface, address net.IP, port uint, tlsOptions *TLSOptions, enableDebuggingHandlers, enableProfilingHandlers bool) {
 	glog.V(1).Infof("Starting to listen on %s:%d", address, port)
-	handler := NewServer(host, enableDebuggingHandlers)
+	handler := NewServer(host, enableDebuggingHandlers, enableProfilingHandlers)
 	s := &http.Server{
 		Addr:           net.JoinHostPort(address.String(), strconv.FormatUint(uint64(port), 10)),
 		Handler:        &handler,
@@ -96,10 +99,11 @@ type HostInterface interface {
 }
 
 // NewServer initializes and configures a kubelet.Server object to handle HTTP requests.
-func NewServer(host HostInterface, enableDebuggingHandlers bool) Server {
+func NewServer(host HostInterface, enableDebuggingHandlers, enableProfilingHandlers bool) Server {
 	server := Server{
 		host: host,
 		mux:  http.NewServeMux(),
+		profiling: enableProfilingHandlers,
 	}
 	server.InstallDefaultHandlers()
 	if enableDebuggingHandlers {
@@ -110,6 +114,9 @@ func NewServer(host HostInterface, enableDebuggingHandlers bool) Server {
 
 // InstallDefaultHandlers registers the default set of supported HTTP request patterns with the mux.
 func (s *Server) InstallDefaultHandlers() {
+	if s.profiling {
+		profile.InstallHandler(s.mux)
+	}
 	healthz.InstallHandler(s.mux,
 		healthz.PingHealthz,
 		healthz.NamedCheck("docker", s.dockerHealthCheck),
