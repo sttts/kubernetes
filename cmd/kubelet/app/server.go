@@ -86,6 +86,18 @@ type KubeletServer struct {
 	CloudConfigFile                string
 }
 
+// bootstrapping interface for kubelet, targets the initialization protocol
+type KubeletBootstrap interface {
+       BirthCry()
+       StartGarbageCollection()
+       ListenAndServe(net.IP, uint, *kubelet.TLSOptions, bool)
+       Run(<-chan kubelet.PodUpdate)
+       RunOnce(<-chan kubelet.PodUpdate) ([]kubelet.RunPodResult, error)
+}
+
+// create and initialize a Kubelet instance
+type KubeletBuilder func(kc *KubeletConfig) (KubeletBootstrap, *config.PodConfig, error)
+
 // NewKubeletServer will create a new KubeletServer with default values.
 func NewKubeletServer() *KubeletServer {
 	return &KubeletServer{
@@ -221,7 +233,7 @@ func (s *KubeletServer) Run(_ []string) error {
 		Cloud:                          cloud,
 	}
 
-	RunKubelet(&kcfg)
+	RunKubelet(&kcfg, nil)
 
 	// runs forever
 	select {}
@@ -321,7 +333,7 @@ func SimpleKubelet(client *client.Client,
 //   2 Kubelet binary
 //   3 Standalone 'kubernetes' binary
 // Eventually, #2 will be replaced with instances of #3
-func RunKubelet(kcfg *KubeletConfig) {
+func RunKubelet(kcfg *KubeletConfig, builder KubeletBuilder) {
 	kcfg.Hostname = util.GetHostname(kcfg.HostnameOverride)
 	kcfg.Recorder = record.FromSource(api.EventSource{Component: "kubelet", Host: kcfg.Hostname})
 	if kcfg.KubeClient != nil {
@@ -334,8 +346,10 @@ func RunKubelet(kcfg *KubeletConfig) {
 
 	credentialprovider.SetPreferredDockercfgPath(kcfg.RootDirectory)
 
-	podCfg := makePodSourceConfig(kcfg)
-	k, err := createAndInitKubelet(kcfg, podCfg)
+	if builder == nil {
+		builder = createAndInitKubelet
+	}
+	k, podCfg, err := builder(kcfg)
 	if err != nil {
 		glog.Errorf("Failed to create kubelet: %s", err)
 		return
@@ -350,14 +364,14 @@ func RunKubelet(kcfg *KubeletConfig) {
 	}
 }
 
-func startKubelet(k *kubelet.Kubelet, podCfg *config.PodConfig, kc *KubeletConfig) {
+func startKubelet(k KubeletBootstrap, podCfg *config.PodConfig, kc *KubeletConfig) {
 	// start the kubelet
 	go util.Forever(func() { k.Run(podCfg.Updates()) }, 0)
 
 	// start the kubelet server
 	if kc.EnableServer {
 		go util.Forever(func() {
-			kubelet.ListenAndServeKubeletServer(k, net.IP(kc.Address), kc.Port, kc.TLSOptions, kc.EnableDebuggingHandlers)
+			k.ListenAndServe(net.IP(kc.Address), kc.Port, kc.TLSOptions, kc.EnableDebuggingHandlers)
 		}, 0)
 	}
 }
@@ -424,7 +438,7 @@ type KubeletConfig struct {
 	Cloud                          cloudprovider.Interface
 }
 
-func createAndInitKubelet(kc *KubeletConfig, pc *config.PodConfig) (*kubelet.Kubelet, error) {
+func createAndInitKubelet(kc *KubeletConfig)(k KubeletBootstrap, pc *config.PodConfig, err error) {
 	// TODO: block until all sources have delivered at least one update to the channel, or break the sync loop
 	// up into "per source" synchronizations
 	// TODO: KubeletConfig.KubeClient should be a client interface, but client interface misses certain methods
@@ -443,7 +457,8 @@ func createAndInitKubelet(kc *KubeletConfig, pc *config.PodConfig) (*kubelet.Kub
 		MaxContainers:      kc.MaxContainerCount,
 	}
 
-	k, err := kubelet.NewMainKubelet(
+	pc = makePodSourceConfig(kc)
+	k, err = kubelet.NewMainKubelet(
 		kc.Hostname,
 		kc.DockerClient,
 		kubeClient,
@@ -467,12 +482,12 @@ func createAndInitKubelet(kc *KubeletConfig, pc *config.PodConfig) (*kubelet.Kub
 		kc.Cloud)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	k.BirthCry()
 
 	k.StartGarbageCollection()
 
-	return k, nil
+	return k, pc, nil
 }
