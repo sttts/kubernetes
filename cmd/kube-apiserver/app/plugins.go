@@ -27,6 +27,7 @@ import (
 	_ "github.com/GoogleCloudPlatform/kubernetes/pkg/cloudprovider/ovirt"
 	_ "github.com/GoogleCloudPlatform/kubernetes/pkg/cloudprovider/rackspace"
 	_ "github.com/GoogleCloudPlatform/kubernetes/pkg/cloudprovider/vagrant"
+	_ "github.com/mesosphere/kubernetes-mesos/pkg/cloud/mesos"
 
 	// Admission policies
 	_ "github.com/GoogleCloudPlatform/kubernetes/plugin/pkg/admission/admit"
