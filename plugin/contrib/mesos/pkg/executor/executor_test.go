@@ -435,6 +435,7 @@ func TestExecutorStaticPods(t *testing.T) {
 	}
 	createStaticPodFile("spod.json", "spod-id-01", "spod-01")
 	createStaticPodFile("spod2.json", "spod-id-02", "spod-02")
+	createStaticPodFile("dir/spod.json", "spod-id-03", "spod-03") // same file name as first one to check for overwriting
 
 	err := zw.Close()
 	assert.NoError(t, err)
