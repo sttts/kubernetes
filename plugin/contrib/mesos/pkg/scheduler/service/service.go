@@ -157,7 +157,6 @@ func NewSchedulerServer() *SchedulerServer {
 		mux:                    http.NewServeMux(),
 		KubeletCadvisorPort:    4194, // copied from github.com/GoogleCloudPlatform/kubernetes/blob/release-0.14/cmd/kubelet/app/server.go
 		KubeletSyncFrequency:   10 * time.Second,
-		StaticPodsConfigPath:   "",
 	}
 	// cache this for later use. also useful in case the original binary gets deleted, e.g.
 	// during upgrades, development deployments, etc.
@@ -182,7 +181,7 @@ func (s *SchedulerServer) addCoreFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&s.AllowPrivileged, "allow-privileged", s.AllowPrivileged, "If true, allow privileged containers.")
 	fs.StringVar(&s.ClusterDomain, "cluster-domain", s.ClusterDomain, "Domain for this cluster.  If set, kubelet will configure all containers to search this domain in addition to the host's search domains")
 	fs.Var(&s.ClusterDNS, "cluster-dns", "IP address for a cluster DNS server. If set, kubelet will configure all containers to use this for DNS resolution in addition to the host's DNS servers")
-	fs.StringVar(&s.StaticPodsConfigPath, "static_pods_config", s.StaticPodsConfigPath, "Path for specification of static pods. Defaults to none.")
+	fs.StringVar(&s.StaticPodsConfigPath, "static-pods-config", s.StaticPodsConfigPath, "Path for specification of static pods. Path should point to dir containing the staticPods configuration files. Defaults to none.")
 
 	fs.StringVar(&s.MesosMaster, "mesos-master", s.MesosMaster, "Location of the Mesos master. The format is a comma-delimited list of of hosts like zk://host1:port,host2:port/mesos. If using ZooKeeper, pay particular attention to the leading zk:// and trailing /mesos! If not using ZooKeeper, standard URLs like http://localhost are also acceptable.")
 	fs.StringVar(&s.MesosUser, "mesos-user", s.MesosUser, "Mesos user for this framework, defaults to root.")
@@ -364,14 +363,15 @@ func (s *SchedulerServer) prepareExecutorInfo(hks hyperkube.Interface) (*mesos.E
 
 	// Check for staticPods
 	if s.StaticPodsConfigPath != "" {
-		bs, numberStaticPods, err := manifests(s.StaticPodsConfigPath)
+		bs, numberStaticPods, err := zipManifests(s.StaticPodsConfigPath)
 		if err != nil {
 			return nil, nil, err
 		}
 		info.Data = bs
 
-		// Adjust the resource accounting for the executor
-		// Currently each podTask accounts the default amount of resources
+		// Adjust the resource accounting for the executor.
+		// Currently each podTask accounts the default amount of resources.
+		// TODO adapt to actual resources specified by pods.
 		log.Infof("Detected %d staticPods in Configuration.", numberStaticPods)
 
 		info.Resources = []*mesos.Resource{
@@ -390,14 +390,14 @@ func (s *SchedulerServer) prepareExecutorInfo(hks hyperkube.Interface) (*mesos.E
 }
 
 // Create a zip of all manifest in given path
-func manifests(path string) ([]byte, int, error) {
+func zipManifests(path string) ([]byte, int, error) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	zipWalker := fs.ZipWalker(zw)
-	manifests := 0
+	numberManifests := 0
 	err := filepath.Walk(path, filepath.WalkFunc(func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
-			manifests++
+			numberManifests++
 		}
 		return zipWalker(path, info, err)
 	}))
@@ -407,7 +407,7 @@ func manifests(path string) ([]byte, int, error) {
 	} else if err = zw.Close(); err != nil {
 		return nil, 0, err
 	}
-	return buf.Bytes(), manifests, nil
+	return buf.Bytes(), numberManifests, nil
 }
 
 // TODO(jdef): hacked from kubelet/server/server.go

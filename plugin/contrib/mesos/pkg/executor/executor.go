@@ -129,6 +129,7 @@ type KubernetesExecutor struct {
 	exitFunc             func(int)
 	podStatusFunc        func(*kubelet.Kubelet, *api.Pod) (api.PodStatus, error)
 	staticPodsConfigPath string
+	hostname             string
 }
 
 type Config struct {
@@ -219,6 +220,11 @@ func (k *KubernetesExecutor) Registered(driver bindings.ExecutorDriver,
 		log.Errorf("failed to register/transition to a connected state")
 	}
 
+	// retrieve hostname from slaveInfo
+	if slaveInfo != nil {
+		k.hostname = *slaveInfo.Hostname
+	}
+
 	if executorInfo != nil && executorInfo.Data != nil {
 		k.retrieveStaticPods(executorInfo.Data)
 	}
@@ -236,6 +242,12 @@ func (k *KubernetesExecutor) Reregistered(driver bindings.ExecutorDriver, slaveI
 	if !(&k.state).transition(disconnectedState, connectedState) {
 		log.Errorf("failed to reregister/transition to a connected state")
 	}
+
+	// retrieve hostname from slaveInfo
+	if slaveInfo != nil {
+		k.hostname = *slaveInfo.Hostname
+	}
+
 	k.initialRegistration.Do(k.onInitialRegistration)
 }
 
@@ -248,73 +260,76 @@ func (k *KubernetesExecutor) onInitialRegistration() {
 	}
 
 	// Initialize staticPods configPath
-	if k.staticPodsConfigPath == "" {
-		return
+	if k.staticPodsConfigPath != "" {
+
+		if _, err := os.Stat(filepath.Clean(k.staticPodsConfigPath)); err != nil {
+			log.Errorf("Could not stat staticPodsConfigPath.\n")
+			return
+		}
+		// Delay until kubelet is started
+		go k.createStaticPodsAfterInit(k.staticPodsConfigPath, k.hostname, k.updateChan)
 	}
-	if _, err := os.Stat(filepath.Clean(k.staticPodsConfigPath)); err != nil {
-		log.Errorf("Could not stat staticPodsConfigPath.\n")
-		return
-	}
-	// Delay until kubelet is started
-	go k.createStaticPods(k.staticPodsConfigPath, "h1", k.updateChan)
 }
 
 // Create staticPods via sourceFileReader after kubelet is initialized
-func (k *KubernetesExecutor) createStaticPods(path string, hostname string, updates chan<- interface{}) {
+func (k *KubernetesExecutor) createStaticPodsAfterInit(path string, hostname string, updates chan<- interface{}) {
 
 	//  wait until kubelet is initialized
 	<-k.kubeletStarted
 
 	config.NewSourceFile(path, hostname, fileCheckFrequency, updates)
+
 }
 
-// Retrieve staticPods Information from executorInfo
-// creates temp Directory and sets k.staticPodsConfigPath
+// Parse staticPods Information from []byte
+// creates temp directory and sets k.staticPodsConfigPath
 func (k *KubernetesExecutor) retrieveStaticPods(data []byte) {
 	// Retrieve staticPods info from executorInfo
-	if data != nil {
-		byteBuf := bytes.NewBuffer(data)
 
-		// extract to tmp dir
-		dir, err := ioutil.TempDir(os.TempDir(), "executor-k8sm-archive")
-		if err != nil {
-			log.Errorf("Failed to create temp dir for staticPods config.")
-			return
-		}
-
-		log.Infof("Extract staticPods config to %s.", dir)
-
-		zr, err := zip.NewReader(bytes.NewReader(byteBuf.Bytes()), int64(byteBuf.Len()))
-		if err != nil {
-			log.Errorf("Could not read staticPods config Files from ExecutorInfo.")
-			return
-		}
-
-		for _, file := range zr.File {
-
-			rc, err := file.Open()
-			if err != nil {
-				log.Errorf("Could retrieve archieved File.")
-				return
-			}
-
-			path := filepath.Clean(filepath.Join(dir, file.Name))
-			f, err := os.Create(path)
-			if err != nil {
-				log.Errorf("Could not create staticPods configFile.")
-				return
-			}
-			defer f.Close()
-
-			if _, err := io.Copy(f, rc); err != nil {
-				log.Errorf("Could not create staticPods configFile.")
-				return
-			}
-		}
-
-		k.staticPodsConfigPath = dir
-
+	if data == nil {
+		return
 	}
+
+	byteBuf := bytes.NewBuffer(data)
+
+	// extract to local sendBox so it is automatically cleaned up
+	dir, err := ioutil.TempDir(".", "executor-k8sm-archive")
+	if err != nil {
+		log.Errorf("Failed to create temp dir for staticPods config.")
+		return
+	}
+
+	log.Infof("Extract staticPods config to %s.", dir)
+
+	zr, err := zip.NewReader(bytes.NewReader(byteBuf.Bytes()), int64(byteBuf.Len()))
+	if err != nil {
+		log.Errorf("Could not read staticPods config Files from ExecutorInfo.")
+		return
+	}
+
+	for _, file := range zr.File {
+
+		rc, err := file.Open()
+		if err != nil {
+			log.Errorf("Could retrieve archieved File.")
+			return
+		}
+
+		path := filepath.Clean(filepath.Join(dir, file.Name))
+		f, err := os.Create(path)
+		if err != nil {
+			log.Errorf("Could not create staticPods configFile.")
+			return
+		}
+		defer f.Close()
+
+		if _, err := io.Copy(f, rc); err != nil {
+			log.Errorf("Could not create staticPods configFile.")
+			return
+		}
+	}
+
+	k.staticPodsConfigPath = dir
 
 }
 
@@ -836,7 +851,6 @@ func (k *KubernetesExecutor) doShutdown(driver bindings.ExecutorDriver) {
 	case <-time.After(15 * time.Second):
 		log.Errorf("timed out waiting for kubelet Run() to die")
 	}
-
 	log.Infoln("exiting")
 	if k.exitFunc != nil {
 		k.exitFunc(0)
