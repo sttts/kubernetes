@@ -17,8 +17,14 @@ limitations under the License.
 package executor
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -27,6 +33,7 @@ import (
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubelet"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubelet/config"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubelet/container"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubelet/dockertools"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
@@ -42,8 +49,9 @@ import (
 )
 
 const (
-	containerPollTime = 300 * time.Millisecond
-	launchGracePeriod = 5 * time.Minute
+	containerPollTime  = 300 * time.Millisecond
+	launchGracePeriod  = 5 * time.Minute
+	fileCheckFrequency = 20 * time.Second
 )
 
 type stateType int32
@@ -100,25 +108,27 @@ type podStatusFunc func() (api.PodStatus, error)
 // KubernetesExecutor is an mesos executor that runs pods
 // in a minion machine.
 type KubernetesExecutor struct {
-	kl                  *kubelet.Kubelet // the kubelet instance.
-	updateChan          chan<- interface{}
-	state               stateType
-	tasks               map[string]*kuberTask
-	pods                map[string]*api.Pod
-	lock                sync.RWMutex
-	sourcename          string
-	client              *client.Client
-	events              <-chan watch.Event
-	done                chan struct{} // signals shutdown
-	outgoing            chan func() (mesos.Status, error)
-	dockerClient        dockertools.DockerInterface
-	suicideWatch        suicideWatcher
-	suicideTimeout      time.Duration
-	shutdownAlert       func()          // invoked just prior to executor shutdown
-	kubeletFinished     <-chan struct{} // signals that kubelet Run() died
-	initialRegistration sync.Once
-	exitFunc            func(int)
-	podStatusFunc       func(*kubelet.Kubelet, *api.Pod) (api.PodStatus, error)
+	kl                   *kubelet.Kubelet // the kubelet instance.
+	updateChan           chan<- interface{}
+	state                stateType
+	tasks                map[string]*kuberTask
+	pods                 map[string]*api.Pod
+	lock                 sync.RWMutex
+	sourcename           string
+	client               *client.Client
+	events               <-chan watch.Event
+	done                 chan struct{} // signals shutdown
+	outgoing             chan func() (mesos.Status, error)
+	dockerClient         dockertools.DockerInterface
+	suicideWatch         suicideWatcher
+	suicideTimeout       time.Duration
+	shutdownAlert        func()          // invoked just prior to executor shutdown
+	kubeletFinished      <-chan struct{} // signals that kubelet Run() died
+	kubeletStarted       <-chan struct{} // signals that kubelet is initialized
+	initialRegistration  sync.Once
+	exitFunc             func(int)
+	podStatusFunc        func(*kubelet.Kubelet, *api.Pod) (api.PodStatus, error)
+	staticPodsConfigPath string
 }
 
 type Config struct {
@@ -131,6 +141,7 @@ type Config struct {
 	ShutdownAlert   func()
 	SuicideTimeout  time.Duration
 	KubeletFinished <-chan struct{}
+	KubeletStarted  <-chan struct{}
 	ExitFunc        func(int)
 	PodStatusFunc   func(*kubelet.Kubelet, *api.Pod) (api.PodStatus, error)
 }
@@ -142,22 +153,23 @@ func (k *KubernetesExecutor) isConnected() bool {
 // New creates a new kubernetes executor.
 func New(config Config) *KubernetesExecutor {
 	k := &KubernetesExecutor{
-		kl:              config.Kubelet,
-		updateChan:      config.Updates,
-		state:           disconnectedState,
-		tasks:           make(map[string]*kuberTask),
-		pods:            make(map[string]*api.Pod),
-		sourcename:      config.SourceName,
-		client:          config.APIClient,
-		done:            make(chan struct{}),
-		outgoing:        make(chan func() (mesos.Status, error), 1024),
-		dockerClient:    config.Docker,
-		suicideTimeout:  config.SuicideTimeout,
-		kubeletFinished: config.KubeletFinished,
-		suicideWatch:    &suicideTimer{},
-		shutdownAlert:   config.ShutdownAlert,
-		exitFunc:        config.ExitFunc,
-		podStatusFunc:   config.PodStatusFunc,
+		kl:                   config.Kubelet,
+		updateChan:           config.Updates,
+		state:                disconnectedState,
+		tasks:                make(map[string]*kuberTask),
+		pods:                 make(map[string]*api.Pod),
+		sourcename:           config.SourceName,
+		client:               config.APIClient,
+		done:                 make(chan struct{}),
+		outgoing:             make(chan func() (mesos.Status, error), 1024),
+		dockerClient:         config.Docker,
+		suicideTimeout:       config.SuicideTimeout,
+		kubeletFinished:      config.KubeletFinished,
+		suicideWatch:         &suicideTimer{},
+		shutdownAlert:        config.ShutdownAlert,
+		exitFunc:             config.ExitFunc,
+		podStatusFunc:        config.PodStatusFunc,
+		staticPodsConfigPath: "",
 	}
 	//TODO(jdef) do something real with these events..
 	if config.Watch != nil {
@@ -206,6 +218,11 @@ func (k *KubernetesExecutor) Registered(driver bindings.ExecutorDriver,
 	if !(&k.state).transition(disconnectedState, connectedState) {
 		log.Errorf("failed to register/transition to a connected state")
 	}
+
+	if executorInfo != nil && executorInfo.Data != nil {
+		k.retrieveStaticPods(executorInfo.Data)
+	}
+
 	k.initialRegistration.Do(k.onInitialRegistration)
 }
 
@@ -229,6 +246,76 @@ func (k *KubernetesExecutor) onInitialRegistration() {
 		Op:     kubelet.SET,
 		Source: k.sourcename,
 	}
+
+	// Initialize staticPods configPath
+	if k.staticPodsConfigPath == "" {
+		return
+	}
+	if _, err := os.Stat(filepath.Clean(k.staticPodsConfigPath)); err != nil {
+		log.Errorf("Could not stat staticPodsConfigPath.\n")
+		return
+	}
+	// Delay until kubelet is started
+	go k.createStaticPods(k.staticPodsConfigPath, "h1", k.updateChan)
+}
+
+// Create staticPods via sourceFileReader after kubelet is initialized
+func (k *KubernetesExecutor) createStaticPods(path string, hostname string, updates chan<- interface{}) {
+
+	//  wait until kubelet is initialized
+	<-k.kubeletStarted
+
+	config.NewSourceFile(path, hostname, fileCheckFrequency, updates)
+}
+
+// Retrieve staticPods Information from executorInfo
+// creates temp Directory and sets k.staticPodsConfigPath
+func (k *KubernetesExecutor) retrieveStaticPods(data []byte) {
+	// Retrieve staticPods info from executorInfo
+	if data != nil {
+		byteBuf := bytes.NewBuffer(data)
+
+		// extract to tmp dir
+		dir, err := ioutil.TempDir(os.TempDir(), "executor-k8sm-archive")
+		if err != nil {
+			log.Errorf("Failed to create temp dir for staticPods config.")
+			return
+		}
+
+		log.Infof("Extract staticPods config to %s.", dir)
+
+		zr, err := zip.NewReader(bytes.NewReader(byteBuf.Bytes()), int64(byteBuf.Len()))
+		if err != nil {
+			log.Errorf("Could not read staticPods config Files from ExecutorInfo.")
+			return
+		}
+
+		for _, file := range zr.File {
+
+			rc, err := file.Open()
+			if err != nil {
+				log.Errorf("Could retrieve archieved File.")
+				return
+			}
+
+			path := filepath.Clean(filepath.Join(dir, file.Name))
+			f, err := os.Create(path)
+			if err != nil {
+				log.Errorf("Could not create staticPods configFile.")
+				return
+			}
+			defer f.Close()
+
+			if _, err := io.Copy(f, rc); err != nil {
+				log.Errorf("Could not create staticPods configFile.")
+				return
+			}
+		}
+
+		k.staticPodsConfigPath = dir
+
+	}
+
 }
 
 // Disconnected is called when the executor is disconnected with the slave.
