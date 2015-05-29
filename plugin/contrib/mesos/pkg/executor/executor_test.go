@@ -17,9 +17,12 @@ limitations under the License.
 package executor
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	//"path/filepath"
 	"reflect"
 	"sync"
 	"sync/atomic"
@@ -41,6 +44,7 @@ import (
 	bindings "github.com/mesos/mesos-go/executor"
 	"github.com/mesos/mesos-go/mesosproto"
 	"github.com/stretchr/testify/assert"
+	"github.com/mesos/mesos-go/mesosutil"
 )
 
 type suicideTracker struct {
@@ -382,6 +386,129 @@ func TestExecutorLaunchAndKillTask(t *testing.T) {
 
 	// Allow some time for asynchronous requests to the driver.
 	time.Sleep(time.Second)
+	mockDriver.AssertExpectations(t)
+}
+
+// TestExecutorStaticPods test that the ExecutorInfo.data is parsed
+// as a zip archive with pod definitions.
+func TestExecutorStaticPods(t *testing.T) {
+	// create some zip with static pod definition
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	createStaticPodFile := func (name string) {
+		w, err := zw.Create(name)
+		assert.NoError(t, err)
+		spod := `{
+	  "kind": "Pod",
+	  "apiVersion": "v1beta1",
+	  "id": "nginx-id-01",
+	  "desiredState": {
+		"manifest": {
+		  "version": "v1beta1",
+		  "containers": [{
+			"name": "nginx-01",
+			"image": "library/nginx",
+			"ports": [{
+			  "containerPort": 80,
+			  "name": "http"
+			}],
+			"livenessProbe": {
+			  "enabled": true,
+			  "type": "http",
+			  "initialDelaySeconds": 30,
+			  "httpGet": {
+				"path": "/",
+				"port": "80"
+			  }
+			}
+		  }]
+		}
+	  },
+	  "labels": {
+		"name": "foo",
+		"cluster": "gce"
+	  }
+	}`
+		_, err = w.Write([]byte(spod))
+		assert.NoError(t, err)
+	}
+	createStaticPodFile("spod.json")
+
+	err := zw.Close()
+	assert.NoError(t, err)
+
+	// create fake apiserver
+	testApiServer := NewTestServer(t, api.NamespaceDefault, nil)
+	defer testApiServer.server.Close()
+
+	mockDriver := &MockExecutorDriver{}
+	updates := make(chan interface{}, 1024)
+	kubeletStarted := make(chan struct{})
+	config := Config{
+		Docker:  dockertools.ConnectToDockerOrDie("fake://"),
+		Updates: updates,
+		APIClient: client.NewOrDie(&client.Config{
+			Host:    testApiServer.server.URL,
+			Version: testapi.Version(),
+		}),
+		Kubelet: &kubelet.Kubelet{},
+		PodStatusFunc: func(kl *kubelet.Kubelet, pod *api.Pod) (api.PodStatus, error) {
+			return api.PodStatus{
+				ContainerStatuses: []api.ContainerStatus{
+					{
+						Name: "foo",
+						State: api.ContainerState{
+							Running: &api.ContainerStateRunning{},
+						},
+					},
+				},
+				Phase: api.PodRunning,
+			}, nil
+		},
+	}
+	executor := New(config)
+
+	// overwrite kubeletStarted which originally came from the service
+	executor.kubeletStarted = kubeletStarted
+
+	// create ExecutorInfo with static pod zip in data field
+	executorInfo := mesosutil.NewExecutorInfo(
+		mesosutil.NewExecutorID("ex1"),
+		mesosutil.NewCommandInfo("k8sm-executor"),
+	)
+	executorInfo.Data = buf.Bytes()
+
+	// start the executor with the static pod data
+	executor.Init(mockDriver)
+	executor.Registered(mockDriver, executorInfo, nil, nil)
+
+	// fake kubelet to be initialized => static pods are created
+	close(kubeletStarted)
+
+	// wait for static pod to start
+	podUpdates := make(chan kubelet.PodUpdate)
+	go func () {
+		for {
+			// filter by PodUpdate type
+			select {
+			case update, ok := <-updates:
+				if !ok {
+					return
+				}
+				switch update.(type) {
+					case kubelet.PodUpdate:
+					podUpdates <- update.(kubelet.PodUpdate)
+				}
+			}
+		}
+	}()
+
+	select {
+	case <- podUpdates:
+	case <-time.After(time.Second):
+		t.Fatalf("Executor should send an pod update")
+	}
+
 	mockDriver.AssertExpectations(t)
 }
 
