@@ -169,7 +169,6 @@ func New(config Config) *KubernetesExecutor {
 		shutdownAlert:        config.ShutdownAlert,
 		exitFunc:             config.ExitFunc,
 		podStatusFunc:        config.PodStatusFunc,
-		staticPodsConfigPath: "",
 	}
 	//TODO(jdef) do something real with these events..
 	if config.Watch != nil {
