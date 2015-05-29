@@ -280,15 +280,11 @@ func (k *KubernetesExecutor) createStaticPodsAfterInit(path string, hostname str
 }
 
 // Parse staticPods Information from []byte
-// creates temp directory and sets k.staticPodsConfigPath
+// creates temp directory and sets k.staticPodsConfigPath to that
 func (k *KubernetesExecutor) retrieveStaticPods(data []byte) {
-	// Retrieve staticPods info from executorInfo
-
 	if data == nil {
 		return
 	}
-
-	byteBuf := bytes.NewBuffer(data)
 
 	// extract to local sendBox so it is automatically cleaned up
 	dir, err := ioutil.TempDir(".", "executor-k8sm-archive")
@@ -299,14 +295,13 @@ func (k *KubernetesExecutor) retrieveStaticPods(data []byte) {
 
 	log.Infof("Extract staticPods config to %s.", dir)
 
-	zr, err := zip.NewReader(bytes.NewReader(byteBuf.Bytes()), int64(byteBuf.Len()))
+	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		log.Errorf("Could not read staticPods config Files from ExecutorInfo.")
 		return
 	}
 
 	for _, file := range zr.File {
-
 		rc, err := file.Open()
 		if err != nil {
 			log.Errorf("Could retrieve archieved File.")
@@ -328,7 +323,6 @@ func (k *KubernetesExecutor) retrieveStaticPods(data []byte) {
 	}
 
 	k.staticPodsConfigPath = dir
-
 }
 
 // Disconnected is called when the executor is disconnected with the slave.
