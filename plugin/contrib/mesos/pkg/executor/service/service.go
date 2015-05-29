@@ -361,7 +361,6 @@ func (ks *KubeletExecutorServer) createAndInitKubelet(
 		Docker:          kc.DockerClient,
 		SuicideTimeout:  ks.SuicideTimeout,
 		KubeletFinished: kubeletFinished,
-		KubeletStarted:  kubeletStarted,
 		ShutdownAlert: func() {
 			if shutdownCloser != nil {
 				if e := shutdownCloser.Close(); e != nil {
