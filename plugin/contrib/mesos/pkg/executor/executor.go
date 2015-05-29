@@ -142,7 +142,6 @@ type Config struct {
 	ShutdownAlert   func()
 	SuicideTimeout  time.Duration
 	KubeletFinished <-chan struct{}
-	KubeletStarted  <-chan struct{}
 	ExitFunc        func(int)
 	PodStatusFunc   func(*kubelet.Kubelet, *api.Pod) (api.PodStatus, error)
 }
