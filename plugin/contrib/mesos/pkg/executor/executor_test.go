@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	//"path/filepath"
 	"reflect"
 	"sync"
 	"sync/atomic"
@@ -395,18 +394,19 @@ func TestExecutorStaticPods(t *testing.T) {
 	// create some zip with static pod definition
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
-	createStaticPodFile := func (name string) {
-		w, err := zw.Create(name)
+	numPods := 0
+	createStaticPodFile := func (fileName string, id string, name string) {
+		w, err := zw.Create(fileName)
 		assert.NoError(t, err)
 		spod := `{
 	  "kind": "Pod",
 	  "apiVersion": "v1beta1",
-	  "id": "nginx-id-01",
+	  "id": "%v",
 	  "desiredState": {
 		"manifest": {
 		  "version": "v1beta1",
 		  "containers": [{
-			"name": "nginx-01",
+			"name": "%v",
 			"image": "library/nginx",
 			"ports": [{
 			  "containerPort": 80,
@@ -429,10 +429,12 @@ func TestExecutorStaticPods(t *testing.T) {
 		"cluster": "gce"
 	  }
 	}`
-		_, err = w.Write([]byte(spod))
+		_, err = w.Write([]byte(fmt.Sprintf(spod, id, name)))
 		assert.NoError(t, err)
+		numPods = numPods + 1
 	}
-	createStaticPodFile("spod.json")
+	createStaticPodFile("spod.json", "spod-id-01", "spod-01")
+	createStaticPodFile("spod2.json", "spod-id-02", "spod-02")
 
 	err := zw.Close()
 	assert.NoError(t, err)
@@ -480,13 +482,15 @@ func TestExecutorStaticPods(t *testing.T) {
 
 	// start the executor with the static pod data
 	executor.Init(mockDriver)
-	executor.Registered(mockDriver, executorInfo, nil, nil)
+	hostname := "h1"
+	executor.Registered(mockDriver, executorInfo, nil, &mesosproto.SlaveInfo{Hostname: &hostname})
 
 	// fake kubelet to be initialized => static pods are created
 	close(kubeletStarted)
 
 	// wait for static pod to start
-	podUpdates := make(chan kubelet.PodUpdate)
+	seenPods := map[string]struct{}{}
+	done := make(chan struct{})
 	go func () {
 		for {
 			// filter by PodUpdate type
@@ -496,17 +500,24 @@ func TestExecutorStaticPods(t *testing.T) {
 					return
 				}
 				switch update.(type) {
-					case kubelet.PodUpdate:
-					podUpdates <- update.(kubelet.PodUpdate)
+				case kubelet.PodUpdate:
+					// register the seen pods by name
+					podUpdate := update.(kubelet.PodUpdate)
+					for _, pod := range(podUpdate.Pods) {
+						seenPods[pod.Name] = struct{}{}
+					}
+					if len(seenPods) == numPods {
+						close(done)
+					}
 				}
 			}
 		}
 	}()
 
 	select {
-	case <- podUpdates:
+	case <- done:
 	case <-time.After(time.Second):
-		t.Fatalf("Executor should send an pod update")
+		t.Fatalf("Executor should send pod updates for %v pods, only saw %v", numPods, len(seenPods))
 	}
 
 	mockDriver.AssertExpectations(t)
