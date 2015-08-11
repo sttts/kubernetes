@@ -486,6 +486,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 		if !hasSubresource {
 			namer = scopeNaming{scope, a.group.Linker, itemPathFn, true}
 			actions = appendIf(actions, action{"LIST", resource, params, namer, true}, isLister)
+			actions = appendIf(actions, action{"POST", resource, params, namer, true}, isCreater)
 			actions = appendIf(actions, action{"WATCHLIST", "watch/" + resource, params, namer, true}, allowWatchList)
 		}
 		break
