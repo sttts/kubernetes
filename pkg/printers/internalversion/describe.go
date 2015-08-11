@@ -1575,7 +1575,8 @@ func describeSecret(secret *api.Secret) (string, error) {
 		w.Write(LEVEL_0, "\nData\n====\n")
 		for k, v := range secret.Data {
 			switch {
-			case k == api.ServiceAccountTokenKey && secret.Type == api.SecretTypeServiceAccountToken:
+			case k == api.ServiceAccountTokenKey && secret.Type == api.SecretTypeServiceAccountToken,
+				k == api.DockerConfigKey && secret.Type == api.SecretTypeDockercfg:
 				w.Write(LEVEL_0, "%s:\t%s\n", k, string(v))
 			default:
 				w.Write(LEVEL_0, "%s:\t%d bytes\n", k, len(v))
