@@ -95,6 +95,10 @@ func RegisterConversions(scheme *runtime.Scheme) error {
 		Convert_api_DaemonEndpoint_To_v1_DaemonEndpoint,
 		Convert_v1_DeleteOptions_To_api_DeleteOptions,
 		Convert_api_DeleteOptions_To_v1_DeleteOptions,
+		Convert_v1_DeprecatedDownwardAPIVolumeFile_To_api_DeprecatedDownwardAPIVolumeFile,
+		Convert_api_DeprecatedDownwardAPIVolumeFile_To_v1_DeprecatedDownwardAPIVolumeFile,
+		Convert_v1_DeprecatedDownwardAPIVolumeSource_To_api_DeprecatedDownwardAPIVolumeSource,
+		Convert_api_DeprecatedDownwardAPIVolumeSource_To_v1_DeprecatedDownwardAPIVolumeSource,
 		Convert_v1_DownwardAPIProjection_To_api_DownwardAPIProjection,
 		Convert_api_DownwardAPIProjection_To_v1_DownwardAPIProjection,
 		Convert_v1_DownwardAPIVolumeFile_To_api_DownwardAPIVolumeFile,
@@ -1084,6 +1088,50 @@ func autoConvert_api_DeleteOptions_To_v1_DeleteOptions(in *api.DeleteOptions, ou
 
 func Convert_api_DeleteOptions_To_v1_DeleteOptions(in *api.DeleteOptions, out *DeleteOptions, s conversion.Scope) error {
 	return autoConvert_api_DeleteOptions_To_v1_DeleteOptions(in, out, s)
+}
+
+func autoConvert_v1_DeprecatedDownwardAPIVolumeFile_To_api_DeprecatedDownwardAPIVolumeFile(in *DeprecatedDownwardAPIVolumeFile, out *api.DeprecatedDownwardAPIVolumeFile, s conversion.Scope) error {
+	out.Path = in.Path
+	out.FieldRef = (*api.ObjectFieldSelector)(unsafe.Pointer(in.FieldRef))
+	out.ResourceFieldRef = (*api.ResourceFieldSelector)(unsafe.Pointer(in.ResourceFieldRef))
+	out.Mode = (*int32)(unsafe.Pointer(in.Mode))
+	return nil
+}
+
+func Convert_v1_DeprecatedDownwardAPIVolumeFile_To_api_DeprecatedDownwardAPIVolumeFile(in *DeprecatedDownwardAPIVolumeFile, out *api.DeprecatedDownwardAPIVolumeFile, s conversion.Scope) error {
+	return autoConvert_v1_DeprecatedDownwardAPIVolumeFile_To_api_DeprecatedDownwardAPIVolumeFile(in, out, s)
+}
+
+func autoConvert_api_DeprecatedDownwardAPIVolumeFile_To_v1_DeprecatedDownwardAPIVolumeFile(in *api.DeprecatedDownwardAPIVolumeFile, out *DeprecatedDownwardAPIVolumeFile, s conversion.Scope) error {
+	out.Path = in.Path
+	out.FieldRef = (*ObjectFieldSelector)(unsafe.Pointer(in.FieldRef))
+	out.ResourceFieldRef = (*ResourceFieldSelector)(unsafe.Pointer(in.ResourceFieldRef))
+	out.Mode = (*int32)(unsafe.Pointer(in.Mode))
+	return nil
+}
+
+func Convert_api_DeprecatedDownwardAPIVolumeFile_To_v1_DeprecatedDownwardAPIVolumeFile(in *api.DeprecatedDownwardAPIVolumeFile, out *DeprecatedDownwardAPIVolumeFile, s conversion.Scope) error {
+	return autoConvert_api_DeprecatedDownwardAPIVolumeFile_To_v1_DeprecatedDownwardAPIVolumeFile(in, out, s)
+}
+
+func autoConvert_v1_DeprecatedDownwardAPIVolumeSource_To_api_DeprecatedDownwardAPIVolumeSource(in *DeprecatedDownwardAPIVolumeSource, out *api.DeprecatedDownwardAPIVolumeSource, s conversion.Scope) error {
+	out.Items = *(*[]api.DeprecatedDownwardAPIVolumeFile)(unsafe.Pointer(&in.Items))
+	out.DefaultMode = (*int32)(unsafe.Pointer(in.DefaultMode))
+	return nil
+}
+
+func Convert_v1_DeprecatedDownwardAPIVolumeSource_To_api_DeprecatedDownwardAPIVolumeSource(in *DeprecatedDownwardAPIVolumeSource, out *api.DeprecatedDownwardAPIVolumeSource, s conversion.Scope) error {
+	return autoConvert_v1_DeprecatedDownwardAPIVolumeSource_To_api_DeprecatedDownwardAPIVolumeSource(in, out, s)
+}
+
+func autoConvert_api_DeprecatedDownwardAPIVolumeSource_To_v1_DeprecatedDownwardAPIVolumeSource(in *api.DeprecatedDownwardAPIVolumeSource, out *DeprecatedDownwardAPIVolumeSource, s conversion.Scope) error {
+	out.Items = *(*[]DeprecatedDownwardAPIVolumeFile)(unsafe.Pointer(&in.Items))
+	out.DefaultMode = (*int32)(unsafe.Pointer(in.DefaultMode))
+	return nil
+}
+
+func Convert_api_DeprecatedDownwardAPIVolumeSource_To_v1_DeprecatedDownwardAPIVolumeSource(in *api.DeprecatedDownwardAPIVolumeSource, out *DeprecatedDownwardAPIVolumeSource, s conversion.Scope) error {
+	return autoConvert_api_DeprecatedDownwardAPIVolumeSource_To_v1_DeprecatedDownwardAPIVolumeSource(in, out, s)
 }
 
 func autoConvert_v1_DownwardAPIProjection_To_api_DownwardAPIProjection(in *DownwardAPIProjection, out *api.DownwardAPIProjection, s conversion.Scope) error {
@@ -4528,11 +4576,8 @@ func autoConvert_v1_VolumeSource_To_api_VolumeSource(in *VolumeSource, out *api.
 	out.Projected = (*api.ProjectedVolumeSource)(unsafe.Pointer(in.Projected))
 	out.PortworxVolume = (*api.PortworxVolumeSource)(unsafe.Pointer(in.PortworxVolume))
 	out.ScaleIO = (*api.ScaleIOVolumeSource)(unsafe.Pointer(in.ScaleIO))
+	// INFO: in.Metadata opted out of conversion generation
 	return nil
-}
-
-func Convert_v1_VolumeSource_To_api_VolumeSource(in *VolumeSource, out *api.VolumeSource, s conversion.Scope) error {
-	return autoConvert_v1_VolumeSource_To_api_VolumeSource(in, out, s)
 }
 
 func autoConvert_api_VolumeSource_To_v1_VolumeSource(in *api.VolumeSource, out *VolumeSource, s conversion.Scope) error {
@@ -4563,10 +4608,6 @@ func autoConvert_api_VolumeSource_To_v1_VolumeSource(in *api.VolumeSource, out *
 	out.PortworxVolume = (*PortworxVolumeSource)(unsafe.Pointer(in.PortworxVolume))
 	out.ScaleIO = (*ScaleIOVolumeSource)(unsafe.Pointer(in.ScaleIO))
 	return nil
-}
-
-func Convert_api_VolumeSource_To_v1_VolumeSource(in *api.VolumeSource, out *VolumeSource, s conversion.Scope) error {
-	return autoConvert_api_VolumeSource_To_v1_VolumeSource(in, out, s)
 }
 
 func autoConvert_v1_VsphereVirtualDiskVolumeSource_To_api_VsphereVirtualDiskVolumeSource(in *VsphereVirtualDiskVolumeSource, out *api.VsphereVirtualDiskVolumeSource, s conversion.Scope) error {
