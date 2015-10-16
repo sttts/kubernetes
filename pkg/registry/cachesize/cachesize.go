@@ -59,6 +59,7 @@ const (
 	Roles                      Resource = "roles"
 	RoleBindings               Resource = "rolebindings"
 	Secrets                    Resource = "secrets"
+	SecurityContextConstraints Resource = "securitycontextconstraints"
 	ServiceAccounts            Resource = "serviceaccounts"
 	Services                   Resource = "services"
 	StorageClasses             Resource = "storageclasses"
