@@ -80,12 +80,15 @@ go_test(
 go_test(
     name = "go_default_test",
     srcs = [
+        "conversion_volumesource_test.go",
         "helpers_test.go",
         "resource_helpers_test.go",
     ],
     library = ":go_default_library",
     tags = ["automanaged"],
     deps = [
+        "//pkg/api:go_default_library",
+        "//pkg/conversion:go_default_library",
         "//vendor:k8s.io/apimachinery/pkg/api/equality",
         "//vendor:k8s.io/apimachinery/pkg/api/resource",
         "//vendor:k8s.io/apimachinery/pkg/apis/meta/v1",

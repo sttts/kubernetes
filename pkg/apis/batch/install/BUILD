@@ -16,6 +16,7 @@ go_library(
         "//pkg/apis/batch:go_default_library",
         "//pkg/apis/batch/v1:go_default_library",
         "//pkg/apis/batch/v2alpha1:go_default_library",
+        "//pkg/apis/extensions/install:go_default_library",
         "//vendor:k8s.io/apimachinery/pkg/apimachinery/announced",
         "//vendor:k8s.io/apimachinery/pkg/apimachinery/registered",
         "//vendor:k8s.io/apimachinery/pkg/runtime",

@@ -10708,7 +10708,6 @@ go_library(
     ],
     tags = ["automanaged"],
     deps = [
-        "//vendor:github.com/elazarl/go-bindata-assetfs",
         "//vendor:github.com/emicklei/go-restful",
         "//vendor:github.com/emicklei/go-restful/swagger",
         "//vendor:github.com/golang/glog",
@@ -10720,7 +10719,6 @@ go_library(
         "//vendor:k8s.io/apiserver/pkg/endpoints/metrics",
         "//vendor:k8s.io/apiserver/pkg/server/mux",
         "//vendor:k8s.io/apiserver/pkg/server/openapi",
-        "//vendor:k8s.io/apiserver/pkg/server/routes/data/swagger",
         "//vendor:k8s.io/apiserver/pkg/storage/etcd/metrics",
     ],
 )
