@@ -694,6 +694,16 @@ message DeleteOptions {
   optional string propagationPolicy = 4;
 }
 
+// DeprecatedDownwardAPIVolumeFile represents information to create the file containing the pod field
+// This type is deprecated and should be replaced by use of the downwardAPI volume source.
+message DeprecatedDownwardAPIVolumeFile {
+}
+
+// DeprecatedDownwardAPIVolumeSource represents a volume containing downward API info.
+// This type is deprecated and should be replaced by use of the downwardAPI volume source.
+message DeprecatedDownwardAPIVolumeSource {
+}
+
 // Represents downward API info for projecting into a projected volume.
 // Note that this is identical to a downwardAPI volume source without the default
 // mode.

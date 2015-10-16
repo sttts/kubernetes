@@ -65,6 +65,8 @@ func RegisterDeepCopies(scheme *runtime.Scheme) error {
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_ContainerStatus, InType: reflect.TypeOf(&ContainerStatus{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_DaemonEndpoint, InType: reflect.TypeOf(&DaemonEndpoint{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_DeleteOptions, InType: reflect.TypeOf(&DeleteOptions{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_DeprecatedDownwardAPIVolumeFile, InType: reflect.TypeOf(&DeprecatedDownwardAPIVolumeFile{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_DeprecatedDownwardAPIVolumeSource, InType: reflect.TypeOf(&DeprecatedDownwardAPIVolumeSource{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_DownwardAPIProjection, InType: reflect.TypeOf(&DownwardAPIProjection{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_DownwardAPIVolumeFile, InType: reflect.TypeOf(&DownwardAPIVolumeFile{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_DownwardAPIVolumeSource, InType: reflect.TypeOf(&DownwardAPIVolumeSource{})},
@@ -738,6 +740,55 @@ func DeepCopy_v1_DeleteOptions(in interface{}, out interface{}, c *conversion.Cl
 		if in.PropagationPolicy != nil {
 			in, out := &in.PropagationPolicy, &out.PropagationPolicy
 			*out = new(DeletionPropagation)
+			**out = **in
+		}
+		return nil
+	}
+}
+
+func DeepCopy_v1_DeprecatedDownwardAPIVolumeFile(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*DeprecatedDownwardAPIVolumeFile)
+		out := out.(*DeprecatedDownwardAPIVolumeFile)
+		*out = *in
+		if in.FieldRef != nil {
+			in, out := &in.FieldRef, &out.FieldRef
+			*out = new(ObjectFieldSelector)
+			**out = **in
+		}
+		if in.ResourceFieldRef != nil {
+			in, out := &in.ResourceFieldRef, &out.ResourceFieldRef
+			*out = new(ResourceFieldSelector)
+			if err := DeepCopy_v1_ResourceFieldSelector(*in, *out, c); err != nil {
+				return err
+			}
+		}
+		if in.Mode != nil {
+			in, out := &in.Mode, &out.Mode
+			*out = new(int32)
+			**out = **in
+		}
+		return nil
+	}
+}
+
+func DeepCopy_v1_DeprecatedDownwardAPIVolumeSource(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*DeprecatedDownwardAPIVolumeSource)
+		out := out.(*DeprecatedDownwardAPIVolumeSource)
+		*out = *in
+		if in.Items != nil {
+			in, out := &in.Items, &out.Items
+			*out = make([]DeprecatedDownwardAPIVolumeFile, len(*in))
+			for i := range *in {
+				if err := DeepCopy_v1_DeprecatedDownwardAPIVolumeFile(&(*in)[i], &(*out)[i], c); err != nil {
+					return err
+				}
+			}
+		}
+		if in.DefaultMode != nil {
+			in, out := &in.DefaultMode, &out.DefaultMode
+			*out = new(int32)
 			**out = **in
 		}
 		return nil
@@ -3471,6 +3522,13 @@ func DeepCopy_v1_VolumeSource(in interface{}, out interface{}, c *conversion.Clo
 			in, out := &in.ScaleIO, &out.ScaleIO
 			*out = new(ScaleIOVolumeSource)
 			if err := DeepCopy_v1_ScaleIOVolumeSource(*in, *out, c); err != nil {
+				return err
+			}
+		}
+		if in.Metadata != nil {
+			in, out := &in.Metadata, &out.Metadata
+			*out = new(DeprecatedDownwardAPIVolumeSource)
+			if err := DeepCopy_v1_DeprecatedDownwardAPIVolumeSource(*in, *out, c); err != nil {
 				return err
 			}
 		}
