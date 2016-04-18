@@ -58,8 +58,10 @@ import (
 	"k8s.io/kubernetes/pkg/util/errors"
 	utilexec "k8s.io/kubernetes/pkg/util/exec"
 	"k8s.io/kubernetes/pkg/util/flowcontrol"
+	"k8s.io/kubernetes/pkg/util/runtime"
 	"k8s.io/kubernetes/pkg/util/selinux"
 	utilstrings "k8s.io/kubernetes/pkg/util/strings"
+	"k8s.io/kubernetes/pkg/util/term"
 	utilwait "k8s.io/kubernetes/pkg/util/wait"
 )
 
@@ -2007,14 +2009,14 @@ func newRktExitError(e error) error {
 	return e
 }
 
-func (r *Runtime) AttachContainer(containerID kubecontainer.ContainerID, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool) error {
+func (r *Runtime) AttachContainer(containerID kubecontainer.ContainerID, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan term.Size) error {
 	return fmt.Errorf("unimplemented")
 }
 
 // Note: In rkt, the container ID is in the form of "UUID:appName", where UUID is
 // the rkt UUID, and appName is the container name.
 // TODO(yifan): If the rkt is using lkvm as the stage1 image, then this function will fail.
-func (r *Runtime) ExecInContainer(containerID kubecontainer.ContainerID, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool) error {
+func (r *Runtime) ExecInContainer(containerID kubecontainer.ContainerID, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan term.Size) error {
 	glog.V(4).Infof("Rkt execing in container.")
 
 	id, err := parseContainerID(containerID)
@@ -2034,6 +2036,21 @@ func (r *Runtime) ExecInContainer(containerID kubecontainer.ContainerID, cmd []s
 
 		// make sure to close the stdout stream
 		defer stdout.Close()
+
+		if resize != nil {
+			go func() {
+				defer runtime.HandleCrash()
+				for {
+					size, ok := <-resize
+					if !ok {
+						return
+					}
+					if err := term.SetSize(p.Fd(), size); err != nil {
+						runtime.HandleError(fmt.Errorf("error resizing exec: %v", err))
+					}
+				}
+			}()
+		}
 
 		if stdin != nil {
 			go io.Copy(p, stdin)
