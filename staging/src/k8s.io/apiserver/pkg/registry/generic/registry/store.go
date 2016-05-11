@@ -845,9 +845,15 @@ func (e *Store) Delete(ctx genericapirequest.Context, name string, options *meta
 	if options.Preconditions != nil {
 		preconditions.UID = options.Preconditions.UID
 	}
-	graceful, pendingGraceful, err := rest.BeforeDelete(e.DeleteStrategy, ctx, obj, options)
-	if err != nil {
-		return nil, false, err
+	// DeleteStrategy is doc'ed as optional, but without one you can't be graceful or you'll panic
+	// tolerate an optional field being optional
+	graceful := false
+	pendingGraceful := false
+	if e.DeleteStrategy != nil {
+		graceful, pendingGraceful, err = rest.BeforeDelete(e.DeleteStrategy, ctx, obj, options)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 	// this means finalizers cannot be updated via DeleteOptions if a deletion is already pending
 	if pendingGraceful {
