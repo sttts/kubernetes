@@ -32,8 +32,10 @@ type SafeFunc func() error
 // TTY helps invoke a function and preserve the state of the terminal, even if the
 // process is terminated during execution.
 type TTY struct {
-	// In is a reader to check for a terminal.
+	// In is a reader used to set the terminal to raw mode.
 	In io.Reader
+	// Out is a writer to check for a terminal.
+	Out io.Writer
 	// Raw is true if the terminal should be set raw.
 	Raw bool
 	// TryDev indicates the TTY should try to open /dev/tty if the provided input
@@ -116,16 +118,16 @@ type Size struct {
 	Height uint16
 }
 
-// GetSize returns the current size of the user's terminal. If t.In is nil or it doesn't have a file
-// description, nil is returned.
+// GetSize returns the current size of the user's terminal. If it isn't a terminal,
+// nil is returned.
 func (t TTY) GetSize() *Size {
-	if t.In == nil {
+	if t.Out == nil {
 		return nil
 	}
 
-	in := t.In
+	out := t.Out
 
-	desc, ok := in.(fd)
+	desc, ok := out.(fd)
 	if !ok {
 		return nil
 	}
@@ -198,8 +200,9 @@ func (s *sizeQueue) monitorSize(initialSizes ...*Size) {
 	}
 
 	resizeEvents := make(chan Size, 1)
-	// TTY.MonitorSize ensures we have a terminal, so it's safe to assume that s.t.In implements fd.
-	monitorResizeEvents(s.t.In.(fd).Fd(), resizeEvents, s.stopResizing)
+
+	// TTY.MonitorSize ensures we have a terminal, so it's safe to assume that s.t.Out implements fd
+	monitorResizeEvents(s.t.Out.(fd).Fd(), resizeEvents, s.stopResizing)
 
 	// listen for resize events in the background
 	go func() {

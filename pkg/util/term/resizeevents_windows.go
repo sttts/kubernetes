@@ -18,37 +18,38 @@ limitations under the License.
 
 package term
 
-func monitorResizeEvents(in uintptr, resizeEvents chan<- Size, stop chan struct{}) {
-	// FIXME(ncdc) I've been told this doesn't work for Windows, and I don't have access to a Windows
-	// system, so I'm commenting this out for now. Hopefully someone who does have Windows can
-	// implement this properly in the future.
-	/*
-		go func() {
-			defer runtime.HandleCrash()
+import (
+	"time"
 
-			var lastSize Size
+	"k8s.io/kubernetes/pkg/util/runtime"
+)
 
-			for {
-				// see if we need to stop running
-				select {
-				case <-stop:
-					return
-				default:
-				}
+func monitorResizeEvents(fd uintptr, resizeEvents chan<- Size, stop chan struct{}) {
+	go func() {
+		defer runtime.HandleCrash()
 
-				size := GetSize(in)
-				if size == nil {
-					return
-				}
+		var lastSize Size
 
-				if size.Height != lastSize.Height || size.Width != lastSize.Width {
-					lastSize.Height = size.Height
-					lastSize.Width = size.Width
-					resizeEvents <- *size
-				}
-
-				time.Sleep(250 * time.Millisecond)
+		for {
+			// see if we need to stop running
+			select {
+			case <-stop:
+				return
+			default:
 			}
-		}()
-	*/
+
+			size := GetSize(fd)
+			if size == nil {
+				return
+			}
+
+			if size.Height != lastSize.Height || size.Width != lastSize.Width {
+				lastSize.Height = size.Height
+				lastSize.Width = size.Width
+				resizeEvents <- *size
+			}
+
+			time.Sleep(250 * time.Millisecond)
+		}
+	}()
 }

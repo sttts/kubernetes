@@ -26,7 +26,7 @@ import (
 	"k8s.io/kubernetes/pkg/util/runtime"
 )
 
-func monitorResizeEvents(in uintptr, resizeEvents chan<- Size, stop chan struct{}) {
+func monitorResizeEvents(fd uintptr, resizeEvents chan<- Size, stop chan struct{}) {
 	go func() {
 		defer runtime.HandleCrash()
 
@@ -37,7 +37,7 @@ func monitorResizeEvents(in uintptr, resizeEvents chan<- Size, stop chan struct{
 		for {
 			select {
 			case <-winch:
-				size := GetSize(in)
+				size := GetSize(fd)
 				if size == nil {
 					return
 				}

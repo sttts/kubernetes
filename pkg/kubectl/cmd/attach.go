@@ -187,7 +187,7 @@ func (p *AttachOptions) Run() error {
 	pod := p.Pod
 
 	// ensure we can recover the terminal while attached
-	t := term.TTY{Parent: p.InterruptParent}
+	t := term.TTY{Parent: p.InterruptParent, Out: p.Out}
 
 	// check for TTY
 	tty := p.TTY
