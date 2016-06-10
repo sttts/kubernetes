@@ -19,6 +19,7 @@ limitations under the License.
 package kubenet
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -196,6 +197,13 @@ const NET_CONFIG_TEMPLATE = `{
   }
 }`
 
+const TUNING_CONFIG_TEMPLATE = `{
+  "cniVersion": "0.1.0",
+  "name": "sysctls",
+  "type": "tuning",
+  "sysctl": %s
+}`
+
 func (plugin *kubenetNetworkPlugin) Event(name string, details map[string]interface{}) {
 	if name != network.NET_PLUGIN_EVENT_POD_CIDR_CHANGE {
 		return
@@ -353,6 +361,29 @@ func (plugin *kubenetNetworkPlugin) setup(namespace string, name string, id kube
 	newPod := &hostport.RunningPod{Pod: pod, IP: ip4}
 	if err := plugin.hostportHandler.OpenPodHostportsAndSync(newPod, BridgeName, runningPods); err != nil {
 		return err
+	}
+
+	// Set sysctls if requested, using the CNI tuning plugin
+	if pod.Spec.SecurityContext != nil && len(pod.Spec.SecurityContext.Sysctls) > 0 {
+		sysctls := make(map[string]string, len(pod.Spec.SecurityContext.Sysctls))
+		for _, c := range pod.Spec.SecurityContext.Sysctls {
+			sysctls[c.Name] = c.Value
+		}
+
+		sysctlsJson, err := json.Marshal(sysctls)
+		if err != nil {
+			return fmt.Errorf("Failed to marshal sysctls into JSON: %v", err)
+		}
+		json := fmt.Sprintf(TUNING_CONFIG_TEMPLATE, sysctlsJson)
+		glog.V(2).Infof("CNI tuning config set to %v", json)
+		tuningConfig, err := libcni.ConfFromBytes([]byte(json))
+		if err != nil {
+			return fmt.Errorf("Failed to create CNI tuning config: %v", err)
+		}
+		_, err = plugin.addContainerToNetwork(tuningConfig, "sysctls", namespace, name, id)
+		if err != nil {
+			return fmt.Errorf("Failed to set sysctls with CNI tuning plugin: %v", err)
+		}
 	}
 
 	return nil

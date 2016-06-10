@@ -644,6 +644,14 @@ func (dm *DockerManager) runContainer(
 		SecurityOpt: securityOpts,
 	}
 
+	// Set sysctls if requested
+	if pod.Spec.SecurityContext != nil && len(pod.Spec.SecurityContext.Sysctls) > 0 {
+		hc.Sysctls = make(map[string]string, len(pod.Spec.SecurityContext.Sysctls))
+		for _, c := range pod.Spec.SecurityContext.Sysctls {
+			hc.Sysctls[c.Name] = c.Value
+		}
+	}
+
 	// If current api version is newer than docker 1.10 requested, set OomScoreAdj to HostConfig
 	result, err := dm.checkDockerAPIVersion(dockerV110APIVersion)
 	if err != nil {
