@@ -642,7 +642,7 @@ func (dm *DockerManager) runContainer(
 			Devices:    devices,
 		},
 		SecurityOpt: securityOpts,
-		Sysctls: map[string]string{}, // TODO: copy the pod.Spec.SecurityContext.SysCtls here when ready
+		Sysctls:     map[string]string{}, // TODO: copy the pod.Spec.SecurityContext.SysCtls here when ready
 	}
 
 	// If current api version is newer than docker 1.10 requested, set OomScoreAdj to HostConfig
