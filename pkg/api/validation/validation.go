@@ -1875,6 +1875,18 @@ func ValidateSeccompPodAnnotations(annotations map[string]string, fldPath *field
 	return allErrs
 }
 
+func validateSysctls(sysctls []api.Sysctl, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for i, s := range sysctls {
+		if len(s.Name) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "sysctl:name"))
+		} else if !validation.IsWhitelistedSysctlOpt(s.Name) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("name"), s.Name, "is not whitelisted"))
+		}
+	}
+	return allErrs
+}
+
 // ValidatePodSecurityContext test that the specified PodSecurityContext has valid data.
 func ValidatePodSecurityContext(securityContext *api.PodSecurityContext, spec *api.PodSpec, specPath, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -1892,6 +1904,9 @@ func ValidatePodSecurityContext(securityContext *api.PodSecurityContext, spec *a
 				supplementalGroup := fmt.Sprintf(`supplementalGroups[%d]`, i)
 				allErrs = append(allErrs, field.Invalid(fldPath.Child(supplementalGroup), gid, IdRangeErrorMsg))
 			}
+		}
+		if securityContext.Sysctls != nil {
+			allErrs = append(allErrs, validateSysctls(securityContext.Sysctls, fldPath.Child("sysctl"))...)
 		}
 	}
 
