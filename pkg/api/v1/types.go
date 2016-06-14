@@ -1750,6 +1750,14 @@ type PodSpec struct {
 	Subdomain string `json:"subdomain,omitempty" protobuf:"bytes,17,opt,name=subdomain"`
 }
 
+// Sysctl defines a kernel parameter to be set
+type Sysctl struct {
+    // Name of a property to set
+    Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+    // Value of a property to set
+    Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
+}
+
 // PodSecurityContext holds pod-level security attributes and common container settings.
 // Some fields are also present in container.securityContext.  Field values of
 // container.securityContext take precedence over field values of PodSecurityContext.
@@ -1787,6 +1795,9 @@ type PodSecurityContext struct {
 	//
 	// If unset, the Kubelet will not modify the ownership and permissions of any volume.
 	FSGroup *int64 `json:"fsGroup,omitempty" protobuf:"varint,5,opt,name=fsGroup"`
+	// Sysctls hold a list of namespaced sysctls used for the pod. Pods with unsupported
+	// sysctls (by the container runtime) might fail to launch.
+	Sysctls []Sysctl `json:"sysctls,omitempty" protobuf:"bytes,6,rep,name=sysctls"`
 }
 
 // PodStatus represents information about the status of a pod. Status may trail the actual
