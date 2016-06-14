@@ -628,6 +628,11 @@ func (dm *DockerManager) runContainer(
 		}
 	}
 
+	sysctls := make(map[string]string, len(pod.Spec.SecurityContext.Sysctls))
+	for _, c := range pod.Spec.SecurityContext.Sysctls {
+		sysctls[c.Name] = c.Value
+	}
+
 	hc := &dockercontainer.HostConfig{
 		Binds:          binds,
 		NetworkMode:    dockercontainer.NetworkMode(netMode),
@@ -642,7 +647,7 @@ func (dm *DockerManager) runContainer(
 			Devices:    devices,
 		},
 		SecurityOpt: securityOpts,
-		Sysctls:     map[string]string{}, // TODO: copy the pod.Spec.SecurityContext.SysCtls here when ready
+		Sysctls:     sysctls,
 	}
 
 	// If current api version is newer than docker 1.10 requested, set OomScoreAdj to HostConfig

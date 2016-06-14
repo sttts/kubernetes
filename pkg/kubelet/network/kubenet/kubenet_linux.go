@@ -388,8 +388,13 @@ func (plugin *kubenetNetworkPlugin) SetUpPod(namespace string, name string, id k
 	}
 
 	// Set sysctls if requested, using the CNI tuning plugin
-	if false { // TODO: check whether sysctls are set in the SecurityContext of the pod
-		sysctlsJson, err := json.Marshal(map[string]string{}) // TODO: fill in pod sysctls here
+	if false {
+		sysctls := make(map[string]string, len(pod.Spec.SecurityContext.Sysctls))
+		for _, c := range pod.Spec.SecurityContext.Sysctls {
+			sysctls[c.Name] = c.Value
+		}
+
+		sysctlsJson, err := json.Marshal(sysctls)
 		if err != nil {
 			return fmt.Errorf("Failed to marshal sysctls into JSON: %v", err)
 		}
