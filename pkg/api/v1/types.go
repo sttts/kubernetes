@@ -1752,10 +1752,10 @@ type PodSpec struct {
 
 // Sysctl defines a kernel parameter to be set
 type Sysctl struct {
-    // Name of a property to set
-    Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-    // Value of a property to set
-    Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
+	// Name of a property to set
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Value of a property to set
+	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
 }
 
 // PodSecurityContext holds pod-level security attributes and common container settings.

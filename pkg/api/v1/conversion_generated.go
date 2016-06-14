@@ -309,6 +309,8 @@ func init() {
 		Convert_api_ServiceSpec_To_v1_ServiceSpec,
 		Convert_v1_ServiceStatus_To_api_ServiceStatus,
 		Convert_api_ServiceStatus_To_v1_ServiceStatus,
+		Convert_v1_Sysctl_To_api_Sysctl,
+		Convert_api_Sysctl_To_v1_Sysctl,
 		Convert_v1_TCPSocketAction_To_api_TCPSocketAction,
 		Convert_api_TCPSocketAction_To_v1_TCPSocketAction,
 		Convert_v1_Taint_To_api_Taint,
@@ -4737,6 +4739,17 @@ func autoConvert_v1_PodSecurityContext_To_api_PodSecurityContext(in *PodSecurity
 	out.RunAsNonRoot = in.RunAsNonRoot
 	out.SupplementalGroups = in.SupplementalGroups
 	out.FSGroup = in.FSGroup
+	if in.Sysctls != nil {
+		in, out := &in.Sysctls, &out.Sysctls
+		*out = make([]api.Sysctl, len(*in))
+		for i := range *in {
+			if err := Convert_v1_Sysctl_To_api_Sysctl(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Sysctls = nil
+	}
 	return nil
 }
 
@@ -6155,6 +6168,26 @@ func autoConvert_api_ServiceStatus_To_v1_ServiceStatus(in *api.ServiceStatus, ou
 
 func Convert_api_ServiceStatus_To_v1_ServiceStatus(in *api.ServiceStatus, out *ServiceStatus, s conversion.Scope) error {
 	return autoConvert_api_ServiceStatus_To_v1_ServiceStatus(in, out, s)
+}
+
+func autoConvert_v1_Sysctl_To_api_Sysctl(in *Sysctl, out *api.Sysctl, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Value = in.Value
+	return nil
+}
+
+func Convert_v1_Sysctl_To_api_Sysctl(in *Sysctl, out *api.Sysctl, s conversion.Scope) error {
+	return autoConvert_v1_Sysctl_To_api_Sysctl(in, out, s)
+}
+
+func autoConvert_api_Sysctl_To_v1_Sysctl(in *api.Sysctl, out *Sysctl, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Value = in.Value
+	return nil
+}
+
+func Convert_api_Sysctl_To_v1_Sysctl(in *api.Sysctl, out *Sysctl, s conversion.Scope) error {
+	return autoConvert_api_Sysctl_To_v1_Sysctl(in, out, s)
 }
 
 func autoConvert_v1_TCPSocketAction_To_api_TCPSocketAction(in *TCPSocketAction, out *api.TCPSocketAction, s conversion.Scope) error {
