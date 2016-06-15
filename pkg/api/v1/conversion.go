@@ -622,14 +622,16 @@ func Convert_api_PodSecurityContext_To_v1_PodSecurityContext(in *api.PodSecurity
 	out.RunAsUser = in.RunAsUser
 	out.RunAsNonRoot = in.RunAsNonRoot
 	out.FSGroup = in.FSGroup
-	if len(in.Sysctls) > 0 {
-		out.Sysctls = make([]Sysctl, 0, len(in.Sysctls))
-		for i := range in.Sysctls {
-			out.Sysctls = append(out.Sysctls, Sysctl{
-				in.Sysctls[i].Name,
-				in.Sysctls[i].Value,
-			})
+	if in.Sysctls != nil {
+		in, out := &in.Sysctls, &out.Sysctls
+		*out = make([]Sysctl, len(*in))
+		for i := range *in {
+			if err := Convert_api_Sysctl_To_v1_Sysctl(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
 		}
+	} else {
+		out.Sysctls = nil
 	}
 
 	return nil
@@ -648,6 +650,18 @@ func Convert_v1_PodSecurityContext_To_api_PodSecurityContext(in *PodSecurityCont
 	out.RunAsUser = in.RunAsUser
 	out.RunAsNonRoot = in.RunAsNonRoot
 	out.FSGroup = in.FSGroup
+	if in.Sysctls != nil {
+		in, out := &in.Sysctls, &out.Sysctls
+		*out = make([]api.Sysctl, len(*in))
+		for i := range *in {
+			if err := Convert_v1_Sysctl_To_api_Sysctl(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Sysctls = nil
+	}
+
 	return nil
 }
 
