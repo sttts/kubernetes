@@ -622,6 +622,16 @@ func Convert_api_PodSecurityContext_To_v1_PodSecurityContext(in *api.PodSecurity
 	out.RunAsUser = in.RunAsUser
 	out.RunAsNonRoot = in.RunAsNonRoot
 	out.FSGroup = in.FSGroup
+	if len(in.Sysctls) > 0 {
+		out.Sysctls = make([]Sysctl, 0, len(in.Sysctls))
+		for i := range in.Sysctls {
+			out.Sysctls = append(out.Sysctls, Sysctl{
+				in.Sysctls[i].Name,
+				in.Sysctls[i].Value,
+			})
+		}
+	}
+
 	return nil
 }
 
