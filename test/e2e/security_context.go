@@ -95,6 +95,38 @@ var _ = framework.KubeDescribe("Security Context [Feature:SecurityContext]", fun
 		})
 	})
 
+	It("should support sysctls", func() {
+		pod := scTestPod(false, false)
+		pod.Spec.SecurityContext.Sysctls = []api.Sysctl{
+			{
+				Name:  "net.ipv4.ip_forward",
+				Value: "2",
+			},
+		}
+		pod.Spec.Containers[0].Command = []string{"/bin/sysctl", "net.ipv4.ip_forward"}
+
+		f.TestContainerOutput("pod.Spec.SecurityContext.Sysctls", pod, 0, []string{
+			"net.ipv4.ip_forward = 2",
+		})
+	})
+
+	It("should reject invalid sysctls", func() {
+		pod := scTestPod(false, false)
+		pod.Spec.SecurityContext.Sysctls = []api.Sysctl{
+			{
+				Name:  "foo",
+				Value: "bar",
+			},
+		}
+
+		client := f.Client.Pods(f.Namespace.Name)
+		_, err := client.Create(pod)
+		defer client.Delete(pod.Name, nil)
+
+		Expect(err).NotTo(BeNil())
+		Expect(err.Error()).To(ContainSubstring("is not whitelisted"))
+	})
+
 	It("should support volume SELinux relabeling", func() {
 		testPodSELinuxLabeling(f, false, false)
 	})
