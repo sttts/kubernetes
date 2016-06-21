@@ -388,7 +388,7 @@ func (plugin *kubenetNetworkPlugin) SetUpPod(namespace string, name string, id k
 	}
 
 	// Set sysctls if requested, using the CNI tuning plugin
-	if false {
+	if pod.Spec.SecurityContext != nil && len(pod.Spec.SecurityContext.Sysctls) > 0 {
 		sysctls := make(map[string]string, len(pod.Spec.SecurityContext.Sysctls))
 		for _, c := range pod.Spec.SecurityContext.Sysctls {
 			sysctls[c.Name] = c.Value
