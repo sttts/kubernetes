@@ -1875,13 +1875,23 @@ func ValidateSeccompPodAnnotations(annotations map[string]string, fldPath *field
 	return allErrs
 }
 
+const SysctlSegmentFmt string = "[a-z0-9]([_a-z0-9]*[a-z0-9])?"
+const SysctlFmt string =  "(" + SysctlSegmentFmt + "\\.)*" + SysctlSegmentFmt
+const SysctlMaxLength int = 253
+
+var sysctlRegexp = regexp.MustCompile("^" + SysctlFmt + "$")
+
+func IsValidSysctlName(name string) bool {
+	return sysctlRegexp.MatchString(name)
+}
+
 func validateSysctls(sysctls []api.Sysctl, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	for i, s := range sysctls {
 		if len(s.Name) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "sysctl:name"))
-		} else if !validation.IsWhitelistedSysctlOpt(s.Name) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("name"), s.Name, "is not whitelisted"))
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), ""))
+		} else if !IsValidSysctlName(s.Name) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("name"), s.Name, fmt.Sprintf("must have at most %d characters and match regex %s", SysctlMaxLength, SysctlFmt)))
 		}
 	}
 	return allErrs
