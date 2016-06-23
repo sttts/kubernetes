@@ -1910,7 +1910,7 @@ func TestValidatePodSpec(t *testing.T) {
 		},
 		{
 			SecurityContext: &api.PodSecurityContext{
-				Sysctls: []api.Sysctl{{Name: "test", Value: "4"}}},
+				Sysctls: []api.Sysctl{{Name: "net.ipv4.route.error_cost", Value: "1000"}}},
 			Volumes:       []api.Volume{{Name: "vol", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}}},
 			Containers:    []api.Container{{Name: "ctr", Image: "image", ImagePullPolicy: "IfNotPresent"}},
 			RestartPolicy: api.RestartPolicyAlways,
@@ -2046,7 +2046,7 @@ func TestValidatePodSpec(t *testing.T) {
 		},
 		"bad sysctl name": {
 			SecurityContext: &api.PodSecurityContext{
-				Sysctls: []api.Sysctl{{Name: "test", Value: "4"}},
+				Sysctls: []api.Sysctl{{Name: "foo-bar", Value: "4"}},
 			},
 			Volumes:       []api.Volume{{Name: "vol", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}}},
 			Containers:    []api.Container{{Name: "ctr", Image: "image", ImagePullPolicy: "IfNotPresent"}},
@@ -6246,5 +6246,48 @@ func TestValidateHasLabel(t *testing.T) {
 	}
 	if errs := ValidateHasLabel(wrongValueCase, field.NewPath("field"), "foo", "bar"); len(errs) == 0 {
 		t.Errorf("expected failure")
+	}
+}
+
+func TestIsValidSysctlName(t *testing.T) {
+	valid := []string{
+		"a.b.c.d",
+		"a",
+		"a_b",
+		"abc",
+		"abc.def",
+	}
+	invalid := []string{
+		"",
+		"*",
+		"ä",
+		"a_",
+		"_",
+		"__",
+		"_a",
+		"_a._b",
+		"-",
+		".",
+		"a.",
+		".a",
+		"a.b.",
+		"a*.b",
+		"a*b",
+		"*a",
+		"a.*",
+		"*",
+		"abc*",
+		"a.abc*",
+		"a.b.*",
+	}
+	for _, s := range valid {
+		if !IsValidSysctlName(s) {
+			t.Errorf("%q expected to be a valid sysctl name", s)
+		}
+	}
+	for _, s := range invalid {
+		if IsValidSysctlName(s) {
+			t.Errorf("%q expected to be an invalid sysctl name", s)
+		}
 	}
 }

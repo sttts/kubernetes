@@ -26,7 +26,9 @@ import (
 	"fmt"
 
 	"k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/util"
+	"k8s.io/kubernetes/pkg/util/wait"
 	"k8s.io/kubernetes/test/e2e/framework"
 
 	. "github.com/onsi/ginkgo"
@@ -113,17 +115,55 @@ var _ = framework.KubeDescribe("Security Context [Feature:SecurityContext]", fun
 		pod := scTestPod(false, false)
 		pod.Spec.SecurityContext.Sysctls = []api.Sysctl{
 			{
-				Name:  "foo",
+				Name:  "foo-bar",
 				Value: "bar",
 			},
 		}
 
+		By("Creating a pod with foo-bar sysctl")
 		client := f.Client.Pods(f.Namespace.Name)
 		_, err := client.Create(pod)
 		defer client.Delete(pod.Name, nil)
 
 		Expect(err).NotTo(BeNil())
-		Expect(err.Error()).To(ContainSubstring("is not whitelisted"))
+		Expect(err.Error()).To(ContainSubstring(`Invalid value: "foo-bar"`))
+	})
+
+	It("should refuse to launch with non-namespaced sysctls", func() {
+		sysctl := "fs.quota.syncs"
+		pod := scTestPod(false, false)
+		pod.Spec.SecurityContext.Sysctls = []api.Sysctl{
+			{
+				Name:  sysctl,
+				Value: "1000",
+			},
+		}
+
+		By(fmt.Sprintf("Creating a pod with a non-namespaced sysctl %s", sysctl))
+		client := f.Client.Pods(f.Namespace.Name)
+		pod, err := client.Create(pod)
+		defer client.Delete(pod.Name, nil)
+
+		By("Watching for error events")
+		var failEv api.Event
+		err = wait.Poll(framework.Poll, framework.PodStartTimeout, func() (bool, error) {
+			events, err := f.Client.Events(f.Namespace.Name).Search(pod)
+			if err != nil {
+				return false, fmt.Errorf("error in listing events: %s", err)
+			}
+			for _, e := range events.Items {
+				if e.Reason == container.FailedSync {
+					failEv = e
+					return true, nil
+				}
+			}
+			return false, nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		// the exact error message might depend on the container runtime. But
+		// at least it should say something about the non-namespaces sysctl.
+		Expect(failEv.Message).Should(ContainSubstring(sysctl))
 	})
 
 	It("should support volume SELinux relabeling", func() {
