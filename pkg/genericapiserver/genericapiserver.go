@@ -246,10 +246,12 @@ type GenericAPIServer struct {
 }
 
 func (s *GenericAPIServer) StorageDecorator() generic.StorageDecorator {
+	ds := []generic.StorageDecorator{}
 	if s.enableWatchCache {
-		return registry.StorageWithCacher
+		ds = append(ds, registry.StorageWithCacher)
 	}
-	return generic.UndecoratedStorage
+	ds = append(ds, AuditingDecorator)
+	return generic.ConcatStorageDecorators(ds...)
 }
 
 // setDefaults fills in any fields not set that are required to have valid data.

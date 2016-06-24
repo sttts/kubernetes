@@ -42,3 +42,22 @@ func UndecoratedStorage(
 	newListFunc func() runtime.Object) storage.Interface {
 	return storageInterface
 }
+
+// ConcatStorageDecorators concatenates a list of decorators, starting with
+// the first as the most inner and the last as the most outer decorator.
+func ConcatStorageDecorators(ds ...StorageDecorator) StorageDecorator {
+	return func(
+		storageInterface storage.Interface,
+		capacity int,
+		objectType runtime.Object,
+		resourcePrefix string,
+		scopeStrategy rest.NamespaceScopedStrategy,
+		newListFunc func() runtime.Object,
+	) storage.Interface {
+		s := storageInterface
+		for _, d := range ds {
+			s = d(s, capacity, objectType, resourcePrefix, scopeStrategy, newListFunc)
+		}
+		return s
+	}
+}
