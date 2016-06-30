@@ -42,6 +42,7 @@ import (
 	"k8s.io/kubernetes/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/util/validation"
 	"k8s.io/kubernetes/pkg/util/validation/field"
+	sysctlwhitelist "k8s.io/kubernetes/pkg/kubelet/sysctls"
 )
 
 // TODO: delete this global variable when we enable the validation of common
@@ -1892,6 +1893,8 @@ func validateSysctls(sysctls []api.Sysctl, fldPath *field.Path) field.ErrorList 
 			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), ""))
 		} else if !IsValidSysctlName(s.Name) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("name"), s.Name, fmt.Sprintf("must have at most %d characters and match regex %s", SysctlMaxLength, SysctlFmt)))
+		} else if !sysctlwhitelist.Whitelisted(s.Name) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("sysctl %q cannot be set in a pod", s.Name)))
 		}
 	}
 	return allErrs

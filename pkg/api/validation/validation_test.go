@@ -1908,7 +1908,7 @@ func TestValidatePodSpec(t *testing.T) {
 			RestartPolicy: api.RestartPolicyAlways,
 			DNSPolicy:     api.DNSClusterFirst,
 		},
-		{
+		{ // Populate with whitelisted sysctl.
 			SecurityContext: &api.PodSecurityContext{
 				Sysctls: []api.Sysctl{{Name: "net.ipv4.route.error_cost", Value: "1000"}}},
 			Volumes:       []api.Volume{{Name: "vol", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}}},
@@ -2046,7 +2046,7 @@ func TestValidatePodSpec(t *testing.T) {
 		},
 		"bad sysctl name": {
 			SecurityContext: &api.PodSecurityContext{
-				Sysctls: []api.Sysctl{{Name: "foo-bar", Value: "4"}},
+				Sysctls: []api.Sysctl{{Name: "net.foo-bar", Value: "4"}},
 			},
 			Volumes:       []api.Volume{{Name: "vol", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}}},
 			Containers:    []api.Container{{Name: "ctr", Image: "image", ImagePullPolicy: "IfNotPresent"}},
@@ -6428,6 +6428,44 @@ func TestIsValidSysctlName(t *testing.T) {
 	for _, s := range invalid {
 		if IsValidSysctlName(s) {
 			t.Errorf("%q expected to be an invalid sysctl name", s)
+		}
+	}
+}
+
+func TestWhitelistedSysctls(t *testing.T) {
+	valid := []string{
+		"net.foo.bar",
+		"kernel.shmmax",
+	}
+	invalid := []string{
+		"net.foo.bar",
+		"kernel.shmmax",
+		"vm.swappiness",
+		"kernel.hostname",
+	}
+
+	sysctls := make([]api.Sysctl, len(valid))
+	for i, sysctl := range valid {
+		sysctls[i].Name = sysctl
+	}
+	errs := validateSysctls(sysctls, field.NewPath("foo"))
+	if len(errs) != 0 {
+		t.Errorf("unexpected validation errors: %v", errs)
+	}
+
+	sysctls = make([]api.Sysctl, len(invalid))
+	for i, sysctl := range invalid {
+		sysctls[i].Name = sysctl
+	}
+	errs = validateSysctls(sysctls, field.NewPath("foo"))
+	if len(errs) != 2 {
+		t.Errorf("expected 2 validation errors. Got: %v", errs)
+	} else {
+		if got, expected := errs[0].Error(), "foo"; !strings.Contains(got, expected) {
+			t.Error("unexpected errors: expected=%q, got=%q", expected, got)
+		}
+		if got, expected := errs[1].Error(), "foo"; !strings.Contains(got, expected) {
+			t.Error("unexpected errors: expected=%q, got=%q", expected, got)
 		}
 	}
 }
