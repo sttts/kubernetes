@@ -2496,6 +2496,21 @@ func (m *PodSecurityPolicySpec) MarshalTo(data []byte) (int, error) {
 		data[i] = 0
 	}
 	i++
+	if len(m.Sysctls) > 0 {
+		for _, s := range m.Sysctls {
+			data[i] = 0x7a
+			i++
+			l = len(s)
+			for l >= 1<<7 {
+				data[i] = uint8(uint64(l)&0x7f | 0x80)
+				l >>= 7
+				i++
+			}
+			data[i] = uint8(l)
+			i++
+			i += copy(data[i:], s)
+		}
+	}
 	return i, nil
 }
 
@@ -3856,6 +3871,12 @@ func (m *PodSecurityPolicySpec) Size() (n int) {
 	l = m.FSGroup.Size()
 	n += 1 + l + sovGenerated(uint64(l))
 	n += 2
+	if len(m.Sysctls) > 0 {
+		for _, s := range m.Sysctls {
+			l = len(s)
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -10763,6 +10784,35 @@ func (m *PodSecurityPolicySpec) Unmarshal(data []byte) error {
 				}
 			}
 			m.ReadOnlyRootFilesystem = bool(v != 0)
+		case 15:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sysctls", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := data[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Sysctls = append(m.Sysctls, string(data[iNdEx:postIndex]))
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(data[iNdEx:])

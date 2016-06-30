@@ -173,6 +173,7 @@ func init() {
 		DeepCopy_v1_ServiceProxyOptions,
 		DeepCopy_v1_ServiceSpec,
 		DeepCopy_v1_ServiceStatus,
+		DeepCopy_v1_Sysctl,
 		DeepCopy_v1_TCPSocketAction,
 		DeepCopy_v1_Taint,
 		DeepCopy_v1_Toleration,
@@ -2241,6 +2242,17 @@ func DeepCopy_v1_PodSecurityContext(in PodSecurityContext, out *PodSecurityConte
 	} else {
 		out.FSGroup = nil
 	}
+	if in.Sysctls != nil {
+		in, out := in.Sysctls, &out.Sysctls
+		*out = make([]Sysctl, len(in))
+		for i := range in {
+			if err := DeepCopy_v1_Sysctl(in[i], &(*out)[i], c); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Sysctls = nil
+	}
 	return nil
 }
 
@@ -3021,6 +3033,12 @@ func DeepCopy_v1_ServiceStatus(in ServiceStatus, out *ServiceStatus, c *conversi
 	if err := DeepCopy_v1_LoadBalancerStatus(in.LoadBalancer, &out.LoadBalancer, c); err != nil {
 		return err
 	}
+	return nil
+}
+
+func DeepCopy_v1_Sysctl(in Sysctl, out *Sysctl, c *conversion.Cloner) error {
+	out.Name = in.Name
+	out.Value = in.Value
 	return nil
 }
 

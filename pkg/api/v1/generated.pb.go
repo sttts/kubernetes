@@ -166,6 +166,7 @@ limitations under the License.
 		ServiceProxyOptions
 		ServiceSpec
 		ServiceStatus
+		Sysctl
 		TCPSocketAction
 		Taint
 		Toleration
@@ -758,6 +759,10 @@ func (m *ServiceStatus) Reset()         { *m = ServiceStatus{} }
 func (m *ServiceStatus) String() string { return proto.CompactTextString(m) }
 func (*ServiceStatus) ProtoMessage()    {}
 
+func (m *Sysctl) Reset()         { *m = Sysctl{} }
+func (m *Sysctl) String() string { return proto.CompactTextString(m) }
+func (*Sysctl) ProtoMessage()    {}
+
 func (m *TCPSocketAction) Reset()         { *m = TCPSocketAction{} }
 func (m *TCPSocketAction) String() string { return proto.CompactTextString(m) }
 func (*TCPSocketAction) ProtoMessage()    {}
@@ -932,6 +937,7 @@ func init() {
 	proto.RegisterType((*ServiceProxyOptions)(nil), "k8s.io.kubernetes.pkg.api.v1.ServiceProxyOptions")
 	proto.RegisterType((*ServiceSpec)(nil), "k8s.io.kubernetes.pkg.api.v1.ServiceSpec")
 	proto.RegisterType((*ServiceStatus)(nil), "k8s.io.kubernetes.pkg.api.v1.ServiceStatus")
+	proto.RegisterType((*Sysctl)(nil), "k8s.io.kubernetes.pkg.api.v1.Sysctl")
 	proto.RegisterType((*TCPSocketAction)(nil), "k8s.io.kubernetes.pkg.api.v1.TCPSocketAction")
 	proto.RegisterType((*Taint)(nil), "k8s.io.kubernetes.pkg.api.v1.Taint")
 	proto.RegisterType((*Toleration)(nil), "k8s.io.kubernetes.pkg.api.v1.Toleration")
@@ -5622,6 +5628,18 @@ func (m *PodSecurityContext) MarshalTo(data []byte) (int, error) {
 		i++
 		i = encodeVarintGenerated(data, i, uint64(*m.FSGroup))
 	}
+	if len(m.Sysctls) > 0 {
+		for _, msg := range m.Sysctls {
+			data[i] = 0x32
+			i++
+			i = encodeVarintGenerated(data, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(data[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
 	return i, nil
 }
 
@@ -7278,6 +7296,32 @@ func (m *ServiceStatus) MarshalTo(data []byte) (int, error) {
 		return 0, err
 	}
 	i += n155
+	return i, nil
+}
+
+func (m *Sysctl) Marshal() (data []byte, err error) {
+	size := m.Size()
+	data = make([]byte, size)
+	n, err := m.MarshalTo(data)
+	if err != nil {
+		return nil, err
+	}
+	return data[:n], nil
+}
+
+func (m *Sysctl) MarshalTo(data []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	data[i] = 0xa
+	i++
+	i = encodeVarintGenerated(data, i, uint64(len(m.Name)))
+	i += copy(data[i:], m.Name)
+	data[i] = 0x12
+	i++
+	i = encodeVarintGenerated(data, i, uint64(len(m.Value)))
+	i += copy(data[i:], m.Value)
 	return i, nil
 }
 
@@ -9467,6 +9511,12 @@ func (m *PodSecurityContext) Size() (n int) {
 	if m.FSGroup != nil {
 		n += 1 + sovGenerated(uint64(*m.FSGroup))
 	}
+	if len(m.Sysctls) > 0 {
+		for _, e := range m.Sysctls {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -10077,6 +10127,16 @@ func (m *ServiceStatus) Size() (n int) {
 	var l int
 	_ = l
 	l = m.LoadBalancer.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
+func (m *Sysctl) Size() (n int) {
+	var l int
+	_ = l
+	l = len(m.Name)
+	n += 1 + l + sovGenerated(uint64(l))
+	l = len(m.Value)
 	n += 1 + l + sovGenerated(uint64(l))
 	return n
 }
@@ -26926,6 +26986,37 @@ func (m *PodSecurityContext) Unmarshal(data []byte) error {
 				}
 			}
 			m.FSGroup = &v
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sysctls", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := data[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Sysctls = append(m.Sysctls, Sysctl{})
+			if err := m.Sysctls[len(m.Sysctls)-1].Unmarshal(data[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(data[iNdEx:])
@@ -32967,6 +33058,114 @@ func (m *ServiceStatus) Unmarshal(data []byte) error {
 			if err := m.LoadBalancer.Unmarshal(data[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(data[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Sysctl) Unmarshal(data []byte) error {
+	l := len(data)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := data[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Sysctl: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Sysctl: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := data[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(data[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := data[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Value = string(data[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
