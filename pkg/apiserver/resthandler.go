@@ -35,6 +35,7 @@ import (
 	"k8s.io/kubernetes/pkg/fields"
 	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/util"
+	"k8s.io/kubernetes/pkg/util/diff"
 	utilruntime "k8s.io/kubernetes/pkg/util/runtime"
 	"k8s.io/kubernetes/pkg/util/strategicpatch"
 
@@ -506,6 +507,8 @@ func PatchResource(r rest.Patcher, scope RequestScope, typer runtime.ObjectTyper
 			return
 		}
 
+		glog.V(2).Infof("AUDIT %s: PATCH %s", req.Request.URL.Path, patchJS)
+
 		if err := setSelfLink(result, req, scope.Namer); err != nil {
 			scope.err(err, res.ResponseWriter, req.Request)
 			return
@@ -713,6 +716,11 @@ func UpdateResource(r rest.Updater, scope RequestScope, typer runtime.ObjectType
 
 		trace.Step("About to store object in database")
 		wasCreated := false
+		var origObj runtime.Object
+		transformers = append(transformers, func(ctx api.Context, newObj, oldObj runtime.Object) (runtime.Object, error) {
+			origObj = oldObj
+			return newObj, nil
+		})
 		result, err := finishRequest(timeout, func() (runtime.Object, error) {
 			obj, created, err := r.Update(ctx, name, rest.DefaultUpdatedObjectInfo(obj, scope.Copier, transformers...))
 			wasCreated = created
@@ -729,6 +737,15 @@ func UpdateResource(r rest.Updater, scope RequestScope, typer runtime.ObjectType
 			return
 		}
 		trace.Step("Self-link added")
+
+		if scope.Subresource != "status" {
+			if origObj == nil {
+				newObj, _ := json.Marshal(result)
+				glog.V(2).Infof("AUDIT %s: nil => %s", newObj)
+			} else {
+				glog.V(2).Infof("AUDIT %s: %s", req.Request.URL.Path, diff.ObjectDiff(origObj, result))
+			}
+		}
 
 		status := http.StatusOK
 		if wasCreated {
