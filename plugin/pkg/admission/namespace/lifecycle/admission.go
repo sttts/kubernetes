@@ -217,6 +217,11 @@ func (l *lifecycle) Validate() error {
 // resources because returning "not found" errors allows someone to search for the "people I'm going to fire in 2017" namespace.
 var accessReviewResources = map[schema.GroupResource]bool{
 	schema.GroupResource{Group: "authorization.k8s.io", Resource: "localsubjectaccessreviews"}: true,
+	schema.GroupResource{Group: "", Resource: "subjectaccessreviews"}:                          true,
+	schema.GroupResource{Group: "", Resource: "localsubjectaccessreviews"}:                     true,
+	schema.GroupResource{Group: "", Resource: "resourceaccessreviews"}:                         true,
+	schema.GroupResource{Group: "", Resource: "localresourceaccessreviews"}:                    true,
+	schema.GroupResource{Group: "", Resource: "selfsubjectrulesreviews"}:                       true,
 }
 
 func isAccessReview(a admission.Attributes) bool {
