@@ -390,7 +390,7 @@ func TestGetServerAddressByClientCIDRs(t *testing.T) {
 	internalAddressCIDRMap := []unversioned.ServerAddressByClientCIDR{
 		publicAddressCIDRMap[0],
 		{
-			ClientCIDR:    s.ServiceClusterIPRange.String(),
+			ClientCIDR:    s.serviceClusterIPRange.String(),
 			ServerAddress: net.JoinHostPort(s.ServiceReadWriteIP.String(), strconv.Itoa(s.ServiceReadWritePort)),
 		},
 	}

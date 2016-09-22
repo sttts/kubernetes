@@ -585,8 +585,12 @@ func initThirdParty(t *testing.T, version, name string) (*Master, *etcdtesting.E
 }
 
 func initThirdPartyMultiple(t *testing.T, versions, names []string) (*Master, *etcdtesting.EtcdTestServer, *httptest.Server, *assert.Assertions) {
-	master, etcdserver, _, assert := newMaster(t)
-	_, master.ServiceClusterIPRange, _ = net.ParseCIDR("10.0.0.0/24")
+	_, etcdserver, config, assert := setUp(t)
+	_, config.ServiceClusterIPRange, _ = net.ParseCIDR("10.0.0.0/24")
+	master, err := New(&config)
+	if err != nil {
+		t.Fatalf("Error in bringing up the master: %v", err)
+	}
 
 	for ix := range names {
 		api := &extensions.ThirdPartyResource{

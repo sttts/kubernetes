@@ -372,7 +372,7 @@ func (m *Master) initV1ResourcesStorage(c *Config) {
 	m.serviceRegistry = service.NewRegistry(serviceRESTStorage)
 
 	var serviceClusterIPRegistry rangeallocation.RangeRegistry
-	serviceClusterIPRange := m.ServiceClusterIPRange
+	serviceClusterIPRange := m.ServiceClusterIPRange()
 	if serviceClusterIPRange == nil {
 		glog.Fatalf("service clusterIPRange is nil")
 		return
@@ -485,7 +485,7 @@ func (m *Master) NewBootstrapController(endpointReconcilerConfig EndpointReconci
 		SystemNamespacesInterval: 1 * time.Minute,
 
 		ServiceClusterIPRegistry: m.serviceClusterIPAllocator,
-		ServiceClusterIPRange:    m.ServiceClusterIPRange,
+		ServiceClusterIPRange:    m.ServiceClusterIPRange(),
 		ServiceClusterIPInterval: 3 * time.Minute,
 
 		ServiceNodePortRegistry: m.serviceNodePortAllocator,

@@ -92,7 +92,7 @@ type GenericAPIServer struct {
 	// TODO refactor this so that `master.go` drives the value used for discovery and the value here isn't exposed.
 	// that structure will force usage in the correct direction where the "owner" of the value is the source of
 	// truth for its value.
-	ServiceClusterIPRange *net.IPNet
+	serviceClusterIPRange *net.IPNet
 
 	// ServiceNodePortRange is only used for `master.go` to construct its RESTStorage for the legacy API group
 	// TODO refactor this closer to the point of use.
@@ -173,6 +173,10 @@ type GenericAPIServer struct {
 	postStartHookLock    sync.Mutex
 	postStartHooksCalled bool
 	openAPIDefinitions   *common.OpenAPIDefinitions
+}
+
+func (s *GenericAPIServer) ServiceClusterIPRange() *net.IPNet {
+	return s.serviceClusterIPRange
 }
 
 func (s *GenericAPIServer) StorageDecorator() generic.StorageDecorator {
@@ -475,14 +479,13 @@ func (s *GenericAPIServer) getServerAddressByClientCIDRs(req *http.Request) []un
 	addressCIDRMap := []unversioned.ServerAddressByClientCIDR{
 		{
 			ClientCIDR: "0.0.0.0/0",
-
 			ServerAddress: s.ExternalAddress,
 		},
 	}
 
 	// Add internal CIDR if the request came from internal IP.
 	clientIP := utilnet.GetClientIP(req)
-	clusterCIDR := s.ServiceClusterIPRange
+	clusterCIDR := s.serviceClusterIPRange
 	if clusterCIDR.Contains(clientIP) {
 		addressCIDRMap = append(addressCIDRMap, unversioned.ServerAddressByClientCIDR{
 			ClientCIDR:    clusterCIDR.String(),

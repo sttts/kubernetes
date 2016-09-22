@@ -286,7 +286,7 @@ func (c Config) New() (*GenericAPIServer, error) {
 	c.setDefaults()
 
 	s := &GenericAPIServer{
-		ServiceClusterIPRange: c.ServiceClusterIPRange,
+		serviceClusterIPRange: c.ServiceClusterIPRange,
 		ServiceNodePortRange:  c.ServiceNodePortRange,
 		legacyAPIPrefix:       c.APIPrefix,
 		apiPrefix:             c.APIGroupPrefix,
