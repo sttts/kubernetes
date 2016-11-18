@@ -182,6 +182,8 @@ __custom_func() {
 	valid_resources = `Valid resource types include:
 
     * all
+    * buildconfigs (aka 'bc')
+    * builds
     * certificatesigningrequests (aka 'csr')
     * clusters (valid only for federation apiservers)
     * clusterrolebindings
@@ -190,10 +192,15 @@ __custom_func() {
     * configmaps (aka 'cm')
     * daemonsets (aka 'ds')
     * deployments (aka 'deploy')
+    * deploymentconfigs (aka 'dc')
     * endpoints (aka 'ep')
     * events (aka 'ev')
     * horizontalpodautoscalers (aka 'hpa')
+    * imagestreamimages (aka 'isimage')
+    * imagestreams (aka 'is')
+    * imagestreamtags (aka 'istag')
     * ingresses (aka 'ing')
+    * groups
     * jobs
     * limitranges (aka 'limits')
     * namespaces (aka 'ns')
@@ -205,15 +212,19 @@ __custom_func() {
     * poddisruptionbudgets (aka 'pdb')
     * podsecuritypolicies (aka 'psp')
     * podtemplates
+    * policies
+    * projects
     * replicasets (aka 'rs')
     * replicationcontrollers (aka 'rc')
     * resourcequotas (aka 'quota')
     * rolebindings
     * roles
+    * routes
     * secrets
     * serviceaccounts (aka 'sa')
     * services (aka 'svc')
     * statefulsets
+    * users
     * storageclasses
     * thirdpartyresources
     `
