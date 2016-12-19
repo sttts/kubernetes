@@ -138,9 +138,34 @@ var ResourcesShortcutStatic = []ResourceShortcuts{
 		ShortForm: schema.GroupResource{Group: "extensions", Resource: "psp"},
 		LongForm:  schema.GroupResource{Group: "extensions", Resource: "podSecurityPolicies"},
 	},
+
 	{
 		ShortForm: schema.GroupResource{Resource: "scc"},
 		LongForm:  schema.GroupResource{Resource: "securityContextConstraints"},
+	},
+	{
+		ShortForm: schema.GroupResource{Resource: "dc"},
+		LongForm:  schema.GroupResource{Resource: "deploymentConfigs"},
+	},
+	{
+		ShortForm: schema.GroupResource{Resource: "bc"},
+		LongForm:  schema.GroupResource{Resource: "buildConfigs"},
+	},
+	{
+		ShortForm: schema.GroupResource{Resource: "is"},
+		LongForm:  schema.GroupResource{Resource: "imageStreams"},
+	},
+	{
+		ShortForm: schema.GroupResource{Resource: "istag"},
+		LongForm:  schema.GroupResource{Resource: "imageStreamTags"},
+	},
+	{
+		ShortForm: schema.GroupResource{Resource: "isimage"},
+		LongForm:  schema.GroupResource{Resource: "imageStreamImages"},
+	},
+	{
+		ShortForm: schema.GroupResource{Resource: "clusterquota"},
+		LongForm:  schema.GroupResource{Resource: "clusterResourceQuota"},
 	},
 }
 
