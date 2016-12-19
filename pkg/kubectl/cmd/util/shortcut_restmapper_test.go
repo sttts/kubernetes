@@ -41,13 +41,13 @@ func TestReplaceAliases(t *testing.T) {
 		{
 			name:     "all-replacement",
 			arg:      "all",
-			expected: "pods,replicationcontrollers,services,statefulsets,horizontalpodautoscalers,jobs,deployments,replicasets",
+			expected: "buildconfigs,builds,imagestreams,deploymentconfigs,deployments,horizontalpodautoscalers,replicationcontrollers,routes,services,statefulsets,jobs,replicasets,pods",
 			srvRes:   []*metav1.APIResourceList{},
 		},
 		{
 			name:     "alias-in-comma-separated-arg",
 			arg:      "all,secrets",
-			expected: "pods,replicationcontrollers,services,statefulsets,horizontalpodautoscalers,jobs,deployments,replicasets,secrets",
+			expected: "buildconfigs,builds,imagestreams,deploymentconfigs,deployments,horizontalpodautoscalers,replicationcontrollers,routes,services,statefulsets,jobs,replicasets,pods,secrets",
 			srvRes:   []*metav1.APIResourceList{},
 		},
 		{
