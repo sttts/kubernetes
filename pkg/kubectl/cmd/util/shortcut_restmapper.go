@@ -104,14 +104,19 @@ func (e shortcutExpander) RESTMappings(gk schema.GroupKind, versions ...string) 
 // Should remain exported in order to expose a current list of resources to downstream
 // composition that wants to build on the concept of 'all' for their CLIs.
 var UserResources = []schema.GroupResource{
-	{Group: "", Resource: "pods"},
+	{Group: "", Resource: "buildconfigs"},
+	{Group: "", Resource: "builds"},
+	{Group: "", Resource: "imagestreams"},
+	{Group: "", Resource: "deploymentconfigs"},
+	{Group: "extensions", Resource: "deployments"},
+	{Group: "autoscaling", Resource: "horizontalpodautoscalers"},
 	{Group: "", Resource: "replicationcontrollers"},
+	{Group: "", Resource: "routes"},
 	{Group: "", Resource: "services"},
 	{Group: "apps", Resource: "statefulsets"},
-	{Group: "autoscaling", Resource: "horizontalpodautoscalers"},
 	{Group: "batch", Resource: "jobs"},
-	{Group: "extensions", Resource: "deployments"},
 	{Group: "extensions", Resource: "replicasets"},
+	{Group: "", Resource: "pods"},
 }
 
 // AliasesForResource returns whether a resource has an alias or not
