@@ -1331,6 +1331,7 @@ func AttachContainer(client DockerInterface, containerID string, stdin io.Reader
 		Stdin:  stdin != nil,
 		Stdout: stdout != nil,
 		Stderr: stderr != nil,
+		Logs:   true,
 	}
 	sopts := StreamOptions{
 		InputStream:  stdin,
