@@ -19,7 +19,7 @@ set -o nounset
 set -o pipefail
 
 FAIL_ON_CHANGES=false
-DRY_RUN=true
+DRY_RUN=false
 while getopts ":fd" opt; do
   case $opt in
     f)
