@@ -8909,6 +8909,10 @@ func TestValidateSecurityContextConstraints(t *testing.T) {
 	allowedCapListedInRequiredDrop.RequiredDropCapabilities = []api.Capability{"foo"}
 	allowedCapListedInRequiredDrop.AllowedCapabilities = []api.Capability{"foo"}
 
+	wildcardAllowedCapAndRequiredDrop := validSCC()
+	wildcardAllowedCapAndRequiredDrop.RequiredDropCapabilities = []api.Capability{"foo"}
+	wildcardAllowedCapAndRequiredDrop.AllowedCapabilities = []api.Capability{api.CapabilityAll}
+
 	errorCases := map[string]struct {
 		scc         *api.SecurityContextConstraints
 		errorType   field.ErrorType
@@ -8993,6 +8997,11 @@ func TestValidateSecurityContextConstraints(t *testing.T) {
 			scc:         allowedCapListedInRequiredDrop,
 			errorType:   field.ErrorTypeInvalid,
 			errorDetail: "capability is listed in allowedCapabilities and requiredDropCapabilities",
+		},
+		"all caps allowed by a wildcard and required drops is not empty": {
+			scc:         wildcardAllowedCapAndRequiredDrop,
+			errorType:   field.ErrorTypeInvalid,
+			errorDetail: "required capabilities must be empty when all capabilities are allowed by a wildcard",
 		},
 	}
 
