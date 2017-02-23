@@ -67,6 +67,8 @@ echo "creating the tmp directory"
 mkdir -p "${CLIENT_REPO_TEMP}"
 cd "${CLIENT_REPO}"
 
+git status || true
+
 # there are two classes of package in staging/client-go, those which are authoritative (client-go has the only copy)
 # and those which are copied and rewritten (client-go is not authoritative).
 # we first copy out the authoritative packages to the temp location, then copy non-authoritative packages
