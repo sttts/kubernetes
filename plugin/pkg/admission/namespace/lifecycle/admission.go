@@ -223,6 +223,9 @@ var accessReviewResources = map[schema.GroupResource]bool{
 	schema.GroupResource{Group: "", Resource: "localresourceaccessreviews"}:                    true,
 	schema.GroupResource{Group: "", Resource: "selfsubjectrulesreviews"}:                       true,
 	schema.GroupResource{Group: "", Resource: "subjectrulesreviews"}:                           true,
+	schema.GroupResource{Group: "authorization.k8s.io", Resource: "subjectaccessreviews"}:      true,
+	schema.GroupResource{Group: "authorization.k8s.io", Resource: "selfsubjectaccessreviews"}:  true,
+	schema.GroupResource{Group: "authorization.k8s.io", Resource: "localsubjectaccessreviews"}: true,
 }
 
 func isAccessReview(a admission.Attributes) bool {
