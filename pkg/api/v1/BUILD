@@ -32,6 +32,7 @@ go_library(
     deps = [
         "//pkg/api:go_default_library",
         "//pkg/apis/extensions:go_default_library",
+        "//pkg/securitycontextconstraints/util:go_default_library",
         "//pkg/util:go_default_library",
         "//pkg/util/parsers:go_default_library",
         "//vendor:github.com/gogo/protobuf/proto",
@@ -67,6 +68,7 @@ go_test(
         "//pkg/api/testing/compat:go_default_library",
         "//pkg/api/v1:go_default_library",
         "//pkg/api/validation:go_default_library",
+        "//pkg/securitycontextconstraints/util:go_default_library",
         "//vendor:k8s.io/apimachinery/pkg/api/equality",
         "//vendor:k8s.io/apimachinery/pkg/api/resource",
         "//vendor:k8s.io/apimachinery/pkg/apis/meta/v1",

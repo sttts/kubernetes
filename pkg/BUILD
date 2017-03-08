@@ -104,6 +104,7 @@ filegroup(
         "//pkg/runtime:all-srcs",
         "//pkg/security:all-srcs",
         "//pkg/securitycontext:all-srcs",
+        "//pkg/securitycontextconstraints:all-srcs",
         "//pkg/serviceaccount:all-srcs",
         "//pkg/ssh:all-srcs",
         "//pkg/types:all-srcs",
