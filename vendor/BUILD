@@ -10458,6 +10458,7 @@ go_library(
     ],
     tags = ["automanaged"],
     deps = [
+        "//pkg/client/clientset_generated/internalclientset/typed/core/internalversion:go_default_library",
         "//vendor:github.com/coreos/go-systemd/daemon",
         "//vendor:github.com/emicklei/go-restful",
         "//vendor:github.com/emicklei/go-restful/swagger",
@@ -10476,6 +10477,7 @@ go_library(
         "//vendor:k8s.io/apimachinery/pkg/util/runtime",
         "//vendor:k8s.io/apimachinery/pkg/util/sets",
         "//vendor:k8s.io/apimachinery/pkg/util/validation",
+        "//vendor:k8s.io/apimachinery/pkg/util/wait",
         "//vendor:k8s.io/apimachinery/pkg/version",
         "//vendor:k8s.io/apiserver/pkg/admission",
         "//vendor:k8s.io/apiserver/pkg/apis/apiserver/install",
@@ -11959,6 +11961,7 @@ go_library(
         "k8s.io/client-go/informers/core/v1/replicationcontroller.go",
         "k8s.io/client-go/informers/core/v1/resourcequota.go",
         "k8s.io/client-go/informers/core/v1/secret.go",
+        "k8s.io/client-go/informers/core/v1/securitycontextconstraints.go",
         "k8s.io/client-go/informers/core/v1/service.go",
         "k8s.io/client-go/informers/core/v1/serviceaccount.go",
     ],
@@ -12766,6 +12769,7 @@ go_library(
         "k8s.io/client-go/kubernetes/typed/core/v1/replicationcontroller.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/resourcequota.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/secret.go",
+        "k8s.io/client-go/kubernetes/typed/core/v1/securitycontextconstraints.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/service.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/service_expansion.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/serviceaccount.go",
@@ -12810,6 +12814,7 @@ go_library(
         "k8s.io/client-go/kubernetes/typed/core/v1/fake/fake_replicationcontroller.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/fake/fake_resourcequota.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/fake/fake_secret.go",
+        "k8s.io/client-go/kubernetes/typed/core/v1/fake/fake_securitycontextconstraints.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/fake/fake_service.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/fake/fake_service_expansion.go",
         "k8s.io/client-go/kubernetes/typed/core/v1/fake/fake_serviceaccount.go",
@@ -13278,6 +13283,7 @@ go_library(
         "k8s.io/client-go/listers/core/v1/replicationcontroller_expansion.go",
         "k8s.io/client-go/listers/core/v1/resourcequota.go",
         "k8s.io/client-go/listers/core/v1/secret.go",
+        "k8s.io/client-go/listers/core/v1/securitycontextconstraints.go",
         "k8s.io/client-go/listers/core/v1/service.go",
         "k8s.io/client-go/listers/core/v1/service_expansion.go",
         "k8s.io/client-go/listers/core/v1/serviceaccount.go",
@@ -13520,6 +13526,7 @@ go_library(
         "//vendor:k8s.io/apimachinery/pkg/util/validation/field",
         "//vendor:k8s.io/client-go/pkg/api",
         "//vendor:k8s.io/client-go/pkg/apis/extensions",
+        "//vendor:k8s.io/client-go/pkg/securitycontextconstraints/util",
         "//vendor:k8s.io/client-go/pkg/util",
         "//vendor:k8s.io/client-go/pkg/util/parsers",
     ],
@@ -13896,6 +13903,7 @@ go_library(
         "//vendor:k8s.io/client-go/pkg/apis/batch",
         "//vendor:k8s.io/client-go/pkg/apis/batch/v1",
         "//vendor:k8s.io/client-go/pkg/apis/batch/v2alpha1",
+        "//vendor:k8s.io/client-go/pkg/apis/extensions/install",
     ],
 )
 
@@ -16296,4 +16304,14 @@ go_library(
     name = "github.com/codedellemc/goscaleio/types/v1",
     srcs = ["github.com/codedellemc/goscaleio/types/v1/types.go"],
     tags = ["automanaged"],
+)
+
+go_library(
+    name = "k8s.io/client-go/pkg/securitycontextconstraints/util",
+    srcs = ["k8s.io/client-go/pkg/securitycontextconstraints/util/util.go"],
+    tags = ["automanaged"],
+    deps = [
+        "//vendor:k8s.io/apimachinery/pkg/util/sets",
+        "//vendor:k8s.io/client-go/pkg/api",
+    ],
 )
