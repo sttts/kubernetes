@@ -3835,6 +3835,7 @@ func IssueSSHCommand(cmd, provider string, node *v1.Node) error {
 
 // NewHostExecPodSpec returns the pod spec of hostexec pod
 func NewHostExecPodSpec(ns, name string) *v1.Pod {
+	one := int64(1)
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -3848,8 +3849,9 @@ func NewHostExecPodSpec(ns, name string) *v1.Pod {
 					ImagePullPolicy: v1.PullIfNotPresent,
 				},
 			},
-			HostNetwork:     true,
-			SecurityContext: &v1.PodSecurityContext{},
+			HostNetwork:                   true,
+			SecurityContext:               &v1.PodSecurityContext{},
+			TerminationGracePeriodSeconds: &one,
 		},
 	}
 	return pod
