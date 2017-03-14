@@ -81,6 +81,11 @@ type PrefixWriter struct {
 	out io.Writer
 }
 
+// NewPrefixWriter creates a new PrefixWriter.
+func NewPrefixWriter(out io.Writer) *PrefixWriter {
+	return &PrefixWriter{out: out}
+}
+
 func (pw *PrefixWriter) Write(level int, format string, a ...interface{}) {
 	levelSpace := "  "
 	prefix := ""
