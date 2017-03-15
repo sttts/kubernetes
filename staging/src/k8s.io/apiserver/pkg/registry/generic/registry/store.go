@@ -1123,6 +1123,15 @@ func (e *Store) CompleteWithOptions(options *generic.StoreOptions) error {
 	if (e.KeyRootFunc == nil) != (e.KeyFunc == nil) {
 		return fmt.Errorf("store for %s must set both KeyRootFunc and KeyFunc or neither", e.QualifiedResource.String())
 	}
+	if e.ObjectNameFunc == nil {
+		e.ObjectNameFunc = func(obj runtime.Object) (string, error) {
+			accessor, err := meta.Accessor(obj)
+			if err != nil {
+				return "", err
+			}
+			return accessor.GetName(), nil
+		}
+	}
 
 	var isNamespaced bool
 	switch {
