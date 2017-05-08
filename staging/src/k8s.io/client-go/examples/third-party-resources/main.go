@@ -18,13 +18,13 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	apiv1 "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
@@ -33,7 +33,7 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	tprv1 "k8s.io/client-go/examples/third-party-resources/apis/tpr/v1"
+	exampletprv1 "k8s.io/client-go/examples/third-party-resources/apis/tpr/v1"
 	exampleclient "k8s.io/client-go/examples/third-party-resources/client"
 	examplecontroller "k8s.io/client-go/examples/third-party-resources/controller"
 )
@@ -69,52 +69,61 @@ func main() {
 	exampleclient.WaitForExampleResource(exampleClient)
 
 	// start a controller on instances of our TPR
-	controller := examplecontroller.ExampleController{
-		ExampleClient: exampleClient,
+	controller, err := examplecontroller.NewExampleController(exampleClient)
+	if err != nil {
+		panic(err)
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	go controller.Run(ctx)
-
-	// The sleep below is just to make sure that the watcher.Run() goroutine has successfully executed
-	// and the watcher is handling the events about Example TPR instances.
-	// In the normal application there is no need for it, because:
-	// 1. It's unlikely to create a watcher and a TPR instance at the same time in the same application.
-	// 2. The application with watcher would most probably keep running instead of exiting right after the watcher startup.
-	time.Sleep(5 * time.Second)
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	go controller.Run(stopCh)
 
 	// Create an instance of our TPR
-	example := &tprv1.Example{
-		Metadata: metav1.ObjectMeta{
+	example := &exampletprv1.Example{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "example1",
 		},
-		Spec: tprv1.ExampleSpec{
+		Spec: exampletprv1.ExampleSpec{
 			Foo: "hello",
 			Bar: true,
 		},
 	}
-	var result tprv1.Example
+	var result exampletprv1.Example
 	err = exampleClient.Post().
-		Resource(tprv1.ExampleResourcePlural).
+		Resource(exampletprv1.ExampleResourcePlural).
 		Namespace(apiv1.NamespaceDefault).
 		Body(example).
 		Do().Into(&result)
-	if (err == nil) {
+	if err == nil {
 		fmt.Printf("CREATED: %#v\n", result)
-	} else if (apierrors.IsAlreadyExists(err)) {
+	} else if apierrors.IsAlreadyExists(err) {
 		fmt.Printf("ALREADY EXISTS: %#v\n", result)
 	} else {
 		panic(err)
 	}
 
 	// Fetch a list of our TPRs
-	exampleList := tprv1.ExampleList{}
-	err = exampleClient.Get().Resource(tprv1.ExampleResourcePlural).Do().Into(&exampleList)
+	exampleList := exampletprv1.ExampleList{}
+	err = exampleClient.Get().Resource(exampletprv1.ExampleResourcePlural).Do().Into(&exampleList)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("LIST: %#v\n", exampleList)
+
+	// the created TPR should show up in the controller store
+	var exampleFromStore *exampletprv1.Example
+	err = wait.Poll(100*time.Millisecond, 30*time.Second, func() (bool, error) {
+		obj, exists, err := controller.Examples.GetByKey(apiv1.NamespaceDefault + "/" + example.Name)
+		if !exists || err != nil {
+			return exists, err
+		}
+		exampleFromStore = obj.(*exampletprv1.Example)
+		return true, nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("FOUND IN STORE: %#v\n", exampleFromStore)
 }
 
 func buildConfig(kubeconfig string) (*rest.Config, error) {

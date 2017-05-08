@@ -17,10 +17,10 @@ limitations under the License.
 package controller
 
 import (
-	"context"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiv1 "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -30,36 +30,26 @@ import (
 
 // Watcher is an example of watching on resource create/update/delete events
 type ExampleController struct {
-	ExampleClient *rest.RESTClient
+	Examples cache.Store
+
+	exampleClient *rest.RESTClient
+	informer      cache.Controller
 }
 
-// Run starts an Example resource watcher
-func (c *ExampleController) Run(ctx context.Context) error {
-	fmt.Print("Watch Example objects\n")
-
-	// Watch Example objects
-	_, err := c.watchExamples(ctx)
-	if err != nil {
-		fmt.Printf("Failed to register watch for Example resource: %v\n", err)
-		return err
+func NewExampleController(exampleClient *rest.RESTClient) (*ExampleController, error) {
+	c := &ExampleController{
+		exampleClient: exampleClient,
 	}
 
-	<-ctx.Done()
-	return ctx.Err()
-}
-
-func (c *ExampleController) watchExamples(ctx context.Context) (cache.Controller, error) {
-	source := cache.NewListWatchFromClient(
-		c.ExampleClient,
+	lw := cache.NewListWatchFromClient(
+		c.exampleClient,
 		tprv1.ExampleResourcePlural,
 		apiv1.NamespaceAll,
 		fields.Everything())
 
-	store, controller := cache.NewInformer(
-		source,
-
-		// The object type.
-		&tprv1.Example{},
+	c.Examples, c.informer = cache.NewInformer(
+		lw,
+		&tprv1.Example{}, // The object type
 
 		// resyncPeriod
 		// Every resyncPeriod, all resources in the cache will retrigger events.
@@ -71,17 +61,21 @@ func (c *ExampleController) watchExamples(ctx context.Context) (cache.Controller
 			AddFunc:    c.onAdd,
 			UpdateFunc: c.onUpdate,
 			DeleteFunc: c.onDelete,
-		})
+		},
+	)
 
-	// store can be used to List and Get
-	for _, obj := range store.List() {
-		example := obj.(*tprv1.Example)
-		fmt.Printf("Existing example: %#v\n", example)
-	}
+	return c, nil
+}
 
-	go controller.Run(ctx.Done())
+// Run starts an Example resource watcher
+func (c *ExampleController) Run(stopCh <-chan struct{}) {
+	defer utilruntime.HandleCrash()
 
-	return controller, nil
+	fmt.Print("Watch Example objects\n")
+
+	go c.informer.Run(stopCh)
+
+	<-stopCh
 }
 
 func (c *ExampleController) onAdd(obj interface{}) {

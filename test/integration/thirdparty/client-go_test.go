@@ -17,17 +17,23 @@ limitations under the License.
 package thirdparty
 
 import (
+	"reflect"
 	"testing"
+	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/diff"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api"
+	corev1 "k8s.io/client-go/pkg/api"
 	"k8s.io/client-go/rest"
 	"k8s.io/kubernetes/test/integration/framework"
 
 	exampletprv1 "k8s.io/client-go/examples/third-party-resources/apis/tpr/v1"
 	exampleclient "k8s.io/client-go/examples/third-party-resources/client"
 	examplecontroller "k8s.io/client-go/examples/third-party-resources/controller"
-	"context"
 )
 
 func TestClientGoThirdPartyResourceExample(t *testing.T) {
@@ -57,17 +63,62 @@ func TestClientGoThirdPartyResourceExample(t *testing.T) {
 	t.Logf("TPR %q is active", exampletprv1.ExampleResourcePlural)
 
 	t.Logf("Starting a controller on instances of TPR %q", exampletprv1.ExampleResourcePlural)
-	controller := examplecontroller.ExampleController{
-		ExampleClient: exampleClient,
-	}
-
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	err = controller.Run(ctx)
+	controller, err := examplecontroller.NewExampleController(exampleClient)
 	if err != nil {
-		t.Fatalf("unexpected error starting a TPR controller: %v", err)
+		t.Fatalf("Failed to launch ExampleController: %v", err)
+	}
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	go controller.Run(stopCh)
+
+	t.Logf("Creating example instance")
+	example := &exampletprv1.Example{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "example1",
+		},
+		Spec: exampletprv1.ExampleSpec{
+			Foo: "hello",
+			Bar: true,
+		},
+	}
+	var result exampletprv1.Example
+	err = exampleClient.Post().
+		Resource(exampletprv1.ExampleResourcePlural).
+		Namespace(corev1.NamespaceDefault).
+		Body(example).
+		Do().Into(&result)
+	if err != nil && apierrors.IsAlreadyExists(err) {
+		t.Fatalf("Failed to create TPR object: %v", err)
 	}
 
+	// Fetch a list of our TPRs
+	t.Logf("Checking that the example instance shows up in a LIST request")
+	exampleList := exampletprv1.ExampleList{}
+	err = exampleClient.Get().Resource(exampletprv1.ExampleResourcePlural).Do().Into(&exampleList)
+	if err != nil {
+		t.Fatalf("Failed to fetch a list of examples: %v", err)
+	}
+	if len(exampleList.Items) != 1 {
+		t.Fatalf("Expected exactly one example in list, got: %#v", exampleList)
+	}
+	if !reflect.DeepEqual(example.Spec, exampleList.Items[0].Spec) {
+		t.Fatalf("Didn't find example with the original spec: %v", diff.ObjectDiff(example, exampleList.Items[0].Spec))
+	}
 
+	// the created TPR should show up in the controller store
+	t.Logf("Waiting for example instance to show up in store")
+	var exampleFromStore *exampletprv1.Example
+	err = wait.Poll(100*time.Millisecond, 30*time.Second, func() (bool, error) {
+		obj, exists, err := controller.Examples.GetByKey(corev1.NamespaceDefault + "/" + example.Name)
+		if !exists || err != nil {
+			return exists, err
+		}
+		exampleFromStore = obj.(*exampletprv1.Example)
+		return true, nil
+	})
+	if err != nil {
+		t.Fatalf("example did not show up in store: %v", err)
+	}
 
+	t.Logf("Found example in store: %#v", exampleFromStore)
 }
