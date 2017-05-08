@@ -554,14 +554,14 @@ func startRealMasterOrDie(t *testing.T, certDir string) (*allClient, clientv3.KV
 
 			kubeAPIServerOptions.SecureServing.BindPort = kubePort
 
-			kubeAPIServerConfig, sharedInformers, _, err := app.CreateKubeAPIServerConfig(kubeAPIServerOptions)
+			kubeAPIServerConfig, internalSharedInformers, externalSharedInformers, _, err := app.CreateKubeAPIServerConfig(kubeAPIServerOptions)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			kubeAPIServerConfig.APIResourceConfigSource = &allResourceSource{} // force enable all resources
 
-			kubeAPIServer, err := app.CreateKubeAPIServer(kubeAPIServerConfig, sharedInformers, wait.NeverStop)
+			kubeAPIServer, err := app.CreateKubeAPIServer(kubeAPIServerConfig, internalSharedInformers, externalSharedInformers, wait.NeverStop)
 			if err != nil {
 				t.Fatal(err)
 			}

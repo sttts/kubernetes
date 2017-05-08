@@ -37,6 +37,8 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/server/filters"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
+	clientgoinformers "k8s.io/client-go/informers"
+	clientgo "k8s.io/client-go/kubernetes"
 	federationv1beta1 "k8s.io/kubernetes/federation/apis/federation/v1beta1"
 	"k8s.io/kubernetes/federation/cmd/federation-apiserver/app/options"
 	"k8s.io/kubernetes/pkg/api"
@@ -172,13 +174,20 @@ func NonBlockingRun(s *options.ServerRunOptions, stopCh <-chan struct{}) error {
 		return fmt.Errorf("invalid Authentication Config: %v", err)
 	}
 
-	client, err := internalclientset.NewForConfig(genericConfig.LoopbackClientConfig)
+	internalClient, err := internalclientset.NewForConfig(genericConfig.LoopbackClientConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create clientset: %v", err)
+		return fmt.Errorf("failed to create internal clientset: %v", err)
 	}
-	sharedInformers := informers.NewSharedInformerFactory(client, 10*time.Minute)
 
-	authorizationConfig := s.Authorization.ToAuthorizationConfig(sharedInformers)
+	externalClient, err := clientgo.NewForConfig(genericConfig.LoopbackClientConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create external clientset: %v", err)
+	}
+
+	internalSharedInformers := informers.NewSharedInformerFactory(internalClient, 10*time.Minute)
+	externalSharedInformers := clientgoinformers.NewSharedInformerFactory(externalClient, genericConfig.LoopbackClientConfig.Timeout)
+
+	authorizationConfig := s.Authorization.ToAuthorizationConfig(internalSharedInformers)
 	apiAuthorizer, err := authorizationConfig.New()
 	if err != nil {
 		return fmt.Errorf("invalid Authorization Config: %v", err)
@@ -192,13 +201,13 @@ func NonBlockingRun(s *options.ServerRunOptions, stopCh <-chan struct{}) error {
 		}
 	}
 
-	pluginInitializer := kubeapiserveradmission.NewPluginInitializer(client, sharedInformers, apiAuthorizer, cloudConfig, nil)
+	pluginInitializer := kubeapiserveradmission.NewPluginInitializer(internalClient, internalSharedInformers, apiAuthorizer, cloudConfig, nil)
 
 	err = s.Admission.ApplyTo(
 		apiAuthorizer,
 		genericConfig.LoopbackClientConfig,
 		genericConfig,
-		genericConfig.SharedInformerFactory,
+		externalSharedInformers,
 		pluginInitializer,
 	)
 	if err != nil {
@@ -249,7 +258,8 @@ func NonBlockingRun(s *options.ServerRunOptions, stopCh <-chan struct{}) error {
 
 	err = m.PrepareRun().NonBlockingRun(stopCh)
 	if err == nil {
-		sharedInformers.Start(stopCh)
+		internalSharedInformers.Start(stopCh)
+		externalSharedInformers.Start(stopCh)
 	}
 	return err
 }
