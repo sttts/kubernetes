@@ -86,17 +86,17 @@ func (c *ExampleController) watchExamples(ctx context.Context) (cache.Controller
 
 func (c *ExampleController) onAdd(obj interface{}) {
 	example := obj.(*tprv1.Example)
-	fmt.Printf("[WATCH] OnAdd %s\n", example.Metadata.SelfLink)
+	fmt.Printf("[WATCH] OnAdd %s\n", example.SelfLink)
 }
 
 func (c *ExampleController) onUpdate(oldObj, newObj interface{}) {
 	oldExample := oldObj.(*tprv1.Example)
 	newExample := newObj.(*tprv1.Example)
-	fmt.Printf("[WATCH] OnUpdate oldObj: %s\n", oldExample.Metadata.SelfLink)
-	fmt.Printf("[WATCH] OnUpdate newObj: %s\n", newExample.Metadata.SelfLink)
+	fmt.Printf("[WATCH] OnUpdate oldObj: %s\n", oldExample.SelfLink)
+	fmt.Printf("[WATCH] OnUpdate newObj: %s\n", newExample.SelfLink)
 }
 
 func (c *ExampleController) onDelete(obj interface{}) {
 	example := obj.(*tprv1.Example)
-	fmt.Printf("[WATCH] OnDelete %s\n", example.Metadata.SelfLink)
+	fmt.Printf("[WATCH] OnDelete %s\n", example.SelfLink)
 }
