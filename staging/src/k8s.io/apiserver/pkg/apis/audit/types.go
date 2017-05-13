@@ -42,8 +42,6 @@ const (
 // Event captures all the information that can be included in an API audit log.
 type Event struct {
 	metav1.TypeMeta
-	// +optional
-	metav1.ListMeta
 
 	// AuditLevel at which event was generated
 	Level Level

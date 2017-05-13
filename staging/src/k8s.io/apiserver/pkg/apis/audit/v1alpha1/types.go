@@ -44,8 +44,6 @@ const (
 // Event captures all the information that can be included in an API audit log.
 type Event struct {
 	metav1.TypeMeta `json:",inline"`
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// AuditLevel at which event was generated
 	Level Level `json:"level" protobuf:"bytes,2,opt,name=level,casttype=Level"`
