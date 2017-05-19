@@ -114,29 +114,49 @@ func (c *CRDFinalizer) sync(key string) error {
 		return err
 	}
 
-	// Its possible for a naming conflict to have removed this resource from the API after instances were created.
-	// For now we will cowardly stop finalizing.  If we don't go through the REST API, weird things may happen:
-	// no audit trail, no admission checks or side effects, finalization would probably still work but defaulting
-	// would be missed.  It would be a mess.
-	// This requires human intervention to solve, update status so they have a reason.
-	// TODO split coreNamesAccepted from extendedNamesAccepted.  If coreNames were accepted, then we have something to cleanup
-	// and the endpoint is serviceable.  if they aren't, then there's nothing to cleanup.
-	if !apiextensions.IsCRDConditionFalse(crd, apiextensions.NameConflict) {
-		apiextensions.SetCRDCondition(crd, apiextensions.CustomResourceDefinitionCondition{
-			Type:    apiextensions.Terminating,
-			Status:  apiextensions.ConditionTrue,
-			Reason:  "InstanceDeletionStuck",
-			Message: fmt.Sprintf("cannot proceed with deletion because of %v condition", apiextensions.NameConflict),
-		})
-		crd, err = c.crdClient.CustomResourceDefinitions().UpdateStatus(crd)
-		if err != nil {
+	// Now we can start deleting items.  We should use the REST API to ensure that all normal admission runs.
+	// Since we control the endpoints, we know that delete collection works. No need to delete if not established.
+	if apiextensions.IsCRDConditionTrue(crd, apiextensions.Established) {
+		if err := c.deleteInstances(crd); err != nil {
+			apiextensions.SetCRDCondition(crd, apiextensions.CustomResourceDefinitionCondition{
+				Type:    apiextensions.Terminating,
+				Status:  apiextensions.ConditionTrue,
+				Reason:  "InstanceDeletionCheck",
+				Message: fmt.Sprintf("could not confirm zero CustomResources remaining: %v", err),
+			})
+			crd, err = c.crdClient.CustomResourceDefinitions().UpdateStatus(crd)
+			if err != nil {
+				utilruntime.HandleError(err)
+			}
 			return err
 		}
-		return fmt.Errorf("cannot proceed with deletion because of %v condition", apiextensions.NameConflict)
+
+		apiextensions.SetCRDCondition(crd, apiextensions.CustomResourceDefinitionCondition{
+			Type:    apiextensions.Terminating,
+			Status:  apiextensions.ConditionFalse,
+			Reason:  "InstanceDeletionCompleted",
+			Message: "removed all instances",
+		})
+	} else {
+		apiextensions.SetCRDCondition(crd, apiextensions.CustomResourceDefinitionCondition{
+			Type:    apiextensions.Terminating,
+			Status:  apiextensions.ConditionFalse,
+			Reason:  "NeverEstablished",
+			Message: "resource was never established",
+		})
 	}
 
-	// Now we can start deleting items.  We should use the REST API to ensure that all normal admission runs.
-	// Since we control the endpoints, we know that delete collection works.
+	apiextensions.CRDRemoveFinalizer(crd, apiextensions.CustomResourceCleanupFinalizer)
+	crd, err = c.crdClient.CustomResourceDefinitions().UpdateStatus(crd)
+	if err != nil {
+		return err
+	}
+
+	// and now issue another delete, which should clean it all up if no finalizers remain or no-op if they do
+	return c.crdClient.CustomResourceDefinitions().Delete(crd.Name, nil)
+}
+
+func (c *CRDFinalizer) deleteInstances(crd *apiextensions.CustomResourceDefinition) error {
 	crClient, err := c.clientPool.ClientForGroupVersionResource(schema.GroupVersionResource{Group: crd.Spec.Group, Version: crd.Spec.Version, Resource: crd.Status.AcceptedNames.Plural})
 	if err != nil {
 		return err
@@ -190,7 +210,7 @@ func (c *CRDFinalizer) sync(key string) error {
 	// now we need to wait until all the resources are deleted.  Start with a simple poll before we do anything fancy.
 	// TODO not all servers are synchronized on caches.  It is possible for a stale one to still be creating things.
 	// Once we have a mechanism for servers to indicate their states, we should check that for concurrence.
-	listErr := wait.PollImmediate(5*time.Second, 1*time.Minute, func() (bool, error) {
+	return wait.PollImmediate(5*time.Second, 1*time.Minute, func() (bool, error) {
 		listObj, err := crResourceClient.List(metav1.ListOptions{})
 		if err != nil {
 			return false, err
@@ -201,34 +221,6 @@ func (c *CRDFinalizer) sync(key string) error {
 		glog.V(2).Infof("%s.%s waiting for %d items to be removed", crd.Status.AcceptedNames.Plural, crd.Spec.Group, len(listObj.(*unstructured.UnstructuredList).Items))
 		return false, nil
 	})
-	if listErr != nil {
-		apiextensions.SetCRDCondition(crd, apiextensions.CustomResourceDefinitionCondition{
-			Type:    apiextensions.Terminating,
-			Status:  apiextensions.ConditionTrue,
-			Reason:  "InstanceDeletionCheck",
-			Message: fmt.Sprintf("could not confirm zero CustomResources remaining: %v", listErr),
-		})
-		crd, err = c.crdClient.CustomResourceDefinitions().UpdateStatus(crd)
-		if err != nil {
-			utilruntime.HandleError(err)
-		}
-		return listErr
-	}
-
-	apiextensions.SetCRDCondition(crd, apiextensions.CustomResourceDefinitionCondition{
-		Type:    apiextensions.Terminating,
-		Status:  apiextensions.ConditionFalse,
-		Reason:  "InstanceDeletionCompleted",
-		Message: "removed all instances",
-	})
-	apiextensions.CRDRemoveFinalizer(crd, apiextensions.CustomResourceCleanupFinalizer)
-	crd, err = c.crdClient.CustomResourceDefinitions().UpdateStatus(crd)
-	if err != nil {
-		return err
-	}
-
-	// and now issue another delete, which should clean it all up if no finalizers remain or no-op if they do
-	return c.crdClient.CustomResourceDefinitions().Delete(crd.Name, nil)
 }
 
 func (c *CRDFinalizer) Run(workers int, stopCh <-chan struct{}) {
