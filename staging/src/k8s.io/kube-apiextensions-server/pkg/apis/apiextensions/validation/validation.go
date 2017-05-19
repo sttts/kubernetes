@@ -46,7 +46,7 @@ func ValidateCustomResourceDefinition(obj *apiextensions.CustomResourceDefinitio
 // ValidateCustomResourceDefinitionUpdate statically validates
 func ValidateCustomResourceDefinitionUpdate(obj, oldObj *apiextensions.CustomResourceDefinition) field.ErrorList {
 	allErrs := genericvalidation.ValidateObjectMetaUpdate(&obj.ObjectMeta, &oldObj.ObjectMeta, field.NewPath("metadata"))
-	allErrs = append(allErrs, ValidateCustomResourceDefinitionSpecUpdate(&obj.Spec, &oldObj.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateCustomResourceDefinitionSpecUpdate(&obj.Spec, &oldObj.Spec, apiextensions.IsCRDConditionTrue(oldObj, apiextensions.Established), field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateCustomResourceDefinitionStatus(&obj.Status, field.NewPath("status"))...)
 	return allErrs
 }
@@ -105,17 +105,19 @@ func ValidateCustomResourceDefinitionSpec(spec *apiextensions.CustomResourceDefi
 }
 
 // ValidateCustomResourceDefinitionSpecUpdate statically validates
-func ValidateCustomResourceDefinitionSpecUpdate(spec, oldSpec *apiextensions.CustomResourceDefinitionSpec, fldPath *field.Path) field.ErrorList {
+func ValidateCustomResourceDefinitionSpecUpdate(spec, oldSpec *apiextensions.CustomResourceDefinitionSpec, established bool, fldPath *field.Path) field.ErrorList {
 	allErrs := ValidateCustomResourceDefinitionSpec(spec, fldPath)
 
-	// these all affect the storage, so you can't change them
-	genericvalidation.ValidateImmutableField(spec.Group, oldSpec.Group, fldPath.Child("group"))
-	genericvalidation.ValidateImmutableField(spec.Version, oldSpec.Version, fldPath.Child("version"))
-	genericvalidation.ValidateImmutableField(spec.Scope, oldSpec.Scope, fldPath.Child("scope"))
-	genericvalidation.ValidateImmutableField(spec.Names.Kind, oldSpec.Names.Kind, fldPath.Child("names", "kind"))
+	if established {
+		// these all affect the storage, so you can't change them
+		genericvalidation.ValidateImmutableField(spec.Group, oldSpec.Group, fldPath.Child("group"))
+		genericvalidation.ValidateImmutableField(spec.Version, oldSpec.Version, fldPath.Child("version"))
+		genericvalidation.ValidateImmutableField(spec.Scope, oldSpec.Scope, fldPath.Child("scope"))
+		genericvalidation.ValidateImmutableField(spec.Names.Kind, oldSpec.Names.Kind, fldPath.Child("names", "kind"))
 
-	// this affects the expected resource name, so you can't change it either
-	genericvalidation.ValidateImmutableField(spec.Names.Plural, oldSpec.Names.Plural, fldPath.Child("names", "plural"))
+		// this affects the expected resource name, so you can't change it either
+		genericvalidation.ValidateImmutableField(spec.Names.Plural, oldSpec.Names.Plural, fldPath.Child("names", "plural"))
+	}
 
 	return allErrs
 }
