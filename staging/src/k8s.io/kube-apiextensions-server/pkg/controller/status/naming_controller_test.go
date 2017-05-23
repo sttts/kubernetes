@@ -88,16 +88,16 @@ func (b *crdBuilder) NewOrDie() *apiextensions.CustomResourceDefinition {
 }
 
 var acceptedCondition = apiextensions.CustomResourceDefinitionCondition{
-	Type:    apiextensions.NameConflict,
-	Status:  apiextensions.ConditionFalse,
+	Type:    apiextensions.NamesAccepted,
+	Status:  apiextensions.ConditionTrue,
 	Reason:  "NoConflicts",
 	Message: "no conflicts found",
 }
 
 func nameConflictCondition(reason, message string) apiextensions.CustomResourceDefinitionCondition {
 	return apiextensions.CustomResourceDefinitionCondition{
-		Type:    apiextensions.NameConflict,
-		Status:  apiextensions.ConditionTrue,
+		Type:    apiextensions.NamesAccepted,
+		Status:  apiextensions.ConditionFalse,
 		Reason:  reason,
 		Message: message,
 	}
@@ -154,7 +154,7 @@ func TestSync(t *testing.T) {
 				newCRD("india.bravo.com").StatusNames("india", "alfa", "", "").NewOrDie(),
 			},
 			expectedNames:                 names("", "delta-singular", "echo-kind", "foxtrot-listkind", "golf-shortname-1", "hotel-shortname-2"),
-			expectedNameConflictCondition: nameConflictCondition("Plural", `"alfa" is already in use`),
+			expectedNameConflictCondition: nameConflictCondition("PluralConflict", `"alfa" is already in use`),
 			expectedEstablishedCondition:  notEstablishedCondition,
 		},
 		{
@@ -164,7 +164,7 @@ func TestSync(t *testing.T) {
 				newCRD("india.bravo.com").StatusNames("india", "indias", "", "", "delta-singular").NewOrDie(),
 			},
 			expectedNames:                 names("alfa", "", "echo-kind", "foxtrot-listkind", "golf-shortname-1", "hotel-shortname-2"),
-			expectedNameConflictCondition: nameConflictCondition("Singular", `"delta-singular" is already in use`),
+			expectedNameConflictCondition: nameConflictCondition("SingularConflict", `"delta-singular" is already in use`),
 			expectedEstablishedCondition:  notEstablishedCondition,
 		},
 		{
@@ -174,7 +174,7 @@ func TestSync(t *testing.T) {
 				newCRD("india.bravo.com").StatusNames("india", "indias", "", "", "hotel-shortname-2").NewOrDie(),
 			},
 			expectedNames:                 names("alfa", "delta-singular", "echo-kind", "foxtrot-listkind"),
-			expectedNameConflictCondition: nameConflictCondition("ShortNames", `"hotel-shortname-2" is already in use`),
+			expectedNameConflictCondition: nameConflictCondition("ShortNamesConflict", `"hotel-shortname-2" is already in use`),
 			expectedEstablishedCondition:  notEstablishedCondition,
 		},
 		{
@@ -184,7 +184,7 @@ func TestSync(t *testing.T) {
 				newCRD("india.bravo.com").StatusNames("india", "indias", "", "echo-kind").NewOrDie(),
 			},
 			expectedNames:                 names("alfa", "delta-singular", "", "foxtrot-listkind", "golf-shortname-1", "hotel-shortname-2"),
-			expectedNameConflictCondition: nameConflictCondition("Kind", `"echo-kind" is already in use`),
+			expectedNameConflictCondition: nameConflictCondition("KindConflict", `"echo-kind" is already in use`),
 			expectedEstablishedCondition:  notEstablishedCondition,
 		},
 		{
@@ -194,7 +194,7 @@ func TestSync(t *testing.T) {
 				newCRD("india.bravo.com").StatusNames("india", "indias", "foxtrot-listkind", "").NewOrDie(),
 			},
 			expectedNames:                 names("alfa", "delta-singular", "echo-kind", "", "golf-shortname-1", "hotel-shortname-2"),
-			expectedNameConflictCondition: nameConflictCondition("ListKind", `"foxtrot-listkind" is already in use`),
+			expectedNameConflictCondition: nameConflictCondition("ListKindConflict", `"foxtrot-listkind" is already in use`),
 			expectedEstablishedCondition:  notEstablishedCondition,
 		},
 		{
@@ -217,7 +217,7 @@ func TestSync(t *testing.T) {
 				newCRD("india.bravo.com").StatusNames("india", "indias", "foxtrot-listkind", "", "delta-singular").NewOrDie(),
 			},
 			expectedNames:                 names("alfa", "yankee-singular", "echo-kind", "whiskey-listkind", "golf-shortname-1", "hotel-shortname-2"),
-			expectedNameConflictCondition: nameConflictCondition("ListKind", `"foxtrot-listkind" is already in use`),
+			expectedNameConflictCondition: nameConflictCondition("ListKindConflict", `"foxtrot-listkind" is already in use`),
 			expectedEstablishedCondition:  notEstablishedCondition,
 		},
 		{
@@ -230,7 +230,7 @@ func TestSync(t *testing.T) {
 				newCRD("india.bravo.com").StatusNames("india", "indias", "foxtrot-listkind", "", "delta-singular", "golf-shortname-1").NewOrDie(),
 			},
 			expectedNames:                 names("alfa", "yankee-singular", "echo-kind", "whiskey-listkind", "victor-shortname-1", "uniform-shortname-2"),
-			expectedNameConflictCondition: nameConflictCondition("ListKind", `"foxtrot-listkind" is already in use`),
+			expectedNameConflictCondition: nameConflictCondition("ListKindConflict", `"foxtrot-listkind" is already in use`),
 			expectedEstablishedCondition:  notEstablishedCondition,
 		},
 		{
@@ -294,7 +294,7 @@ func TestSync(t *testing.T) {
 				newCRD("india.bravo.com").StatusNames("india", "alfa", "", "").NewOrDie(),
 			},
 			expectedNames:                 names("", "delta-singular", "echo-kind", "foxtrot-listkind", "golf-shortname-1", "hotel-shortname-2"),
-			expectedNameConflictCondition: nameConflictCondition("Plural", `"alfa" is already in use`),
+			expectedNameConflictCondition: nameConflictCondition("PluralConflict", `"alfa" is already in use`),
 			expectedEstablishedCondition:  establishedCondition,
 		},
 		{
@@ -306,7 +306,7 @@ func TestSync(t *testing.T) {
 				newCRD("india.bravo.com").StatusNames("india", "alfa", "", "").NewOrDie(),
 			},
 			expectedNames:                 names("", "delta-singular", "echo-kind", "foxtrot-listkind", "golf-shortname-1", "hotel-shortname-2"),
-			expectedNameConflictCondition: nameConflictCondition("Plural", `"alfa" is already in use`),
+			expectedNameConflictCondition: nameConflictCondition("PluralConflict", `"alfa" is already in use`),
 			expectedEstablishedCondition:  notEstablishedCondition,
 		},
 	}
