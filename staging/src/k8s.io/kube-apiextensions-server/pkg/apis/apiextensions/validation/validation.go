@@ -109,13 +109,14 @@ func ValidateCustomResourceDefinitionSpecUpdate(spec, oldSpec *apiextensions.Cus
 	allErrs := ValidateCustomResourceDefinitionSpec(spec, fldPath)
 
 	if established {
-		// these all affect the storage, so you can't change them
+		// this affects the resource name, which is always immutable, so this can't be updated.
 		genericvalidation.ValidateImmutableField(spec.Group, oldSpec.Group, fldPath.Child("group"))
 		genericvalidation.ValidateImmutableField(spec.Version, oldSpec.Version, fldPath.Child("version"))
 		genericvalidation.ValidateImmutableField(spec.Scope, oldSpec.Scope, fldPath.Child("scope"))
 		genericvalidation.ValidateImmutableField(spec.Names.Kind, oldSpec.Names.Kind, fldPath.Child("names", "kind"))
+		genericvalidation.ValidateImmutableField(spec.Names.ListKind, oldSpec.Names.ListKind, fldPath.Child("names", "listKind"))
 
-		// this affects the expected resource name, so you can't change it either
+		// this affects the resource name, which is always immutable, so this can't be updated.
 		genericvalidation.ValidateImmutableField(spec.Names.Plural, oldSpec.Names.Plural, fldPath.Child("names", "plural"))
 	}
 
