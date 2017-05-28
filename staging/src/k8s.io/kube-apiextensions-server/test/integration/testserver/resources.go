@@ -67,6 +67,24 @@ func NewNoxuInstance(namespace, name string) *unstructured.Unstructured {
 	}
 }
 
+func NewNoxu2CustomResourceDefinition(scope apiextensionsv1alpha1.ResourceScope) *apiextensionsv1alpha1.CustomResourceDefinition {
+	return &apiextensionsv1alpha1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "noxus2.mygroup.example.com"},
+		Spec: apiextensionsv1alpha1.CustomResourceDefinitionSpec{
+			Group:   "mygroup.example.com",
+			Version: "v1alpha1",
+			Names: apiextensionsv1alpha1.CustomResourceDefinitionNames{
+				Plural:     "noxus2",
+				Singular:   "nonenglishnoxu2",
+				Kind:       "WishIHadChosenNoxu2",
+				ShortNames: []string{"foo", "bar", "abc", "def"},
+				ListKind:   "Noxu2ItemList",
+			},
+			Scope: scope,
+		},
+	}
+}
+
 func NewCurletCustomResourceDefinition(scope apiextensionsv1alpha1.ResourceScope) *apiextensionsv1alpha1.CustomResourceDefinition {
 	return &apiextensionsv1alpha1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "curlets.mygroup.example.com"},
