@@ -557,7 +557,7 @@ func TestNameConflict(t *testing.T) {
 	}
 
 	// A NameConflict occurs
-	err = wait.Poll(30*time.Millisecond, wait.ForeverTestTimeout, func() (bool, error) {
+	err = wait.Poll(500*time.Millisecond, wait.ForeverTestTimeout, func() (bool, error) {
 		crd, err := testserver.GetCustomResourceDefinition(noxu2Definition, apiExtensionClient)
 		if err != nil {
 			return false, err
@@ -580,7 +580,7 @@ func TestNameConflict(t *testing.T) {
 	}
 
 	// Names are now accepted
-	err = wait.Poll(30*time.Millisecond, wait.ForeverTestTimeout, func() (bool, error) {
+	err = wait.Poll(500*time.Millisecond, wait.ForeverTestTimeout, func() (bool, error) {
 		crd, err := testserver.GetCustomResourceDefinition(noxu2Definition, apiExtensionClient)
 		if err != nil {
 			return false, err

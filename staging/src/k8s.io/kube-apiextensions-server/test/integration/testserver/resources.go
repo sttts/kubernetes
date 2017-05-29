@@ -125,7 +125,7 @@ func CreateNewCustomResourceDefinition(customResourceDefinition *apiextensionsv1
 	}
 
 	// wait until the resource appears in discovery
-	err = wait.PollImmediate(30*time.Millisecond, 30*time.Second, func() (bool, error) {
+	err = wait.PollImmediate(30*time.Millisecond, 500*time.Second, func() (bool, error) {
 		resourceList, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(customResourceDefinition.Spec.Group + "/" + customResourceDefinition.Spec.Version)
 		if err != nil {
 			return false, nil
@@ -152,7 +152,7 @@ func DeleteCustomResourceDefinition(customResource *apiextensionsv1alpha1.Custom
 	if err := apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Delete(customResource.Name, nil); err != nil {
 		return err
 	}
-	err := wait.PollImmediate(30*time.Millisecond, 30*time.Second, func() (bool, error) {
+	err := wait.PollImmediate(500*time.Millisecond, 30*time.Second, func() (bool, error) {
 		if _, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(customResource.Spec.Group + "/" + customResource.Spec.Version); err != nil {
 			if errors.IsNotFound(err) {
 				return true, nil
