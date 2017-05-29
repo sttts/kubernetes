@@ -118,20 +118,20 @@ func NewCurletInstance(namespace, name string) *unstructured.Unstructured {
 	}
 }
 
-func CreateNewCustomResourceDefinition(customResourceDefinition *apiextensionsv1alpha1.CustomResourceDefinition, apiExtensionsClient clientset.Interface, clientPool dynamic.ClientPool) (*dynamic.Client, error) {
-	_, err := apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Create(customResourceDefinition)
+func CreateNewCustomResourceDefinition(crd *apiextensionsv1alpha1.CustomResourceDefinition, apiExtensionsClient clientset.Interface, clientPool dynamic.ClientPool) (*dynamic.Client, error) {
+	_, err := apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Create(crd)
 	if err != nil {
 		return nil, err
 	}
 
 	// wait until the resource appears in discovery
-	err = wait.PollImmediate(30*time.Millisecond, 500*time.Second, func() (bool, error) {
-		resourceList, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(customResourceDefinition.Spec.Group + "/" + customResourceDefinition.Spec.Version)
+	err = wait.PollImmediate(500*time.Millisecond, 30*time.Second, func() (bool, error) {
+		resourceList, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(crd.Spec.Group + "/" + crd.Spec.Version)
 		if err != nil {
 			return false, nil
 		}
 		for _, resource := range resourceList.APIResources {
-			if resource.Name == customResourceDefinition.Spec.Names.Plural {
+			if resource.Name == crd.Spec.Names.Plural {
 				return true, nil
 			}
 		}
@@ -141,19 +141,19 @@ func CreateNewCustomResourceDefinition(customResourceDefinition *apiextensionsv1
 		return nil, err
 	}
 
-	dynamicClient, err := clientPool.ClientForGroupVersionResource(schema.GroupVersionResource{Group: customResourceDefinition.Spec.Group, Version: customResourceDefinition.Spec.Version, Resource: customResourceDefinition.Spec.Names.Plural})
+	dynamicClient, err := clientPool.ClientForGroupVersionResource(schema.GroupVersionResource{Group: crd.Spec.Group, Version: crd.Spec.Version, Resource: crd.Spec.Names.Plural})
 	if err != nil {
 		return nil, err
 	}
 	return dynamicClient, nil
 }
 
-func DeleteCustomResourceDefinition(customResource *apiextensionsv1alpha1.CustomResourceDefinition, apiExtensionsClient clientset.Interface) error {
-	if err := apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Delete(customResource.Name, nil); err != nil {
+func DeleteCustomResourceDefinition(crd *apiextensionsv1alpha1.CustomResourceDefinition, apiExtensionsClient clientset.Interface) error {
+	if err := apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Delete(crd.Name, nil); err != nil {
 		return err
 	}
 	err := wait.PollImmediate(500*time.Millisecond, 30*time.Second, func() (bool, error) {
-		if _, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(customResource.Spec.Group + "/" + customResource.Spec.Version); err != nil {
+		if _, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(crd.Spec.Group + "/" + crd.Spec.Version); err != nil {
 			if errors.IsNotFound(err) {
 				return true, nil
 			}
@@ -164,6 +164,6 @@ func DeleteCustomResourceDefinition(customResource *apiextensionsv1alpha1.Custom
 	return err
 }
 
-func GetCustomResourceDefinition(customResource *apiextensionsv1alpha1.CustomResourceDefinition, apiExtensionsClient clientset.Interface) (*apiextensionsv1alpha1.CustomResourceDefinition, error) {
-	return apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Get(customResource.Name, metav1.GetOptions{})
+func GetCustomResourceDefinition(crd *apiextensionsv1alpha1.CustomResourceDefinition, apiExtensionsClient clientset.Interface) (*apiextensionsv1alpha1.CustomResourceDefinition, error) {
+	return apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Get(crd.Name, metav1.GetOptions{})
 }
