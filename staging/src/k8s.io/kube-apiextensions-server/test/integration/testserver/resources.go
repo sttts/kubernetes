@@ -153,13 +153,20 @@ func DeleteCustomResourceDefinition(crd *apiextensionsv1alpha1.CustomResourceDef
 		return err
 	}
 	err := wait.PollImmediate(500*time.Millisecond, 30*time.Second, func() (bool, error) {
-		if _, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(crd.Spec.Group + "/" + crd.Spec.Version); err != nil {
+		groupResource, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(crd.Spec.Group + "/" + crd.Spec.Version)
+		if err != nil {
 			if errors.IsNotFound(err) {
 				return true, nil
+
 			}
 			return false, err
 		}
-		return false, nil
+		for _, g := range groupResource.APIResources {
+			if g.Name == crd.Spec.Names.Plural {
+				return false, nil
+			}
+		}
+		return true, nil
 	})
 	return err
 }
