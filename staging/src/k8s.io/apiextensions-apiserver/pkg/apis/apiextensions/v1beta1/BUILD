@@ -11,6 +11,7 @@ go_library(
         "defaults.go",
         "doc.go",
         "generated.pb.go",
+        "marshal.go",
         "register.go",
         "types.go",
         "zz_generated.conversion.go",
