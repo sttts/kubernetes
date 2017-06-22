@@ -221,6 +221,12 @@ func checkForWatchCachePrimed(crd *apiextensionsv1beta1.CustomResourceDefinition
 				"namespace": ns,
 				"name":      instanceName,
 			},
+			"spec": map[string]interface{}{
+				"alpha": "foo_123",
+				"beta":  10,
+				"gamma": "bar",
+				"delta": "hello",
+			},
 		},
 	}
 	if _, err := resourceClient.Create(instance); err != nil {
