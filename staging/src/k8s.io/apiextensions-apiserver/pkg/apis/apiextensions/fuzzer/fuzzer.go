@@ -41,6 +41,9 @@ func Funcs(codecs runtimeserializer.CodecFactory) []interface{} {
 			if len(obj.Names.ListKind) == 0 && len(obj.Names.Kind) > 0 {
 				obj.Names.ListKind = obj.Names.Kind + "List"
 			}
+			if obj.Validation.JSONSchema.Default == nil {
+				obj.Validation.JSONSchema.Default = "random-value"
+			}
 		},
 	}
 }
