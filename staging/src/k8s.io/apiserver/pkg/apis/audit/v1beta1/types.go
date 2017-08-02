@@ -225,6 +225,11 @@ type ObjectReference struct {
 	Name string `json:"name,omitempty" protobuf:"bytes,3,opt,name=name"`
 	// +optional
 	UID types.UID `json:"uid,omitempty" protobuf:"bytes,4,opt,name=uid,casttype=k8s.io/apimachinery/pkg/types.UID"`
+	// APIGroup is the name of the API group that contains the referred object.
+	// The empty string represents the core API group.
+	// +optional
+	APIGroup string `json:"apiGroup,omitempty" protobuf:"bytes,5,opt,name=apiGroup"`
+	// APIVersion is the version of the API group that contains the referred object.
 	// +optional
 	APIVersion string `json:"apiVersion,omitempty" protobuf:"bytes,5,opt,name=apiVersion"`
 	// +optional
