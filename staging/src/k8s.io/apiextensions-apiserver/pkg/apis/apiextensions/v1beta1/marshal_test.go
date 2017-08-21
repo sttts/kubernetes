@@ -85,6 +85,70 @@ func TestStringArrayOrStringMarshalJSON(t *testing.T) {
 	}
 }
 
+type JSONSchemaPropsOrStringArrayHolder struct {
+	JSPoA          JSONSchemaPropsOrStringArray  `json:"val1"`
+	JSPoAOmitEmpty *JSONSchemaPropsOrStringArray `json:"val2,omitempty"`
+}
+
+func TestJSONSchemaPropsOrStringArrayUnmarshalJSON(t *testing.T) {
+	cases := []struct {
+		input  string
+		result JSONSchemaPropsOrStringArrayHolder
+	}{
+		{`{}`, JSONSchemaPropsOrStringArrayHolder{}},
+
+		{`{"val1": {}}`, JSONSchemaPropsOrStringArrayHolder{JSPoA: JSONSchemaPropsOrStringArray{Schema: &JSONSchemaProps{}}}},
+		{`{"val1": {"type":"string"}}`, JSONSchemaPropsOrStringArrayHolder{JSPoA: JSONSchemaPropsOrStringArray{Schema: &JSONSchemaProps{Type: "string"}}}},
+		{`{"val1": [""]}`, JSONSchemaPropsOrStringArrayHolder{JSPoA: JSONSchemaPropsOrStringArray{Property: []string{""}}}},
+		{`{"val1": ["","foo"]}`, JSONSchemaPropsOrStringArrayHolder{JSPoA: JSONSchemaPropsOrStringArray{Property: []string{"", "foo"}}}},
+
+		{`{"val2": {}}`, JSONSchemaPropsOrStringArrayHolder{JSPoAOmitEmpty: &JSONSchemaPropsOrStringArray{Schema: &JSONSchemaProps{}}}},
+		{`{"val2": {"type":"string"}}`, JSONSchemaPropsOrStringArrayHolder{JSPoAOmitEmpty: &JSONSchemaPropsOrStringArray{Schema: &JSONSchemaProps{Type: "string"}}}},
+		{`{"val2": [""]}`, JSONSchemaPropsOrStringArrayHolder{JSPoAOmitEmpty: &JSONSchemaPropsOrStringArray{Property: []string{""}}}},
+		{`{"val2": ["","foo"]}`, JSONSchemaPropsOrStringArrayHolder{JSPoAOmitEmpty: &JSONSchemaPropsOrStringArray{Property: []string{"", "foo"}}}},
+	}
+
+	for _, c := range cases {
+		var result JSONSchemaPropsOrStringArrayHolder
+		if err := json.Unmarshal([]byte(c.input), &result); err != nil {
+			t.Errorf("Failed to unmarshal input '%v': %v", c.input, err)
+		}
+		if !reflect.DeepEqual(result, c.result) {
+			t.Errorf("Failed to unmarshal input '%v': expected %+v, got %+v", c.input, c.result, result)
+		}
+	}
+}
+
+func TestJSONSchemaPropsOrStringArrayMarshalJSON(t *testing.T) {
+	cases := []struct {
+		input  JSONSchemaPropsOrStringArrayHolder
+		result string
+	}{
+		{JSONSchemaPropsOrStringArrayHolder{}, `{"val1":null}`},
+
+		{JSONSchemaPropsOrStringArrayHolder{JSPoA: JSONSchemaPropsOrStringArray{Schema: &JSONSchemaProps{}}}, `{"val1":{}}`},
+		{JSONSchemaPropsOrStringArrayHolder{JSPoA: JSONSchemaPropsOrStringArray{Schema: &JSONSchemaProps{Type: "string"}}}, `{"val1":{"type":"string"}}`},
+		{JSONSchemaPropsOrStringArrayHolder{JSPoA: JSONSchemaPropsOrStringArray{Property: []string{""}}}, `{"val1":[""]}`},
+		{JSONSchemaPropsOrStringArrayHolder{JSPoA: JSONSchemaPropsOrStringArray{Property: []string{"", "foo"}}}, `{"val1":["","foo"]}`},
+
+		{JSONSchemaPropsOrStringArrayHolder{JSPoAOmitEmpty: &JSONSchemaPropsOrStringArray{}}, `{"val1":null,"val2":null}`},
+		{JSONSchemaPropsOrStringArrayHolder{JSPoAOmitEmpty: &JSONSchemaPropsOrStringArray{Schema: &JSONSchemaProps{}}}, `{"val1":null,"val2":{}}`},
+		{JSONSchemaPropsOrStringArrayHolder{JSPoAOmitEmpty: &JSONSchemaPropsOrStringArray{Schema: &JSONSchemaProps{Type: "string"}}}, `{"val1":null,"val2":{"type":"string"}}`},
+		{JSONSchemaPropsOrStringArrayHolder{JSPoAOmitEmpty: &JSONSchemaPropsOrStringArray{Property: []string{""}}}, `{"val1":null,"val2":[""]}`},
+		{JSONSchemaPropsOrStringArrayHolder{JSPoAOmitEmpty: &JSONSchemaPropsOrStringArray{Property: []string{"", "foo"}}}, `{"val1":null,"val2":["","foo"]}`},
+	}
+
+	for i, c := range cases {
+		result, err := json.Marshal(&c.input)
+		if err != nil {
+			t.Errorf("%d: Unexpected error marshaling input '%v': %v", i, c.input, err)
+		}
+		if string(result) != c.result {
+			t.Errorf("%d: Failed to marshal input '%v': expected: %q, got %q", i, c.input, c.result, string(result))
+		}
+	}
+}
+
 type JSONSchemaPropsOrArrayHolder struct {
 	JSPoA          JSONSchemaPropsOrArray  `json:"val1"`
 	JSPoAOmitEmpty *JSONSchemaPropsOrArray `json:"val2,omitempty"`
