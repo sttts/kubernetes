@@ -16,7 +16,11 @@ limitations under the License.
 
 package v1beta1
 
-import "encoding/json"
+import (
+	"net/url"
+
+	"k8s.io/apimachinery/pkg/util/json"
+)
 
 var jsTrue = []byte("true")
 var jsFalse = []byte("false")
@@ -112,5 +116,35 @@ func (s *JSONSchemaPropsOrArray) UnmarshalJSON(data []byte) error {
 		}
 	}
 	*s = nw
+	return nil
+}
+
+// MarshalJSON marshal this to JSON
+func (r JSONSchemaURL) MarshalJSON() ([]byte, error) {
+	if r == "" {
+		return []byte("{}"), nil
+	}
+	v := map[string]interface{}{"$schema": string(r)}
+	return json.Marshal(v)
+}
+
+// UnmarshalJSON unmarshal this from JSON
+func (r *JSONSchemaURL) UnmarshalJSON(data []byte) error {
+	var v map[string]interface{}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	if v == nil {
+		return nil
+	}
+	if vv, ok := v["$schema"]; ok {
+		if str, ok := vv.(string); ok {
+			u, err := url.Parse(str)
+			if err != nil {
+				return err
+			}
+			*r = JSONSchemaURL(u.String())
+		}
+	}
 	return nil
 }

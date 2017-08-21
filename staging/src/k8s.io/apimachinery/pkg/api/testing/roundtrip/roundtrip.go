@@ -329,7 +329,7 @@ func roundTrip(t *testing.T, scheme *runtime.Scheme, codec runtime.Codec, object
 	// ensure that the object produced from decoding the encoded data is equal
 	// to the original object
 	if !apiequality.Semantic.DeepEqual(original, obj2) {
-		t.Errorf("%v: diff: %v\nCodec: %#v\nSource:\n\n%#v\n\nEncoded:\n\n%s\n\nFinal:\n\n%#v", name, diff.ObjectReflectDiff(object, obj2), codec, printer.Sprintf("%#v", object), dataAsString(data), printer.Sprintf("%#v", obj2))
+		t.Errorf("%v: diff: %v\nCodec: %#v\nSource:\n\n%#v\n\nEncoded:\n\n%s\n\nFinal:\n\n%#v", name, diff.ObjectReflectDiff(original, obj2), codec, printer.Sprintf("%#v", original), dataAsString(data), printer.Sprintf("%#v", obj2))
 		return
 	}
 
