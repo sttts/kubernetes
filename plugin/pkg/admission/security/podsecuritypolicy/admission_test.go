@@ -430,7 +430,7 @@ func TestFailClosedOnInvalidPod(t *testing.T) {
 	plugin := NewTestAdmission(nil)
 	pod := &v1.Pod{}
 	attrs := kadmission.NewAttributesRecord(pod, nil, kapi.Kind("Pod").WithVersion("version"), pod.Namespace, pod.Name, kapi.Resource("pods").WithVersion("version"), "", kadmission.Create, &user.DefaultInfo{})
-	err := plugin.Admit(attrs)
+	err := plugin.MutatingAdmit(attrs)
 
 	if err == nil {
 		t.Fatalf("expected versioned pod object to fail admission")
@@ -1655,7 +1655,7 @@ func testPSPAdmitAdvanced(testCaseName string, op kadmission.Operation, psps []*
 	plugin := NewTestAdmission(informerFactory.Extensions().InternalVersion().PodSecurityPolicies().Lister())
 
 	attrs := kadmission.NewAttributesRecord(pod, oldPod, kapi.Kind("Pod").WithVersion("version"), "namespace", "", kapi.Resource("pods").WithVersion("version"), "", op, &user.DefaultInfo{})
-	err := plugin.Admit(attrs)
+	err := plugin.MutatingAdmit(attrs)
 
 	if shouldPass && err != nil {
 		t.Errorf("%s: expected no errors but received %v", testCaseName, err)

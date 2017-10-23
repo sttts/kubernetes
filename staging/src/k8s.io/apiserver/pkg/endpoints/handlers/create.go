@@ -96,7 +96,7 @@ func createHandler(r rest.NamedCreater, scope RequestScope, typer runtime.Object
 		userInfo, _ := request.UserFrom(ctx)
 		admissionAttributes := admission.NewAttributesRecord(obj, nil, scope.Kind, namespace, name, scope.Resource, scope.Subresource, admission.Create, userInfo)
 		if mutatingAdmission != nil && mutatingAdmission.Handles(admission.Create) {
-			err = mutatingAdmission.Admit(admissionAttributes)
+			err = mutatingAdmission.MutatingAdmit(admissionAttributes)
 			if err != nil {
 				scope.err(err, w, req)
 				return

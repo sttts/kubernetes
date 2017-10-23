@@ -50,7 +50,7 @@ type wantInternalWardleInformerFactory struct {
 func (self *wantInternalWardleInformerFactory) SetInternalWardleInformerFactory(sf informers.SharedInformerFactory) {
 	self.sf = sf
 }
-func (self *wantInternalWardleInformerFactory) Admit(a admission.Attributes) error { return nil }
+func (self *wantInternalWardleInformerFactory) MutatingAdmit(a admission.Attributes) error { return nil }
 func (self *wantInternalWardleInformerFactory) Handles(o admission.Operation) bool { return false }
 func (self *wantInternalWardleInformerFactory) Validate() error                    { return nil }
 

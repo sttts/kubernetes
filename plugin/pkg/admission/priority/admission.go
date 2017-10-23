@@ -99,8 +99,8 @@ var (
 	priorityClassResource = api.Resource("priorityclasses")
 )
 
-// Admit checks Pods and PriorityClasses and admits or rejects them. It also resolves the priority of pods based on their PriorityClass.
-func (p *priorityPlugin) Admit(a admission.Attributes) error {
+// MutatingAdmit checks Pods and PriorityClasses and admits or rejects them. It also resolves the priority of pods based on their PriorityClass.
+func (p *priorityPlugin) MutatingAdmit(a admission.Attributes) error {
 	operation := a.GetOperation()
 	// Ignore all calls to subresources or resources other than pods.
 	// Ignore all operations other than Create and Update.

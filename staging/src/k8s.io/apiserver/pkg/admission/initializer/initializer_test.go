@@ -111,7 +111,7 @@ type WantExternalKubeInformerFactory struct {
 func (self *WantExternalKubeInformerFactory) SetExternalKubeInformerFactory(sf informers.SharedInformerFactory) {
 	self.sf = sf
 }
-func (self *WantExternalKubeInformerFactory) Admit(a admission.Attributes) error { return nil }
+func (self *WantExternalKubeInformerFactory) MutatingAdmit(a admission.Attributes) error { return nil }
 func (self *WantExternalKubeInformerFactory) Handles(o admission.Operation) bool { return false }
 func (self *WantExternalKubeInformerFactory) Validate() error                    { return nil }
 
@@ -124,7 +124,7 @@ type WantExternalKubeClientSet struct {
 }
 
 func (self *WantExternalKubeClientSet) SetExternalKubeClientSet(cs kubernetes.Interface) { self.cs = cs }
-func (self *WantExternalKubeClientSet) Admit(a admission.Attributes) error               { return nil }
+func (self *WantExternalKubeClientSet) MutatingAdmit(a admission.Attributes) error               { return nil }
 func (self *WantExternalKubeClientSet) Handles(o admission.Operation) bool               { return false }
 func (self *WantExternalKubeClientSet) Validate() error                                  { return nil }
 
@@ -137,7 +137,7 @@ type WantAuthorizerAdmission struct {
 }
 
 func (self *WantAuthorizerAdmission) SetAuthorizer(a authorizer.Authorizer) { self.auth = a }
-func (self *WantAuthorizerAdmission) Admit(a admission.Attributes) error    { return nil }
+func (self *WantAuthorizerAdmission) MutatingAdmit(a admission.Attributes) error    { return nil }
 func (self *WantAuthorizerAdmission) Handles(o admission.Operation) bool    { return false }
 func (self *WantAuthorizerAdmission) Validate() error                       { return nil }
 
@@ -157,7 +157,7 @@ type clientCertWanter struct {
 }
 
 func (s *clientCertWanter) SetClientCert(cert, key []byte)     { s.gotCert, s.gotKey = cert, key }
-func (s *clientCertWanter) Admit(a admission.Attributes) error { return nil }
+func (s *clientCertWanter) MutatingAdmit(a admission.Attributes) error { return nil }
 func (s *clientCertWanter) Handles(o admission.Operation) bool { return false }
 func (s *clientCertWanter) Validate() error                    { return nil }
 
@@ -167,7 +167,7 @@ type WantSchemeAdmission struct {
 }
 
 func (self *WantSchemeAdmission) SetScheme(s *runtime.Scheme)        { self.scheme = s }
-func (self *WantSchemeAdmission) Admit(a admission.Attributes) error { return nil }
+func (self *WantSchemeAdmission) MutatingAdmit(a admission.Attributes) error { return nil }
 func (self *WantSchemeAdmission) Handles(o admission.Operation) bool { return false }
 func (self *WantSchemeAdmission) Validate() error                    { return nil }
 

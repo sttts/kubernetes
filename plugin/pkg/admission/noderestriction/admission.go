@@ -84,7 +84,7 @@ var (
 	nodeResource = api.Resource("nodes")
 )
 
-func (c *nodePlugin) Admit(a admission.Attributes) error {
+func (c *nodePlugin) MutatingAdmit(a admission.Attributes) error {
 	nodeName, isNode := c.nodeIdentifier.NodeIdentity(a.GetUserInfo())
 
 	// Our job is just to restrict nodes

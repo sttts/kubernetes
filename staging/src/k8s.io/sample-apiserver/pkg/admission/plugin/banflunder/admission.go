@@ -47,7 +47,7 @@ var _ = wardleinitializer.WantsInternalWardleInformerFactory(&disallowFlunder{})
 // Admit ensures that the object in-flight is of kind Flunder.
 // In addition checks that the Name is not on the banned list.
 // The list is stored in Fischers API objects.
-func (d *disallowFlunder) Admit(a admission.Attributes) error {
+func (d *disallowFlunder) MutatingAdmit(a admission.Attributes) error {
 	// we are only interested in flunders
 	if a.GetKind().GroupKind() != wardle.Kind("Flunder") {
 		return nil

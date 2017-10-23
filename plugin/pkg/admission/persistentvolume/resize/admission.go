@@ -79,7 +79,7 @@ func (pvcr *persistentVolumeClaimResize) Validate() error {
 	return nil
 }
 
-func (pvcr *persistentVolumeClaimResize) Admit(a admission.Attributes) error {
+func (pvcr *persistentVolumeClaimResize) MutatingAdmit(a admission.Attributes) error {
 	if a.GetResource().GroupResource() != api.Resource("persistentvolumeclaims") {
 		return nil
 	}

@@ -49,7 +49,7 @@ type provision struct {
 var _ = kubeapiserveradmission.WantsInternalKubeInformerFactory(&provision{})
 var _ = kubeapiserveradmission.WantsInternalKubeClientSet(&provision{})
 
-func (p *provision) Admit(a admission.Attributes) error {
+func (p *provision) MutatingAdmit(a admission.Attributes) error {
 	// if we're here, then we've already passed authentication, so we're allowed to do what we're trying to do
 	// if we're here, then the API server has found a route, which means that if we have a non-empty namespace
 	// its a namespaced resource.

@@ -53,8 +53,8 @@ type Attributes interface {
 
 // Interface is an abstract, pluggable interface for Admission Control decisions.
 type Interface interface {
-	// Admit makes an admission decision based on the request attributes
-	Admit(a Attributes) (err error)
+	// MutatingAdmit makes an admission decision based on the request attributes
+	MutatingAdmit(a Attributes) (err error)
 
 	// Handles returns true if this admission controller can handle the given operation
 	// where operation can be one of CREATE, UPDATE, DELETE, or CONNECT
@@ -63,8 +63,8 @@ type Interface interface {
 
 // ValidationInterface is an abstract, pluggable interface for Admission Control decisions.
 type ValidationInterface interface {
-	// Validate makes an admission decision based on the request attributes.  It is NOT allowed to mutate
-	Validate(a Attributes) (err error)
+	// ValidatingAdmit makes an admission decision based on the request attributes.  It is NOT allowed to mutate
+	ValidatingAdmit(a Attributes) (err error)
 
 	// Handles returns true if this admission controller can handle the given operation
 	// where operation can be one of CREATE, UPDATE, DELETE, or CONNECT

@@ -77,13 +77,13 @@ func (a *claimDefaulterPlugin) Validate() error {
 	return nil
 }
 
-// Admit sets the default value of a PersistentVolumeClaim's storage class, in case the user did
+// MutatingAdmit sets the default value of a PersistentVolumeClaim's storage class, in case the user did
 // not provide a value.
 //
 // 1.  Find available StorageClasses.
 // 2.  Figure which is the default
 // 3.  Write to the PVClaim
-func (c *claimDefaulterPlugin) Admit(a admission.Attributes) error {
+func (c *claimDefaulterPlugin) MutatingAdmit(a admission.Attributes) error {
 	if a.GetResource().GroupResource() != api.Resource("persistentvolumeclaims") {
 		return nil
 	}

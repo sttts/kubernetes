@@ -39,7 +39,7 @@ func TestIgnoresNonCreate(t *testing.T) {
 	for _, op := range []admission.Operation{admission.Delete, admission.Connect} {
 		attrs := admission.NewAttributesRecord(pod, nil, api.Kind("Pod").WithVersion("version"), "myns", "myname", api.Resource("pods").WithVersion("version"), "", op, nil)
 		handler := admission.NewChainHandler(NewServiceAccount())
-		err := handler.Admit(attrs)
+		err := handler.MutatingAdmit(attrs)
 		if err != nil {
 			t.Errorf("Expected %s operation allowed, got err: %v", op, err)
 		}
@@ -51,7 +51,7 @@ func TestIgnoresUpdateOfInitializedPod(t *testing.T) {
 	oldPod := &api.Pod{}
 	attrs := admission.NewAttributesRecord(pod, oldPod, api.Kind("Pod").WithVersion("version"), "myns", "myname", api.Resource("pods").WithVersion("version"), "", admission.Update, nil)
 	handler := admission.NewChainHandler(NewServiceAccount())
-	err := handler.Admit(attrs)
+	err := handler.MutatingAdmit(attrs)
 	if err != nil {
 		t.Errorf("Expected update of initialized pod allowed, got err: %v", err)
 	}

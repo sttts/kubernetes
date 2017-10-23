@@ -76,7 +76,7 @@ type podTolerationsPlugin struct {
 // instead if specified. Tolerations to a namespace are assigned via
 // scheduler.alpha.kubernetes.io/defaultTolerations and scheduler.alpha.kubernetes.io/tolerationsWhitelist
 // annotations keys.
-func (p *podTolerationsPlugin) Admit(a admission.Attributes) error {
+func (p *podTolerationsPlugin) MutatingAdmit(a admission.Attributes) error {
 	resource := a.GetResource().GroupResource()
 	if resource != api.Resource("pods") {
 		return nil

@@ -91,8 +91,8 @@ func readConfig(config io.Reader) *pluginConfig {
 	return defaultConfig
 }
 
-// Admit enforces that pod and its namespace node label selectors matches at least a node in the cluster.
-func (p *podNodeSelector) Admit(a admission.Attributes) error {
+// MutatingAdmit enforces that pod and its namespace node label selectors matches at least a node in the cluster.
+func (p *podNodeSelector) MutatingAdmit(a admission.Attributes) error {
 	resource := a.GetResource().GroupResource()
 	if resource != api.Resource("pods") {
 		return nil

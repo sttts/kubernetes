@@ -97,7 +97,7 @@ func DeleteResource(r rest.GracefulDeleter, allowsOptions bool, scope RequestSco
 		if mutatingAdmission != nil && mutatingAdmission.Handles(admission.Delete) {
 			userInfo, _ := request.UserFrom(ctx)
 
-			err = mutatingAdmission.Admit(admission.NewAttributesRecord(nil, nil, scope.Kind, namespace, name, scope.Resource, scope.Subresource, admission.Delete, userInfo))
+			err = mutatingAdmission.MutatingAdmit(admission.NewAttributesRecord(nil, nil, scope.Kind, namespace, name, scope.Resource, scope.Subresource, admission.Delete, userInfo))
 			if err != nil {
 				scope.err(err, w, req)
 				return
@@ -106,7 +106,7 @@ func DeleteResource(r rest.GracefulDeleter, allowsOptions bool, scope RequestSco
 		if validatingAdmission != nil && validatingAdmission.Handles(admission.Delete) {
 			userInfo, _ := request.UserFrom(ctx)
 
-			err = validatingAdmission.Validate(admission.NewAttributesRecord(nil, nil, scope.Kind, namespace, name, scope.Resource, scope.Subresource, admission.Delete, userInfo))
+			err = validatingAdmission.ValidatingAdmit(admission.NewAttributesRecord(nil, nil, scope.Kind, namespace, name, scope.Resource, scope.Subresource, admission.Delete, userInfo))
 			if err != nil {
 				scope.err(err, w, req)
 				return
@@ -184,7 +184,7 @@ func DeleteCollection(r rest.CollectionDeleter, checkBody bool, scope RequestSco
 		if mutatingAdmission != nil && mutatingAdmission.Handles(admission.Delete) {
 			userInfo, _ := request.UserFrom(ctx)
 
-			err = mutatingAdmission.Admit(admission.NewAttributesRecord(nil, nil, scope.Kind, namespace, "", scope.Resource, scope.Subresource, admission.Delete, userInfo))
+			err = mutatingAdmission.MutatingAdmit(admission.NewAttributesRecord(nil, nil, scope.Kind, namespace, "", scope.Resource, scope.Subresource, admission.Delete, userInfo))
 			if err != nil {
 				scope.err(err, w, req)
 				return
@@ -193,7 +193,7 @@ func DeleteCollection(r rest.CollectionDeleter, checkBody bool, scope RequestSco
 		if validatingAdmission != nil && validatingAdmission.Handles(admission.Delete) {
 			userInfo, _ := request.UserFrom(ctx)
 
-			err = validatingAdmission.Validate(admission.NewAttributesRecord(nil, nil, scope.Kind, namespace, "", scope.Resource, scope.Subresource, admission.Delete, userInfo))
+			err = validatingAdmission.ValidatingAdmit(admission.NewAttributesRecord(nil, nil, scope.Kind, namespace, "", scope.Resource, scope.Subresource, admission.Delete, userInfo))
 			if err != nil {
 				scope.err(err, w, req)
 				return

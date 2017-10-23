@@ -85,7 +85,7 @@ func makeNamespaceKey(namespace string) *v1.Namespace {
 	}
 }
 
-func (l *lifecycle) Admit(a admission.Attributes) error {
+func (l *lifecycle) MutatingAdmit(a admission.Attributes) error {
 	// prevent deletion of immortal namespaces
 	if a.GetOperation() == admission.Delete && a.GetKind().GroupKind() == v1.SchemeGroupVersion.WithKind("Namespace").GroupKind() && l.immortalNamespaces.Has(a.GetName()) {
 		return errors.NewForbidden(a.GetResource().GroupResource(), a.GetName(), fmt.Errorf("this namespace may not be deleted"))

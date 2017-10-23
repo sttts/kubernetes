@@ -117,7 +117,7 @@ func admit(t *testing.T, ir admission.Interface, pods []*api.Pod) {
 		podKind := api.Kind("Pod").WithVersion("version")
 		podRes := api.Resource("pods").WithVersion("version")
 		attrs := admission.NewAttributesRecord(p, nil, podKind, "test", p.ObjectMeta.Name, podRes, "", admission.Create, nil)
-		if err := ir.Admit(attrs); err != nil {
+		if err := ir.MutatingAdmit(attrs); err != nil {
 			t.Error(err)
 		}
 	}
@@ -142,11 +142,11 @@ func testAdminScenarios(t *testing.T, ir admission.Interface, p *api.Pod) {
 	}
 
 	for _, test := range tests {
-		err := ir.Admit(test.attrs)
+		err := ir.MutatingAdmit(test.attrs)
 		if err != nil && test.expectError == false {
 			t.Error(err)
 		} else if err == nil && test.expectError == true {
-			t.Error("Error expected for Admit but received none")
+			t.Error("Error expected for MutatingAdmit but received none")
 		}
 	}
 }

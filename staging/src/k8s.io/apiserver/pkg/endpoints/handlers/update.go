@@ -91,7 +91,7 @@ func UpdateResource(r rest.Updater, scope RequestScope, typer runtime.ObjectType
 		var transformers []rest.TransformFunc
 		if mutatingAdmission != nil && mutatingAdmission.Handles(admission.Update) {
 			transformers = append(transformers, func(ctx request.Context, newObj, oldObj runtime.Object) (runtime.Object, error) {
-				return newObj, mutatingAdmission.Admit(admission.NewAttributesRecord(newObj, oldObj, scope.Kind, namespace, name, scope.Resource, scope.Subresource, admission.Update, userInfo))
+				return newObj, mutatingAdmission.MutatingAdmit(admission.NewAttributesRecord(newObj, oldObj, scope.Kind, namespace, name, scope.Resource, scope.Subresource, admission.Update, userInfo))
 			})
 		}
 
