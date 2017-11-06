@@ -18,6 +18,7 @@ package validation
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	genericvalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -107,7 +108,13 @@ func ValidateCustomResourceDefinitionSpec(spec *apiextensions.CustomResourceDefi
 	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CustomResourceValidation) {
 		allErrs = append(allErrs, ValidateCustomResourceDefinitionValidation(spec.Validation, fldPath.Child("validation"))...)
 	} else if spec.Validation != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("validation"), "disabled by feature-gate"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("validation"), "disabled by feature-gate CustomResourceValidation"))
+	}
+
+	if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CustomResourceSubResources) {
+		allErrs = append(allErrs, ValidateCustomResourceDefinitionSubResources(spec.SubResources, fldPath.Child("subResources"))...)
+	} else if spec.SubResources != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("subResources"), "disabled by feature-gate CustomResourceSubresources"))
 	}
 
 	return allErrs
@@ -182,9 +189,27 @@ func ValidateCustomResourceDefinitionValidation(customResourceValidation *apiext
 		return allErrs
 	}
 
-	if customResourceValidation.OpenAPIV3Schema != nil {
+	if schema := customResourceValidation.OpenAPIV3Schema; schema != nil {
+		// if subresources are enabled, only properties is allowed inside the root schema
+		if utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CustomResourceSubResources) {
+			v := reflect.ValueOf(schema).Elem()
+			fieldsPresent := 0
+
+			for i := 0; i < v.NumField(); i++ {
+				field := v.Field(i).Interface()
+				if !reflect.DeepEqual(field, reflect.Zero(reflect.TypeOf(field)).Interface()) {
+					fieldsPresent++
+				}
+			}
+
+			if fieldsPresent > 1 || (fieldsPresent == 1 && v.FieldByName("Properties").IsNil()) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("openAPIV3Schema"), *schema, fmt.Sprintf("if subresources for custom resources are enabled, only properties can be used at the root of the schema")))
+				return allErrs
+			}
+		}
+
 		openAPIV3Schema := &specStandardValidatorV3{}
-		allErrs = append(allErrs, ValidateCustomResourceDefinitionOpenAPISchema(customResourceValidation.OpenAPIV3Schema, fldPath.Child("openAPIV3Schema"), openAPIV3Schema)...)
+		allErrs = append(allErrs, ValidateCustomResourceDefinitionOpenAPISchema(schema, fldPath.Child("openAPIV3Schema"), openAPIV3Schema)...)
 	}
 
 	// if validation passed otherwise, make sure we can actually construct a schema validator from this custom resource validation.
@@ -322,6 +347,45 @@ func (v *specStandardValidatorV3) validate(schema *apiextensions.JSONSchemaProps
 
 	if schema.Items != nil && len(schema.Items.JSONSchemas) != 0 {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("items"), "items must be a schema object and not an array"))
+	}
+
+	return allErrs
+}
+
+// ValidateCustomResourceDefinitionSubResources statically validates
+func ValidateCustomResourceDefinitionSubResources(subResources *apiextensions.CustomResourceSubResources, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if subResources == nil {
+		return allErrs
+	}
+
+	if subResources.Scale != nil {
+		if len(subResources.Scale.SpecReplicasPath) == 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.specReplicasPath"), subResources.Scale.SpecReplicasPath, "specReplicasPath cannot be empty"))
+		}
+
+		// should be constrained json path
+		specReplicasPath := strings.TrimPrefix(subResources.Scale.SpecReplicasPath, ".")
+		splitSpecReplicasPath := strings.Split(specReplicasPath, ".")
+		if len(splitSpecReplicasPath) <= 1 || splitSpecReplicasPath[0] != "spec" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.specReplicasPath"), subResources.Scale.SpecReplicasPath, "specReplicasPath should be a json path under .spec"))
+		}
+
+		if len(subResources.Scale.StatusReplicasPath) == 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.statusReplicasPath"), subResources.Scale.StatusReplicasPath, "statusReplicasPath cannot be empty"))
+		}
+
+		// should be constrained json path
+		statusReplicasPath := strings.TrimPrefix(subResources.Scale.StatusReplicasPath, ".")
+		splitStatusReplicasPath := strings.Split(statusReplicasPath, ".")
+		if len(splitStatusReplicasPath) <= 1 || splitStatusReplicasPath[0] != "status" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.statusReplicasPath"), subResources.Scale.StatusReplicasPath, "statusReplicasPath should be a json path under .status"))
+		}
+
+		if subResources.Scale.ScaleGroupVersion != "autoscaling/v1" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.scaleGroupVersion"), subResources.Scale.ScaleGroupVersion, "scaleGroupVersion must be autoscaling/v1"))
+		}
 	}
 
 	return allErrs
