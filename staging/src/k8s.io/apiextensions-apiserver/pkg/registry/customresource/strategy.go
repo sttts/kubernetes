@@ -17,13 +17,10 @@ limitations under the License.
 package customresource
 
 import (
-	"fmt"
-
 	"github.com/go-openapi/validate"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -32,12 +29,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
-	"k8s.io/apiserver/pkg/registry/rest"
 	apiserverstorage "k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
-	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	apiextensionsfeatures "k8s.io/apiextensions-apiserver/pkg/features"
 )
 
@@ -50,23 +45,18 @@ type customResourceStrategy struct {
 	validator       customResourceValidator
 }
 
-func NewStrategy(typer runtime.ObjectTyper, namespaceScoped bool, kind schema.GroupVersionKind, validator *validate.SchemaValidator) customResourceStrategy {
+func NewStrategy(typer runtime.ObjectTyper, namespaceScoped bool, kind schema.GroupVersionKind, schemaValidator, statusSchemaValidator *validate.SchemaValidator) customResourceStrategy {
 	return customResourceStrategy{
 		ObjectTyper:     typer,
 		NameGenerator:   names.SimpleNameGenerator,
 		namespaceScoped: namespaceScoped,
 		validator: customResourceValidator{
-			namespaceScoped: namespaceScoped,
-			kind:            kind,
-			validator:       validator,
+			namespaceScoped:       namespaceScoped,
+			kind:                  kind,
+			schemaValidator:       schemaValidator,
+			statusSchemaValidator: statusSchemaValidator,
 		},
 	}
-}
-
-// DefaultGarbageCollectionPolicy returns Orphan because that was the default
-// behavior before the server-side garbage collection was implemented.
-func (customResourceStrategy) DefaultGarbageCollectionPolicy() rest.GarbageCollectionPolicy {
-	return rest.OrphanDependents
 }
 
 func (a customResourceStrategy) NamespaceScoped() bool {
@@ -181,141 +171,4 @@ func (a customResourceStrategy) MatchCustomResourceDefinitionStorage(label label
 		Field:    field,
 		GetAttrs: a.GetAttrs,
 	}
-}
-
-type customResourceValidator struct {
-	namespaceScoped bool
-	kind            schema.GroupVersionKind
-	validator       *validate.SchemaValidator
-}
-
-func (a customResourceValidator) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath("metadata"), nil, err.Error())}
-	}
-	typeAccessor, err := meta.TypeAccessor(obj)
-	if err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath("kind"), nil, err.Error())}
-	}
-	if typeAccessor.GetKind() != a.kind.Kind {
-		return field.ErrorList{field.Invalid(field.NewPath("kind"), typeAccessor.GetKind(), fmt.Sprintf("must be %v", a.kind.Kind))}
-	}
-	if typeAccessor.GetAPIVersion() != a.kind.Group+"/"+a.kind.Version {
-		return field.ErrorList{field.Invalid(field.NewPath("apiVersion"), typeAccessor.GetAPIVersion(), fmt.Sprintf("must be %v", a.kind.Group+"/"+a.kind.Version))}
-	}
-
-	customResourceObject, ok := obj.(*unstructured.Unstructured)
-	// this will never happen.
-	if !ok {
-		return field.ErrorList{field.Invalid(field.NewPath(""), customResourceObject, fmt.Sprintf("has type %T. Must be a pointer to an Unstructured type", customResourceObject))}
-	}
-	customResource := customResourceObject.UnstructuredContent()
-
-	if err = apiservervalidation.ValidateCustomResource(customResource, a.validator); err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath(""), customResource, err.Error())}
-	}
-
-	return validation.ValidateObjectMetaAccessor(accessor, a.namespaceScoped, validation.NameIsDNSSubdomain, field.NewPath("metadata"))
-}
-
-func (a customResourceValidator) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
-	objAccessor, err := meta.Accessor(obj)
-	if err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath("metadata"), nil, err.Error())}
-	}
-	oldAccessor, err := meta.Accessor(old)
-	if err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath("metadata"), nil, err.Error())}
-	}
-	typeAccessor, err := meta.TypeAccessor(obj)
-	if err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath("kind"), nil, err.Error())}
-	}
-	if typeAccessor.GetKind() != a.kind.Kind {
-		return field.ErrorList{field.Invalid(field.NewPath("kind"), typeAccessor.GetKind(), fmt.Sprintf("must be %v", a.kind.Kind))}
-	}
-	if typeAccessor.GetAPIVersion() != a.kind.Group+"/"+a.kind.Version {
-		return field.ErrorList{field.Invalid(field.NewPath("apiVersion"), typeAccessor.GetAPIVersion(), fmt.Sprintf("must be %v", a.kind.Group+"/"+a.kind.Version))}
-	}
-
-	customResourceObject, ok := obj.(*unstructured.Unstructured)
-	// this will never happen.
-	if !ok {
-		return field.ErrorList{field.Invalid(field.NewPath(""), customResourceObject, fmt.Sprintf("has type %T. Must be a pointer to an Unstructured type", customResourceObject))}
-	}
-	customResource := customResourceObject.UnstructuredContent()
-
-	if err = apiservervalidation.ValidateCustomResource(customResource, a.validator); err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath(""), customResource, err.Error())}
-	}
-
-	return validation.ValidateObjectMetaAccessorUpdate(objAccessor, oldAccessor, field.NewPath("metadata"))
-}
-
-func (a customResourceValidator) ValidateStatusUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
-	objAccessor, err := meta.Accessor(obj)
-	if err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath("metadata"), nil, err.Error())}
-	}
-	oldAccessor, err := meta.Accessor(old)
-	if err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath("metadata"), nil, err.Error())}
-	}
-	typeAccessor, err := meta.TypeAccessor(obj)
-	if err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath("kind"), nil, err.Error())}
-	}
-	if typeAccessor.GetKind() != a.kind.Kind {
-		return field.ErrorList{field.Invalid(field.NewPath("kind"), typeAccessor.GetKind(), fmt.Sprintf("must be %v", a.kind.Kind))}
-	}
-	if typeAccessor.GetAPIVersion() != a.kind.Group+"/"+a.kind.Version {
-		return field.ErrorList{field.Invalid(field.NewPath("apiVersion"), typeAccessor.GetAPIVersion(), fmt.Sprintf("must be %v", a.kind.Group+"/"+a.kind.Version))}
-	}
-
-	customResourceObject, ok := obj.(*unstructured.Unstructured)
-	// this will never happen.
-	if !ok {
-		return field.ErrorList{field.Invalid(field.NewPath(""), customResourceObject, fmt.Sprintf("has type %T. Must be a pointer to an Unstructured type", customResourceObject))}
-	}
-	customResource := customResourceObject.UnstructuredContent()
-
-	// validate only the status
-	customResourceStatus := customResource["status"]
-	if err = apiservervalidation.ValidateCustomResource(customResourceStatus, a.validator); err != nil {
-		return field.ErrorList{field.Invalid(field.NewPath("status"), customResourceStatus, err.Error())}
-	}
-
-	return validation.ValidateObjectMetaAccessorUpdate(objAccessor, oldAccessor, field.NewPath("metadata"))
-}
-
-type customResourceDefinitionStorageStatusStrategy struct {
-	customResourceStrategy
-}
-
-func NewStatusStrategy(strategy customResourceStrategy) customResourceDefinitionStorageStatusStrategy {
-	return customResourceDefinitionStorageStatusStrategy{strategy}
-}
-
-func (customResourceDefinitionStorageStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
-	newCustomResourceObject := obj.(*unstructured.Unstructured)
-	oldCustomResourceObject := old.(*unstructured.Unstructured)
-
-	newCustomResource := newCustomResourceObject.UnstructuredContent()
-	oldCustomResource := oldCustomResourceObject.UnstructuredContent()
-
-	// update is not allowed to set spec and metadata
-	newCustomResource["spec"] = oldCustomResource["spec"]
-	newCustomResourceObject.SetAnnotations(oldCustomResourceObject.GetAnnotations())
-	newCustomResourceObject.SetFinalizers(oldCustomResourceObject.GetFinalizers())
-	newCustomResourceObject.SetGeneration(oldCustomResourceObject.GetGeneration())
-	newCustomResourceObject.SetLabels(oldCustomResourceObject.GetLabels())
-	newCustomResourceObject.SetOwnerReferences(oldCustomResourceObject.GetOwnerReferences())
-	newCustomResourceObject.SetSelfLink(oldCustomResourceObject.GetSelfLink())
-
-}
-
-// ValidateUpdate is the default update validation for an end user updating status.
-func (a customResourceDefinitionStorageStatusStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
-	return a.customResourceStrategy.validator.ValidateStatusUpdate(ctx, obj, old)
 }

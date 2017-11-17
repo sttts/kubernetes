@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -40,15 +41,25 @@ type CustomResourceStorage struct {
 	Scale          *ScaleREST
 }
 
-func NewStorage(resource schema.GroupResource, listKind schema.GroupVersionKind, strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, specReplicasPath, statusReplicasPath, labelSelectorPath string) CustomResourceStorage {
+func NewStorage(resource schema.GroupResource, listKind schema.GroupVersionKind, strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, scale *apiextensions.CustomResourceSubResourceScale) CustomResourceStorage {
 	customResourceREST, customResourceStatusREST := NewREST(resource, listKind, strategy, optsGetter)
 	customResourceRegistry := NewRegistry(customResourceREST)
 
-	return CustomResourceStorage{
+	s := CustomResourceStorage{
 		CustomResource: customResourceREST,
 		Status:         customResourceStatusREST,
-		Scale:          &ScaleREST{registry: customResourceRegistry, specReplicasPath: specReplicasPath, statusReplicasPath: statusReplicasPath, labelSelectorPath: labelSelectorPath},
 	}
+
+	if scale != nil {
+		s.Scale = &ScaleREST{
+			registry:           customResourceRegistry,
+			specReplicasPath:   scale.SpecReplicasPath,
+			statusReplicasPath: scale.StatusReplicasPath,
+			labelSelectorPath:  scale.LabelSelectorPath,
+		}
+	}
+
+	return s
 }
 
 // REST implements a RESTStorage for API services against etcd

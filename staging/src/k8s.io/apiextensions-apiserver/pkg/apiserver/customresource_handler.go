@@ -85,8 +85,11 @@ type crdInfo struct {
 	spec          *apiextensions.CustomResourceDefinitionSpec
 	acceptedNames *apiextensions.CustomResourceDefinitionNames
 
-	customResourceStorage customresource.CustomResourceStorage
-	requestScope          handlers.RequestScope
+	storage customresource.CustomResourceStorage
+
+	requestScope       handlers.RequestScope
+	scaleRequestScope  handlers.RequestScope
+	statusRequestScope handlers.RequestScope
 }
 
 // crdStorageMap goes from customresourcedefinition to its storage
@@ -177,89 +180,96 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	terminating := apiextensions.IsCRDConditionTrue(crd, apiextensions.Terminating)
 
 	subresource := requestInfo.Subresource
-	crdInfo, err := r.getServingInfoFor(crd, subresource)
+	crdInfo, err := r.getServingInfoFor(crd)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	storage := crdInfo.customResourceStorage.CustomResource
-	requestScope := crdInfo.requestScope
+	storage := crdInfo.storage.CustomResource
 	minRequestTimeout := 1 * time.Minute
 
-	var handler http.HandlerFunc
-	switch requestInfo.Verb {
-	case "get":
-		switch subresource {
-		case "status":
-			statusStorage := crdInfo.customResourceStorage.Status
-			handler = handlers.GetResource(statusStorage, storage, requestScope)
-		case "scale":
-			scaleStorage := crdInfo.customResourceStorage.Scale
-			handler = handlers.GetResource(scaleStorage, storage, requestScope)
-		default:
-			handler = handlers.GetResource(storage, storage, requestScope)
-		}
-		handler(w, req)
-		return
-	case "list":
-		forceWatch := false
-		handler = handlers.ListResource(storage, storage, requestScope, forceWatch, minRequestTimeout)
-		handler(w, req)
-		return
-	case "watch":
-		forceWatch := true
-		handler = handlers.ListResource(storage, storage, requestScope, forceWatch, minRequestTimeout)
-		handler(w, req)
-		return
-	case "create":
-		if terminating {
-			http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
+	var requestScope handlers.RequestScope
+	switch {
+	case subresource == "status" && crd.Spec.SubResources != nil && crd.Spec.SubResources.Status != nil:
+		requestScope = crdInfo.statusRequestScope
+		storage := crdInfo.storage.Status
+		switch requestInfo.Verb {
+		case "get":
+			handlers.GetResource(storage, nil, requestScope)(w, req)
+			return
+		case "update":
+			if terminating {
+				http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
+				return
+			}
+			handlers.UpdateResource(storage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)(w, req)
 			return
 		}
-		handler := handlers.CreateResource(storage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)
-		handler(w, req)
-		return
-	case "update":
-		if terminating {
-			http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
+
+	case subresource == "status" && crd.Spec.SubResources != nil && crd.Spec.SubResources.Scale != nil:
+		requestScope = crdInfo.scaleRequestScope
+		storage := crdInfo.storage.Scale
+		switch requestInfo.Verb {
+		case "get":
+			handlers.GetResource(storage, nil, requestScope)(w, req)
+			return
+		case "update":
+			if terminating {
+				http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
+				return
+			}
+			handlers.UpdateResource(storage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)(w, req)
 			return
 		}
-		switch subresource {
-		case "status":
-			statusStorage := crdInfo.customResourceStorage.Status
-			handler = handlers.UpdateResource(statusStorage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)
-		case "scale":
-			scaleStorage := crdInfo.customResourceStorage.Scale
-			handler = handlers.UpdateResource(scaleStorage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)
-		default:
-			handler = handlers.UpdateResource(storage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)
-		}
-		handler(w, req)
-		return
-	case "patch":
-		if terminating {
-			http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
-			return
-		}
-		handler = handlers.PatchResource(storage, requestScope, r.admission, unstructured.UnstructuredObjectConverter{})
-		handler(w, req)
-		return
-	case "delete":
-		allowsOptions := true
-		handler = handlers.DeleteResource(storage, allowsOptions, requestScope, r.admission)
-		handler(w, req)
-		return
-	case "deletecollection":
-		checkBody := true
-		handler = handlers.DeleteCollection(storage, checkBody, requestScope, r.admission)
-		handler(w, req)
-		return
 
 	default:
-		http.Error(w, fmt.Sprintf("unhandled verb %q", requestInfo.Verb), http.StatusMethodNotAllowed)
-		return
+		requestScope = crdInfo.requestScope
+		switch requestInfo.Verb {
+		case "get":
+			handlers.GetResource(storage, storage, requestScope)(w, req)
+			return
+		case "list":
+			forceWatch := false
+			handlers.ListResource(storage, storage, requestScope, forceWatch, minRequestTimeout)(w, req)
+			return
+		case "watch":
+			forceWatch := true
+			handlers.ListResource(storage, storage, requestScope, forceWatch, minRequestTimeout)(w, req)
+			return
+		case "create":
+			if terminating {
+				http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
+				return
+			}
+			handlers.CreateResource(storage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)(w, req)
+			return
+		case "update":
+			if terminating {
+				http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
+				return
+			}
+			handlers.UpdateResource(storage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)(w, req)
+			return
+		case "patch":
+			if terminating {
+				http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
+				return
+			}
+			handlers.PatchResource(storage, requestScope, r.admission, unstructured.UnstructuredObjectConverter{})(w, req)
+			return
+		case "delete":
+			allowsOptions := true
+			handlers.DeleteResource(storage, allowsOptions, requestScope, r.admission)(w, req)
+			return
+		case "deletecollection":
+			checkBody := true
+			handlers.DeleteCollection(storage, checkBody, requestScope, r.admission)(w, req)
+			return
+		}
 	}
+
+	http.Error(w, fmt.Sprintf("unhandled verb %q", requestInfo.Verb), http.StatusMethodNotAllowed)
 }
 
 // removeDeadStorage removes REST storage that isn't being used
@@ -284,7 +294,7 @@ func (r *crdHandler) removeDeadStorage() {
 		}
 		if !found {
 			glog.V(4).Infof("Removing dead CRD storage for %v", s.requestScope.Resource)
-			s.customResourceStorage.CustomResource.DestroyFunc()
+			s.storage.CustomResource.DestroyFunc()
 			delete(storageMap, uid)
 		}
 	}
@@ -298,14 +308,14 @@ func (r *crdHandler) removeDeadStorage() {
 // GetCustomResourceListerCollectionDeleter returns the ListerCollectionDeleter for
 // the given uid, or nil if one does not exist.
 func (r *crdHandler) GetCustomResourceListerCollectionDeleter(crd *apiextensions.CustomResourceDefinition) finalizer.ListerCollectionDeleter {
-	info, err := r.getServingInfoFor(crd, "")
+	info, err := r.getServingInfoFor(crd)
 	if err != nil {
 		utilruntime.HandleError(err)
 	}
-	return info.customResourceStorage.CustomResource
+	return info.storage.CustomResource
 }
 
-func (r *crdHandler) getServingInfoFor(crd *apiextensions.CustomResourceDefinition, subresource string) (*crdInfo, error) {
+func (r *crdHandler) getServingInfoFor(crd *apiextensions.CustomResourceDefinition) (*crdInfo, error) {
 	storageMap := r.customStorage.Load().(crdStorageMap)
 	ret, ok := storageMap[crd.UID]
 	if ok {
@@ -346,20 +356,18 @@ func (r *crdHandler) getServingInfoFor(crd *apiextensions.CustomResourceDefiniti
 	if err := openapispec.ExpandSchema(openapiSchema, nil, nil); err != nil {
 		return nil, err
 	}
-
-	// for the status subresource, validate only against the status schema
-	if subresource == "status" {
-		statusSchema := openapiSchema.SchemaProps.Properties["status"]
-		openapiSchema = &statusSchema
-	}
 	validator := validate.NewSchemaValidator(openapiSchema, nil, "", strfmt.Default)
 
-	// get JSONPath for the scale subresource
-	var specReplicasPath, statusReplicasPath, labelSelectorPath string
+	// for the status subresource, validate only against the status schema
+	var statusValidator *validate.SchemaValidator
+	if crd.Spec.SubResources != nil && crd.Spec.SubResources.Status != nil {
+		statusSchema := openapiSchema.SchemaProps.Properties["status"]
+		statusValidator = validate.NewSchemaValidator(&statusSchema, nil, "", strfmt.Default)
+	}
+
+	var scale *apiextensions.CustomResourceSubResourceScale
 	if crd.Spec.SubResources != nil && crd.Spec.SubResources.Scale != nil {
-		specReplicasPath = crd.Spec.SubResources.Scale.SpecReplicasPath
-		statusReplicasPath = crd.Spec.SubResources.Scale.StatusReplicasPath
-		labelSelectorPath = crd.Spec.SubResources.Scale.LabelSelectorPath
+		scale = crd.Spec.SubResources.Scale
 	}
 
 	customResourceStorage := customresource.NewStorage(
@@ -370,8 +378,9 @@ func (r *crdHandler) getServingInfoFor(crd *apiextensions.CustomResourceDefiniti
 			crd.Spec.Scope == apiextensions.NamespaceScoped,
 			kind,
 			validator,
+			statusValidator,
 		),
-		r.restOptionsGetter, specReplicasPath, statusReplicasPath, labelSelectorPath,
+		r.restOptionsGetter, scale,
 	)
 
 	selfLinkPrefix := ""
@@ -411,9 +420,8 @@ func (r *crdHandler) getServingInfoFor(crd *apiextensions.CustomResourceDefiniti
 		Typer:           typer,
 		UnsafeConvertor: unstructured.UnstructuredObjectConverter{},
 
-		Resource:    schema.GroupVersionResource{Group: crd.Spec.Group, Version: crd.Spec.Version, Resource: crd.Status.AcceptedNames.Plural},
-		Kind:        kind,
-		Subresource: subresource,
+		Resource: schema.GroupVersionResource{Group: crd.Spec.Group, Version: crd.Spec.Version, Resource: crd.Status.AcceptedNames.Plural},
+		Kind:     kind,
 
 		MetaGroupVersion: metav1.SchemeGroupVersion,
 	}
@@ -422,9 +430,13 @@ func (r *crdHandler) getServingInfoFor(crd *apiextensions.CustomResourceDefiniti
 		spec:          &crd.Spec,
 		acceptedNames: &crd.Status.AcceptedNames,
 
-		customResourceStorage: customResourceStorage,
-		requestScope:          requestScope,
+		storage:            customResourceStorage,
+		requestScope:       requestScope,
+		scaleRequestScope:  requestScope, // shallow copy
+		statusRequestScope: requestScope, // shallow copy
 	}
+	ret.scaleRequestScope.Subresource = "scale"
+	ret.statusRequestScope.Subresource = "status"
 
 	storageMap2 := make(crdStorageMap, len(storageMap))
 
@@ -481,7 +493,7 @@ func (c *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{}) 
 	// as it is used without locking elsewhere
 	for k, v := range storageMap {
 		if k == oldCRD.UID {
-			v.customResourceStorage.CustomResource.DestroyFunc()
+			v.storage.CustomResource.DestroyFunc()
 			continue
 		}
 		storageMap2[k] = v
