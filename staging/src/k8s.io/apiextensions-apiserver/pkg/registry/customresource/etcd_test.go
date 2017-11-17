@@ -17,9 +17,11 @@ limitations under the License.
 package customresource_test
 
 import (
+	"io"
 	"testing"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,19 +31,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/diff"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
+	registrytest "k8s.io/apiserver/pkg/registry/generic/testing"
 	"k8s.io/apiserver/pkg/registry/rest"
 	etcdtesting "k8s.io/apiserver/pkg/storage/etcd/testing"
 	"k8s.io/client-go/discovery"
-
-	// TODO: remove this dependency on k/k
-	"k8s.io/kubernetes/pkg/registry/registrytest"
 
 	"k8s.io/apiextensions-apiserver/pkg/apiserver"
 	"k8s.io/apiextensions-apiserver/pkg/registry/customresource"
 )
 
 func newStorage(t *testing.T) (customresource.CustomResourceStorage, *etcdtesting.EtcdTestServer) {
-	etcdStorage, server := registrytest.NewEtcdStorage(t, "mygroup.example.com")
+	server, etcdStorage := etcdtesting.NewUnsecuredEtcd3TestClientServer(t)
+	etcdStorage.Codec = unstructuredJsonCodec{}
 	restOptions := generic.RESTOptions{StorageConfig: etcdStorage, Decorator: generic.UndecoratedStorage, DeleteCollectionWorkers: 1, ResourcePrefix: "noxus"}
 
 	parameterScheme := runtime.NewScheme()
@@ -51,7 +52,6 @@ func newStorage(t *testing.T) (customresource.CustomResourceStorage, *etcdtestin
 		&metav1.GetOptions{},
 		&metav1.DeleteOptions{},
 	)
-	parameterScheme.AddGeneratedDeepCopyFuncs(metav1.GetGeneratedDeepCopyFuncs()...)
 
 	typer := apiserver.UnstructuredObjectTyper{
 		Delegate:          parameterScheme,
@@ -59,11 +59,6 @@ func newStorage(t *testing.T) (customresource.CustomResourceStorage, *etcdtestin
 	}
 
 	kind := schema.GroupVersionKind{Group: "mygroup.example.com", Version: "v1beta1", Kind: "Noxu"}
-
-	var specReplicasPath, statusReplicasPath, labelSelectorPath string
-	specReplicasPath = ".spec.replicas"
-	statusReplicasPath = ".status.replicas"
-	labelSelectorPath = ".spec.labelSelector"
 
 	storage := customresource.NewStorage(
 		schema.GroupResource{Group: "mygroup.example.com", Resource: "noxus"},
@@ -73,8 +68,14 @@ func newStorage(t *testing.T) (customresource.CustomResourceStorage, *etcdtestin
 			true,
 			kind,
 			nil,
+			nil,
 		),
-		restOptions, specReplicasPath, statusReplicasPath, labelSelectorPath,
+		restOptions, &apiextensions.CustomResourceSubResourceScale{
+			SpecReplicasPath:   ".spec.replicas",
+			StatusReplicasPath: ".status.replicas",
+			LabelSelectorPath:  ".spec.labelSelector",
+			ScaleGroupVersion:  autoscalingv1.SchemeGroupVersion.Group,
+		},
 	)
 
 	return storage, server
@@ -278,4 +279,26 @@ func TestScaleUpdate(t *testing.T) {
 	if _, _, err = storage.Scale.Update(ctx, update.Name, rest.DefaultUpdatedObjectInfo(&update), rest.ValidateAllObjectFunc, rest.ValidateAllObjectUpdateFunc); err != nil && !errors.IsConflict(err) {
 		t.Fatalf("unexpected error, expecting an update conflict but got %v", err)
 	}
+}
+
+type unstructuredJsonCodec struct{}
+
+func (c unstructuredJsonCodec) Decode(data []byte, defaults *schema.GroupVersionKind, into runtime.Object) (runtime.Object, *schema.GroupVersionKind, error) {
+	obj := into.(*unstructured.Unstructured)
+	err := obj.UnmarshalJSON(data)
+	if err != nil {
+		return nil, nil, err
+	}
+	gvk := obj.GroupVersionKind()
+	return obj, &gvk, nil
+}
+
+func (c unstructuredJsonCodec) Encode(obj runtime.Object, w io.Writer) error {
+	u := obj.(*unstructured.Unstructured)
+	bs, err := u.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	w.Write(bs)
+	return nil
 }
