@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
-	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -45,12 +44,6 @@ type strategy struct {
 
 func NewStrategy(typer runtime.ObjectTyper) strategy {
 	return strategy{typer, names.SimpleNameGenerator}
-}
-
-// DefaultGarbageCollectionPolicy returns Orphan because that was the default
-// behavior before the server-side garbage collection was implemented.
-func (strategy) DefaultGarbageCollectionPolicy() rest.GarbageCollectionPolicy {
-	return rest.OrphanDependents
 }
 
 func (strategy) NamespaceScoped() bool {
