@@ -21,6 +21,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apiextensions-apiserver/test/integration/testserver"
@@ -64,6 +65,11 @@ func newNoxuSubResourceInstance(namespace, name string) *unstructured.Unstructur
 }
 
 func TestStatusSubResource(t *testing.T) {
+	// enable alpha feature CustomResourceDefaulting
+	if err := utilfeature.DefaultFeatureGate.Set("CustomResourceSubResources=true"); err != nil {
+		t.Errorf("failed to enable feature gate for CustomResourceDefaulting: %v", err)
+	}
+
 	stopCh, apiExtensionClient, clientPool, err := testserver.StartDefaultServer()
 	if err != nil {
 		t.Fatal(err)

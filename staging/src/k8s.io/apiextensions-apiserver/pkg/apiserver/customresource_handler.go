@@ -172,10 +172,6 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !apiextensions.IsCRDConditionTrue(crd, apiextensions.Established) {
 		r.delegate.ServeHTTP(w, req)
 	}
-	if len(requestInfo.Subresource) > 0 {
-		http.NotFound(w, req)
-		return
-	}
 
 	terminating := apiextensions.IsCRDConditionTrue(crd, apiextensions.Terminating)
 
@@ -223,7 +219,7 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-	default:
+	case len(subresource) == 0:
 		requestScope = crdInfo.requestScope
 		switch requestInfo.Verb {
 		case "get":
@@ -267,6 +263,9 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			handlers.DeleteCollection(storage, checkBody, requestScope, r.admission)(w, req)
 			return
 		}
+	default:
+		http.Error(w, "the server could not find the requested resource", http.StatusNotFound)
+		return
 	}
 
 	http.Error(w, fmt.Sprintf("unhandled verb %q", requestInfo.Verb), http.StatusMethodNotAllowed)
