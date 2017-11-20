@@ -42,6 +42,12 @@ func newNoxuSubResourcesCRD(scope apiextensionsv1beta1.ResourceScope) *apiextens
 			Scope: apiextensionsv1beta1.NamespaceScoped,
 			SubResources: &apiextensionsv1beta1.CustomResourceSubResources{
 				Status: &apiextensionsv1beta1.CustomResourceSubResourceStatus{},
+				Scale: &apiextensionsv1beta1.CustomResourceSubResourceScale{
+					SpecReplicasPath:   ".spec.replicas",
+					StatusReplicasPath: ".status.replicas",
+					LabelSelectorPath:  ".spec.labelSelector",
+					ScaleGroupVersion:  "autoscaling/v1",
+				},
 			},
 		},
 	}
@@ -107,5 +113,32 @@ func TestStatusSubResource(t *testing.T) {
 	_, err = noxuResourceClient.UpdateStatus(gottenNoxuInstance)
 	if err != nil {
 		t.Fatalf("unable to update status: %v", err)
+	}
+}
+
+func TestScaleSubResource(t *testing.T) {
+	stopCh, apiExtensionClient, clientPool, err := testserver.StartDefaultServer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer close(stopCh)
+
+	noxuDefinition := newNoxuSubResourcesCRD(apiextensionsv1beta1.NamespaceScoped)
+	noxuVersionClient, err := testserver.CreateNewCustomResourceDefinition(noxuDefinition, apiExtensionClient, clientPool)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ns := "not-the-default"
+	noxuResourceClient := NewNamespacedCustomResourceClient(ns, noxuVersionClient, noxuDefinition)
+	_, err = instantiateCustomResource(t, newNoxuSubResourceInstance(ns, "foo"), noxuResourceClient, noxuDefinition)
+	if err != nil {
+		t.Fatalf("unable to create noxu instance: %v", err)
+	}
+
+	// TODO: fix this
+	_, err = noxuResourceClient.GetScale("foo", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("unable to get scale: %v", err)
 	}
 }
