@@ -72,6 +72,8 @@ type ResourceInterface interface {
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	// Patch patches the provided resource.
 	Patch(name string, pt types.PatchType, data []byte) (*unstructured.Unstructured, error)
+	// UpdateStatus updates the status subresource of the provided resource.
+	UpdateStatus(obj *unstructured.Unstructured) (*unstructured.Unstructured, error)
 }
 
 // Client is a Kubernetes client that allows you to access metadata
@@ -251,6 +253,23 @@ func (rc *ResourceClient) Patch(name string, pt types.PatchType, data []byte) (*
 		Resource(rc.resource.Name).
 		Name(name).
 		Body(data).
+		Do().
+		Into(result)
+	return result, err
+}
+
+// UpdateStatus updates the provided resource.
+func (rc *ResourceClient) UpdateStatus(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	result := new(unstructured.Unstructured)
+	if len(obj.GetName()) == 0 {
+		return result, errors.New("object missing name")
+	}
+	err := rc.cl.Put().
+		NamespaceIfScoped(rc.ns, rc.resource.Namespaced).
+		Resource(rc.resource.Name).
+		Name(obj.GetName()).
+		SubResource("status").
+		Body(obj).
 		Do().
 		Into(result)
 	return result, err
