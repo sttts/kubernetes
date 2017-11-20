@@ -207,7 +207,7 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-	case subresource == "status" && crd.Spec.SubResources != nil && crd.Spec.SubResources.Scale != nil:
+	case subresource == "scale" && crd.Spec.SubResources != nil && crd.Spec.SubResources.Scale != nil:
 		requestScope = crdInfo.scaleRequestScope
 		storage := crdInfo.storage.Scale
 		switch requestInfo.Verb {
