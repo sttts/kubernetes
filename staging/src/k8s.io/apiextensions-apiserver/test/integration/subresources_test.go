@@ -64,16 +64,17 @@ func newNoxuSubResourceInstance(namespace, name string) *unstructured.Unstructur
 				"name":      name,
 			},
 			"spec": map[string]interface{}{
-				"num": 10,
+				"num":      int64(10),
+				"replicas": int64(3),
 			},
 		},
 	}
 }
 
 func TestStatusSubResource(t *testing.T) {
-	// enable alpha feature CustomResourceDefaulting
+	// enable alpha feature CustomResourceSubResources
 	if err := utilfeature.DefaultFeatureGate.Set("CustomResourceSubResources=true"); err != nil {
-		t.Errorf("failed to enable feature gate for CustomResourceDefaulting: %v", err)
+		t.Errorf("failed to enable feature gate for CustomResourceSubResources: %v", err)
 	}
 
 	stopCh, apiExtensionClient, clientPool, err := testserver.StartDefaultServer()
@@ -100,29 +101,47 @@ func TestStatusSubResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gottenNoxuInstance.Object = map[string]interface{}{
-		"apiVersion": "mygroup.example.com/v1beta1",
-		"kind":       "WishIHadChosenNoxu",
-		"metadata": map[string]interface{}{
-			"namespace": "not-the-default",
-			"name":      "foo",
-		},
-		"spec": map[string]interface{}{
-			"num": 10,
-		},
-		"status": map[string]interface{}{
-			"num": 10,
-		},
+	// .status.num = 10
+	ok := unstructured.SetNestedField(gottenNoxuInstance.Object, int64(10), "status", "num")
+	if !ok {
+		t.Fatalf("unable to set status")
 	}
 
-	// TODO: fix this error
-	_, err = noxuResourceClient.UpdateStatus(gottenNoxuInstance)
+	// .spec.num = 20
+	ok = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(20), "spec", "num")
+	if !ok {
+		t.Fatalf("unable to set spec")
+	}
+
+	updatedStatusInstance, err := noxuResourceClient.UpdateStatus(gottenNoxuInstance)
 	if err != nil {
 		t.Fatalf("unable to update status: %v", err)
+	}
+
+	// UpdateStatus should not update spec. Check that .spec.num remains 10.
+	specNum, ok := unstructured.NestedInt64(updatedStatusInstance.Object, "spec", "num")
+	if !ok {
+		t.Fatalf("unable to get .spec.num")
+	}
+	if specNum != int64(10) {
+		t.Fatalf("expected %v, got %v", int64(10), specNum)
+	}
+
+	statusNum, ok := unstructured.NestedInt64(updatedStatusInstance.Object, "status", "num")
+	if !ok {
+		t.Fatalf("unable to get .status.num")
+	}
+	if statusNum != int64(10) {
+		t.Fatalf("expected %v, got %v", int64(10), statusNum)
 	}
 }
 
 func TestScaleSubResource(t *testing.T) {
+	// enable alpha feature CustomResourceSubResources
+	if err := utilfeature.DefaultFeatureGate.Set("CustomResourceSubResources=true"); err != nil {
+		t.Errorf("failed to enable feature gate for CustomResourceSubResources: %v", err)
+	}
+
 	stopCh, apiExtensionClient, clientPool, err := testserver.StartDefaultServer()
 	if err != nil {
 		t.Fatal(err)

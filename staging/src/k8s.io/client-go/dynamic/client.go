@@ -282,17 +282,13 @@ func (rc *ResourceClient) UpdateStatus(obj *unstructured.Unstructured) (*unstruc
 
 // GetScale takes name of the resource, and returns the corresponding autoscalingv1.Scale object, and an error if there is any.
 func (rc *ResourceClient) GetScale(name string, opts metav1.GetOptions) (*autoscalingv1.Scale, error) {
-	parameterEncoder := rc.parameterCodec
-	if parameterEncoder == nil {
-		parameterEncoder = defaultParameterEncoder
-	}
 	result := new(autoscalingv1.Scale)
 	err := rc.cl.Get().
 		NamespaceIfScoped(rc.ns, rc.resource.Namespaced).
 		Resource(rc.resource.Name).
-		VersionedParams(&opts, parameterEncoder).
 		Name(name).
 		SubResource("scale").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Do().
 		Into(result)
 	return result, err
