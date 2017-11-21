@@ -26,7 +26,6 @@ import (
 	"net/url"
 	"strings"
 
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -75,10 +74,6 @@ type ResourceInterface interface {
 	Patch(name string, pt types.PatchType, data []byte) (*unstructured.Unstructured, error)
 	// UpdateStatus updates the status subresource of the provided resource.
 	UpdateStatus(obj *unstructured.Unstructured) (*unstructured.Unstructured, error)
-	// GetScale gets the Scale object for the provided resource.
-	GetScale(name string, opts metav1.GetOptions) (*autoscalingv1.Scale, error)
-	// UpdateScale updates the Scale object for the provided resource.
-	UpdateScale(name string, scale *autoscalingv1.Scale) (*autoscalingv1.Scale, error)
 }
 
 // Client is a Kubernetes client that allows you to access metadata
@@ -275,34 +270,6 @@ func (rc *ResourceClient) UpdateStatus(obj *unstructured.Unstructured) (*unstruc
 		Name(obj.GetName()).
 		SubResource("status").
 		Body(obj).
-		Do().
-		Into(result)
-	return result, err
-}
-
-// GetScale takes name of the resource, and returns the corresponding autoscalingv1.Scale object, and an error if there is any.
-func (rc *ResourceClient) GetScale(name string, opts metav1.GetOptions) (*autoscalingv1.Scale, error) {
-	result := new(autoscalingv1.Scale)
-	err := rc.cl.Get().
-		NamespaceIfScoped(rc.ns, rc.resource.Namespaced).
-		Resource(rc.resource.Name).
-		Name(name).
-		SubResource("scale").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
-		Into(result)
-	return result, err
-}
-
-// UpdateScale takes the top resource name and the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
-func (rc *ResourceClient) UpdateScale(name string, scale *autoscalingv1.Scale) (*autoscalingv1.Scale, error) {
-	result := new(autoscalingv1.Scale)
-	err := rc.cl.Put().
-		NamespaceIfScoped(rc.ns, rc.resource.Namespaced).
-		Resource(rc.resource.Name).
-		Name(name).
-		SubResource("scale").
-		Body(scale).
 		Do().
 		Into(result)
 	return result, err

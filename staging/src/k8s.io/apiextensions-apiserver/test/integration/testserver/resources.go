@@ -24,13 +24,16 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage/names"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/scale"
 )
 
 const (
@@ -292,4 +295,19 @@ func DeleteCustomResourceDefinition(crd *apiextensionsv1beta1.CustomResourceDefi
 
 func GetCustomResourceDefinition(crd *apiextensionsv1beta1.CustomResourceDefinition, apiExtensionsClient clientset.Interface) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
 	return apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Get(crd.Name, metav1.GetOptions{})
+}
+
+func CreateNewScaleClient(apiExtensionsClient clientset.Interface) (scale.ScalesGetter, error) {
+	restClient := apiExtensionsClient.Discovery().RESTClient()
+
+	restMapperRes, err := discovery.GetAPIGroupResources(apiExtensionsClient.Discovery())
+	if err != nil {
+		return nil, err
+	}
+	restMapper := discovery.NewRESTMapper(restMapperRes, apimeta.InterfacesForUnstructured)
+
+	resolver := scale.NewDiscoveryScaleKindResolver(apiExtensionsClient.Discovery())
+
+	client := scale.New(restClient, restMapper, dynamic.LegacyAPIPathResolverFunc, resolver)
+	return client, nil
 }

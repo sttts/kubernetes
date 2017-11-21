@@ -21,6 +21,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -161,9 +162,18 @@ func TestScaleSubResource(t *testing.T) {
 		t.Fatalf("unable to create noxu instance: %v", err)
 	}
 
-	// TODO: fix this
-	_, err = noxuResourceClient.GetScale("foo", metav1.GetOptions{})
+	scaleClient, err := testserver.CreateNewScaleClient(apiExtensionClient)
 	if err != nil {
-		t.Fatalf("unable to get scale: %v", err)
+		t.Fatal(err)
+	}
+
+	groupResource := schema.GroupResource{
+		Group:    "mygroup.example.com",
+		Resource: "noxus",
+	}
+
+	_, err = scaleClient.Scales("not-the-default").Get(groupResource, "foo")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
