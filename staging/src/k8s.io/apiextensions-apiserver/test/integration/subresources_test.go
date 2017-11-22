@@ -19,10 +19,12 @@ package integration
 import (
 	"testing"
 
+	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/client-go/dynamic"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apiextensions-apiserver/test/integration/testserver"
@@ -78,7 +80,7 @@ func TestStatusSubResource(t *testing.T) {
 		t.Errorf("failed to enable feature gate for CustomResourceSubResources: %v", err)
 	}
 
-	stopCh, apiExtensionClient, clientPool, err := testserver.StartDefaultServer()
+	stopCh, apiExtensionClient, clientPool, err := testserver.StartDefaultServerWithClients()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,11 +145,17 @@ func TestScaleSubResource(t *testing.T) {
 		t.Errorf("failed to enable feature gate for CustomResourceSubResources: %v", err)
 	}
 
-	stopCh, apiExtensionClient, clientPool, err := testserver.StartDefaultServer()
+	stopCh, config, err := testserver.StartDefaultServer()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer close(stopCh)
+
+	apiExtensionClient, err := clientset.NewForConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientPool := dynamic.NewDynamicClientPool(config)
 
 	noxuDefinition := newNoxuSubResourcesCRD(apiextensionsv1beta1.NamespaceScoped)
 	noxuVersionClient, err := testserver.CreateNewCustomResourceDefinition(noxuDefinition, apiExtensionClient, clientPool)
@@ -162,7 +170,7 @@ func TestScaleSubResource(t *testing.T) {
 		t.Fatalf("unable to create noxu instance: %v", err)
 	}
 
-	scaleClient, err := testserver.CreateNewScaleClient(noxuDefinition, apiExtensionClient)
+	scaleClient, err := testserver.CreateNewScaleClient(noxuDefinition, config)
 	if err != nil {
 		t.Fatal(err)
 	}

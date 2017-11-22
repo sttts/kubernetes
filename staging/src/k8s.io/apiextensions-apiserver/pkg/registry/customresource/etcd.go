@@ -17,7 +17,6 @@ limitations under the License.
 package customresource
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -141,7 +140,7 @@ func (r *ScaleREST) Get(ctx genericapirequest.Context, name string, options *met
 
 	scaleObject, err := scaleFromCustomResource(cr, r.specReplicasPath, r.statusReplicasPath, r.labelSelectorPath)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("%v", err))
+		return nil, err
 	}
 	return scaleObject, err
 }

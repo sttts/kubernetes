@@ -32,6 +32,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/scale"
 )
 
@@ -296,10 +297,12 @@ func GetCustomResourceDefinition(crd *apiextensionsv1beta1.CustomResourceDefinit
 	return apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Get(crd.Name, metav1.GetOptions{})
 }
 
-func CreateNewScaleClient(crd *apiextensionsv1beta1.CustomResourceDefinition, apiExtensionsClient clientset.Interface) (scale.ScalesGetter, error) {
-	restClient := apiExtensionsClient.Discovery().RESTClient()
-
-	groupResource, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(crd.Spec.Group + "/" + crd.Spec.Version)
+func CreateNewScaleClient(crd *apiextensionsv1beta1.CustomResourceDefinition, config *rest.Config) (scale.ScalesGetter, error) {
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	groupResource, err := discoveryClient.ServerResourcesForGroupVersion(crd.Spec.Group + "/" + crd.Spec.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -320,9 +323,7 @@ func CreateNewScaleClient(crd *apiextensionsv1beta1.CustomResourceDefinition, ap
 	}
 
 	restMapper := discovery.NewRESTMapper(resources, nil)
+	resolver := scale.NewDiscoveryScaleKindResolver(discoveryClient)
 
-	resolver := scale.NewDiscoveryScaleKindResolver(apiExtensionsClient.Discovery())
-
-	client := scale.New(restClient, restMapper, dynamic.LegacyAPIPathResolverFunc, resolver)
-	return client, nil
+	return scale.NewForConfig(config, restMapper, dynamic.LegacyAPIPathResolverFunc, resolver)
 }
