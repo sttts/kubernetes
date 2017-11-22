@@ -24,7 +24,6 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -297,14 +296,30 @@ func GetCustomResourceDefinition(crd *apiextensionsv1beta1.CustomResourceDefinit
 	return apiExtensionsClient.Apiextensions().CustomResourceDefinitions().Get(crd.Name, metav1.GetOptions{})
 }
 
-func CreateNewScaleClient(apiExtensionsClient clientset.Interface) (scale.ScalesGetter, error) {
+func CreateNewScaleClient(crd *apiextensionsv1beta1.CustomResourceDefinition, apiExtensionsClient clientset.Interface) (scale.ScalesGetter, error) {
 	restClient := apiExtensionsClient.Discovery().RESTClient()
 
-	restMapperRes, err := discovery.GetAPIGroupResources(apiExtensionsClient.Discovery())
+	groupResource, err := apiExtensionsClient.Discovery().ServerResourcesForGroupVersion(crd.Spec.Group + "/" + crd.Spec.Version)
 	if err != nil {
 		return nil, err
 	}
-	restMapper := discovery.NewRESTMapper(restMapperRes, apimeta.InterfacesForUnstructured)
+
+	resources := []*discovery.APIGroupResources{
+		{
+			Group: metav1.APIGroup{
+				Name: crd.Spec.Group,
+				Versions: []metav1.GroupVersionForDiscovery{
+					{Version: crd.Spec.Version},
+				},
+				PreferredVersion: metav1.GroupVersionForDiscovery{Version: crd.Spec.Version},
+			},
+			VersionedResources: map[string][]metav1.APIResource{
+				crd.Spec.Version: groupResource.APIResources,
+			},
+		},
+	}
+
+	restMapper := discovery.NewRESTMapper(resources, nil)
 
 	resolver := scale.NewDiscoveryScaleKindResolver(apiExtensionsClient.Discovery())
 

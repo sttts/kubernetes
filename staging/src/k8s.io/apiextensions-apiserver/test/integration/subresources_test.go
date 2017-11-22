@@ -162,7 +162,7 @@ func TestScaleSubResource(t *testing.T) {
 		t.Fatalf("unable to create noxu instance: %v", err)
 	}
 
-	scaleClient, err := testserver.CreateNewScaleClient(apiExtensionClient)
+	scaleClient, err := testserver.CreateNewScaleClient(noxuDefinition, apiExtensionClient)
 	if err != nil {
 		t.Fatal(err)
 	}
