@@ -29,6 +29,9 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
 	"github.com/golang/glog"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/scale"
+	"k8s.io/client-go/scale/scheme/autoscalingv1"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -364,9 +367,9 @@ func (r *crdHandler) getServingInfoFor(crd *apiextensions.CustomResourceDefiniti
 		statusValidator = validate.NewSchemaValidator(&statusSchema, nil, "", strfmt.Default)
 	}
 
-	var scale *apiextensions.CustomResourceSubResourceScale
+	var scaleSpec *apiextensions.CustomResourceSubResourceScale
 	if crd.Spec.SubResources != nil && crd.Spec.SubResources.Scale != nil {
-		scale = crd.Spec.SubResources.Scale
+		scaleSpec = crd.Spec.SubResources.Scale
 	}
 
 	customResourceStorage := customresource.NewStorage(
@@ -379,7 +382,7 @@ func (r *crdHandler) getServingInfoFor(crd *apiextensions.CustomResourceDefiniti
 			validator,
 			statusValidator,
 		),
-		r.restOptionsGetter, scale,
+		r.restOptionsGetter, scaleSpec,
 	)
 
 	selfLinkPrefix := ""
@@ -434,7 +437,14 @@ func (r *crdHandler) getServingInfoFor(crd *apiextensions.CustomResourceDefiniti
 		scaleRequestScope:  requestScope, // shallow copy
 		statusRequestScope: requestScope, // shallow copy
 	}
+
+	// override scaleSpec subresource values
+	scaleConverter := scale.NewScaleConverter()
 	ret.scaleRequestScope.Subresource = "scale"
+	ret.scaleRequestScope.Serializer = serializer.NewCodecFactory(scaleConverter.Scheme())
+	ret.scaleRequestScope.Kind = autoscalingv1.SchemeGroupVersion.WithKind("Scale") // TODO: use crd.Spec.SubResources.Scale.ScaleGroupVersion
+
+	// override status subresource values
 	ret.statusRequestScope.Subresource = "status"
 
 	storageMap2 := make(crdStorageMap, len(storageMap))
