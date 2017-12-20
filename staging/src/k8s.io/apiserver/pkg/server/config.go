@@ -259,7 +259,6 @@ func NewConfig(codecs serializer.CodecFactory) *Config {
 func NewRecommendedConfig(codecs serializer.CodecFactory) *RecommendedConfig {
 	return &RecommendedConfig{
 		Config: *NewConfig(codecs),
-		ExtraAdmissionInitializersInitFunc: make([]AdmissionInitializersInitFunc, 0),
 	}
 }
 
