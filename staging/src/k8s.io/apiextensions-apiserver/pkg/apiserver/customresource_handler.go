@@ -124,6 +124,8 @@ func NewCustomResourceDefinitionHandler(
 }
 
 func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	reqStart := time.Now()
+
 	ctx, ok := r.requestContextMapper.Get(req)
 	if !ok {
 		// programmer error
@@ -151,6 +153,9 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		r.delegate.ServeHTTP(w, req)
 		return
 	}
+
+	var httpCode int
+	defer handlers.RecordMetrics(w, req, requestInfo, httpCode, reqStart)
 
 	crdName := requestInfo.Resource + "." + requestInfo.APIGroup
 	crd, err := r.crdLister.Get(crdName)
