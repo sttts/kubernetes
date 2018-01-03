@@ -463,3 +463,7 @@
 
 [[constraint]]
   name = "vbom.ml/util"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/euforia/go-git-server"
