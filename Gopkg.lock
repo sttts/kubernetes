@@ -931,6 +931,14 @@
   revision = "13f86432b882000a51c6e610c620974462691a97"
 
 [[projects]]
+  name = "github.com/jteeuwen/go-bindata"
+  packages = [
+    ".",
+    "go-bindata"
+  ]
+  revision = "a0ff2567cfb70903282db057e799fd826784d41d"
+
+[[projects]]
   name = "github.com/juju/ratelimit"
   packages = ["."]
   revision = "5b9ff866471762aa2ab2dced63c9fb6f53921342"
@@ -952,9 +960,21 @@
   revision = "2788f0dbd16903de03cb8186e5c7d97b69ad387b"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/kr/pretty"
+  packages = ["."]
+  revision = "cfb55aafdaf3ec08f0db22699ab822c50091b1c4"
+
+[[projects]]
   name = "github.com/kr/pty"
   packages = ["."]
   revision = "f7ee69f31298ecbe5d2b349c711e2547a617d398"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kr/text"
+  packages = ["."]
+  revision = "7cafcd837844e784b526369c9bce262804aebc60"
 
 [[projects]]
   name = "github.com/libopenstorage/openstorage"
@@ -1059,6 +1079,13 @@
   packages = [
     ".",
     "config",
+    "ginkgo",
+    "ginkgo/convert",
+    "ginkgo/interrupthandler",
+    "ginkgo/nodot",
+    "ginkgo/testrunner",
+    "ginkgo/testsuite",
+    "ginkgo/watch",
     "internal/codelocation",
     "internal/containernode",
     "internal/failer",
@@ -1355,6 +1382,12 @@
   revision = "e7cb7fa329f456b3855136a2642b197bad7366ba"
 
 [[projects]]
+  name = "github.com/tools/godep"
+  packages = ["."]
+  revision = "f15f6db5da33a4ac48be83e20b9dd838e14f117b"
+  version = "v79"
+
+[[projects]]
   name = "github.com/ugorji/go"
   packages = ["codec"]
   revision = "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74"
@@ -1530,7 +1563,10 @@
 
 [[projects]]
   name = "golang.org/x/tools"
-  packages = ["container/intsets"]
+  packages = [
+    "container/intsets",
+    "go/vcs"
+  ]
   revision = "2382e3994d48b1d22acc2c86bcad0a2aff028e32"
 
 [[projects]]
@@ -2363,6 +2399,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5c3b1e2f43af9df635d3b833e5c7445f37ebb4b762c928947c67f59927a3777c"
+  inputs-digest = "3802ba67ac66a3561623f9f4b56c32c22284b3dad464912d560adc06053dc435"
   solver-name = "gps-cdcl"
   solver-version = 1
