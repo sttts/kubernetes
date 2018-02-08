@@ -46,6 +46,8 @@ type Config struct {
 	ComponentConfig componentconfig.KubeControllerManagerConfiguration
 	SecureServing   *apiserver.SecureServingInfo
 	InsecureServing *InsecureServingInfo
+	Authentication  apiserver.AuthenticationInfo
+	Authorization   apiserver.AuthorizationInfo
 	Extra           ExtraConfig
 }
 
@@ -53,6 +55,8 @@ type completedConfig struct {
 	ComponentConfig componentconfig.KubeControllerManagerConfiguration
 	SecureServing   *apiserver.SecureServingInfo
 	InsecureServing *InsecureServingInfo
+	Authentication  apiserver.AuthenticationInfo
+	Authorization   apiserver.AuthorizationInfo
 	Extra           *ExtraConfig
 }
 
@@ -68,6 +72,8 @@ func (c *Config) Complete() CompletedConfig {
 		c.ComponentConfig,
 		c.SecureServing,
 		c.InsecureServing,
+		c.Authentication,
+		c.Authorization,
 		&c.Extra,
 	}
 
