@@ -17,6 +17,7 @@ limitations under the License.
 package app
 
 import (
+	apiserver "k8s.io/apiserver/pkg/server"
 	clientset "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -43,12 +44,14 @@ type ExtraConfig struct {
 // Config is the main context object for the controller manager.
 type Config struct {
 	ComponentConfig componentconfig.KubeControllerManagerConfiguration
+	SecureServing   *apiserver.SecureServingInfo
 	InsecureServing *InsecureServingInfo
 	Extra           ExtraConfig
 }
 
 type completedConfig struct {
 	ComponentConfig componentconfig.KubeControllerManagerConfiguration
+	SecureServing   *apiserver.SecureServingInfo
 	InsecureServing *InsecureServingInfo
 	Extra           *ExtraConfig
 }
@@ -63,6 +66,7 @@ type CompletedConfig struct {
 func (c *Config) Complete() CompletedConfig {
 	cc := completedConfig{
 		c.ComponentConfig,
+		c.SecureServing,
 		c.InsecureServing,
 		&c.Extra,
 	}

@@ -209,6 +209,7 @@ func TestAddFlags(t *testing.T) {
 	expected := &KubeControllerManagerOptions{
 		Generic: cmoptions.GenericControllerManagerOptions{
 			ComponentConfig: componentConfig,
+			SecureServing:   &apiserveroptions.SecureServingOptions{},
 			InsecureServing: &cmoptions.InsecureServingOptions{
 				BindAddress: net.ParseIP(componentConfig.Address),
 				BindPort:    int(componentConfig.Port),
