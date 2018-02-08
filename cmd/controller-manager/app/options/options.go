@@ -66,22 +66,28 @@ const (
 // the kube-controller-manager and the cloud-contoller-manager. Any common changes should
 // be made here. Any individual changes should be made in that controller.
 func NewGenericControllerManagerOptions(componentConfig componentconfig.KubeControllerManagerConfiguration) GenericControllerManagerOptions {
-	return GenericControllerManagerOptions{
+	o := GenericControllerManagerOptions{
 		ComponentConfig: componentConfig,
-		SecureServing:   &apiserveroptions.SecureServingOptions{},
+		SecureServing:   apiserveroptions.NewSecureServingOptions(),
 		InsecureServing: &InsecureServingOptions{
 			BindAddress: net.ParseIP(componentConfig.Address),
 			BindPort:    int(componentConfig.Port),
 			BindNetwork: "tcp",
 		},
 	}
+
+	// disable secure serving for now
+	// TODO: enable HTTPS by default
+	o.SecureServing.BindPort = 0
+
+	return o
 }
 
 // NewDefaultControllerManagerComponentConfig returns default kube-controller manager configuration object.
-func NewDefaultControllerManagerComponentConfig(port int32) componentconfig.KubeControllerManagerConfiguration {
+func NewDefaultControllerManagerComponentConfig(insecurePort int32) componentconfig.KubeControllerManagerConfiguration {
 	return componentconfig.KubeControllerManagerConfiguration{
 		Controllers:                                     []string{"*"},
-		Port:                                            port,
+		Port:                                            insecurePort,
 		Address:                                         "0.0.0.0",
 		ConcurrentEndpointSyncs:                         5,
 		ConcurrentServiceSyncs:                          1,
