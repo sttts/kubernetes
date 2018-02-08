@@ -40,11 +40,11 @@ func (s *SecureServingOptionsWithLoopback) ApplyTo(c *server.Config) error {
 		return nil
 	}
 
-	if err := s.SecureServingOptions.ApplyTo(&c.SecureServingInfo); err != nil {
+	if err := s.SecureServingOptions.ApplyTo(&c.SecureServing); err != nil {
 		return err
 	}
 
-	if c.SecureServingInfo == nil {
+	if c.SecureServing == nil {
 		return nil
 	}
 
@@ -61,7 +61,7 @@ func (s *SecureServingOptionsWithLoopback) ApplyTo(c *server.Config) error {
 		return fmt.Errorf("failed to generate self-signed certificate for loopback connection: %v", err)
 	}
 
-	secureLoopbackClientConfig, err := c.SecureServingInfo.NewLoopbackClientConfig(uuid.NewRandom().String(), certPem)
+	secureLoopbackClientConfig, err := c.SecureServing.NewLoopbackClientConfig(uuid.NewRandom().String(), certPem)
 	switch {
 	// if we failed and there's no fallback loopback client config, we need to fail
 	case err != nil && c.LoopbackClientConfig == nil:
@@ -72,7 +72,7 @@ func (s *SecureServingOptionsWithLoopback) ApplyTo(c *server.Config) error {
 
 	default:
 		c.LoopbackClientConfig = secureLoopbackClientConfig
-		c.SecureServingInfo.SNICerts[server.LoopbackClientServerNameOverride] = &tlsCert
+		c.SecureServing.SNICerts[server.LoopbackClientServerNameOverride] = &tlsCert
 	}
 
 	return nil
