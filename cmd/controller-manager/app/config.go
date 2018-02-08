@@ -43,17 +43,17 @@ type ExtraConfig struct {
 
 // Config is the main context object for the controller manager.
 type Config struct {
-	ComponentConfig     componentconfig.KubeControllerManagerConfiguration
-	SecureServingInfo   *apiserver.SecureServingInfo
-	InsecureServingInfo *InsecureServingInfo
-	Extra               ExtraConfig
+	ComponentConfig componentconfig.KubeControllerManagerConfiguration
+	SecureServing   *apiserver.SecureServingInfo
+	InsecureServing *InsecureServingInfo
+	Extra           ExtraConfig
 }
 
 type completedConfig struct {
-	ComponentConfig     componentconfig.KubeControllerManagerConfiguration
-	SecureServingInfo   *apiserver.SecureServingInfo
-	InsecureServingInfo *InsecureServingInfo
-	Extra               *ExtraConfig
+	ComponentConfig componentconfig.KubeControllerManagerConfiguration
+	SecureServing   *apiserver.SecureServingInfo
+	InsecureServing *InsecureServingInfo
+	Extra           *ExtraConfig
 }
 
 // CompletedConfig same as Config, just to swap private object.
@@ -66,8 +66,8 @@ type CompletedConfig struct {
 func (c *Config) Complete() CompletedConfig {
 	cc := completedConfig{
 		c.ComponentConfig,
-		c.SecureServingInfo,
-		c.InsecureServingInfo,
+		c.SecureServing,
+		c.InsecureServing,
 		&c.Extra,
 	}
 

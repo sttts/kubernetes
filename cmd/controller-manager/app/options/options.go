@@ -181,10 +181,10 @@ func (o *GenericControllerManagerOptions) AddFlags(fs *pflag.FlagSet) {
 func (o *GenericControllerManagerOptions) ApplyTo(c *genericcontrollermanager.Config, userAgent string) error {
 	c.ComponentConfig = o.ComponentConfig
 
-	if err := o.SecureServing.ApplyTo(&c.SecureServingInfo); err != nil {
+	if err := o.SecureServing.ApplyTo(&c.SecureServing); err != nil {
 		return err
 	}
-	if err := o.InsecureServing.ApplyTo(&c.InsecureServingInfo, &c.ComponentConfig); err != nil {
+	if err := o.InsecureServing.ApplyTo(&c.InsecureServing, &c.ComponentConfig); err != nil {
 		return err
 	}
 

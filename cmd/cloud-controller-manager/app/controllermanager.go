@@ -115,13 +115,13 @@ func Run(c *cloudcontrollerconfig.CompletedConfig) error {
 
 	// Start the controller manager HTTP server
 	stopCh := make(chan struct{})
-	if c.Generic.SecureServingInfo != nil {
-		if err := genericcontrollermanager.Serve(&c.Generic, c.Generic.SecureServingInfo.Serve, stopCh); err != nil {
+	if c.Generic.SecureServing != nil {
+		if err := genericcontrollermanager.Serve(&c.Generic, c.Generic.SecureServing.Serve, stopCh); err != nil {
 			return err
 		}
 	}
-	if c.Generic.InsecureServingInfo != nil {
-		if err := genericcontrollermanager.Serve(&c.Generic, c.Generic.InsecureServingInfo.Serve, stopCh); err != nil {
+	if c.Generic.InsecureServing != nil {
+		if err := genericcontrollermanager.Serve(&c.Generic, c.Generic.InsecureServing.Serve, stopCh); err != nil {
 			return err
 		}
 	}
