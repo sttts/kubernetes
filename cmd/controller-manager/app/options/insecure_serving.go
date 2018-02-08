@@ -71,11 +71,13 @@ func (s *InsecureServingOptions) AddDeprecatedFlags(fs *pflag.FlagSet) {
 	}
 
 	fs.IPVar(&s.BindAddress, "address", s.BindAddress,
-		"DEPRECATED: see --bind-address instead.")
-	fs.MarkDeprecated("address", "see --bind-address instead.")
+		"The IP address on which to listen for the --port port. DEPRECATED: see --bind-address instead.")
+	// MarkDeprecated hides the flag from the help. We don't want that:
+	// fs.MarkDeprecated("address", "see --bind-address instead.")
 
-	fs.IntVar(&s.BindPort, "port", s.BindPort, "DEPRECATED: see --secure-port instead.")
-	fs.MarkDeprecated("port", "see --secure-port instead.")
+	fs.IntVar(&s.BindPort, "port", s.BindPort, "The port on which to serve HTTP insecurely without authentication and authorization. If 0, don't serve HTTPS at all. DEPRECATED: see --secure-port instead.")
+	// MarkDeprecated hides the flag from the help. We don't want that:
+	// fs.MarkDeprecated("port", "see --secure-port instead.")
 }
 
 // ApplyTo adds InsecureServingOptions to the insecureserverinfo amd kube-controller manager configuration.
