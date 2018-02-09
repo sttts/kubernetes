@@ -38,7 +38,6 @@ func TestAddFlags(t *testing.T) {
 	s.AddFlags(f, []string{""}, []string{""})
 
 	args := []string{
-		"--address=192.168.4.10",
 		"--allocate-node-cidrs=true",
 		"--attach-detach-reconcile-sync-period=30s",
 		"--cidr-allocator-type=CloudAllocator",
@@ -91,7 +90,6 @@ func TestAddFlags(t *testing.T) {
 		"--node-monitor-period=10s",
 		"--node-startup-grace-period=30s",
 		"--pod-eviction-timeout=2m",
-		"--port=10000",
 		"--profiling=false",
 		"--pv-recycler-increment-timeout-nfs=45",
 		"--pv-recycler-minimum-timeout-hostpath=45",
@@ -106,6 +104,9 @@ func TestAddFlags(t *testing.T) {
 		"--terminated-pod-gc-threshold=12000",
 		"--unhealthy-zone-threshold=0.6",
 		"--use-service-account-credentials=true",
+		"--cert-dir=/a/b/c",
+		"--bind-address=192.168.4.21",
+		"--secure-port=10001",
 	}
 	f.Parse(args)
 	// Sort GCIgnoredResources because it's built from a map, which means the
@@ -113,8 +114,8 @@ func TestAddFlags(t *testing.T) {
 	sort.Sort(sortedGCIgnoredResources(s.Generic.ComponentConfig.GCIgnoredResources))
 
 	componentConfig := componentconfig.KubeControllerManagerConfiguration{
-		Port:                                            10000,
-		Address:                                         "192.168.4.10",
+		Port:                                            10252,
+		Address:                                         "0.0.0.0",
 		AllocateNodeCIDRs:                               true,
 		CloudConfigFile:                                 "/cloud-config",
 		CloudProvider:                                   "gce",
@@ -209,13 +210,19 @@ func TestAddFlags(t *testing.T) {
 	expected := &KubeControllerManagerOptions{
 		Generic: cmoptions.GenericControllerManagerOptions{
 			ComponentConfig: componentConfig,
-			SecureServing:   &apiserveroptions.SecureServingOptions{},
+			SecureServing: &apiserveroptions.SecureServingOptions{
+				BindPort:    10001,
+				BindAddress: net.ParseIP("192.168.4.21"),
+				ServerCert: apiserveroptions.GeneratableKeyCert{
+					CertDirectory: "/a/b/c",
+					PairName:      "kube-controller-manager",
+				},
+			},
 			InsecureServing: &cmoptions.InsecureServingOptions{
 				BindAddress: net.ParseIP(componentConfig.Address),
 				BindPort:    int(componentConfig.Port),
 				BindNetwork: "tcp",
 			},
-
 			Kubeconfig: "/kubeconfig",
 			Master:     "192.168.4.20",
 		},
