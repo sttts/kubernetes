@@ -11,7 +11,6 @@ go_library(
     importpath = "k8s.io/apiserver/pkg/admission/plugin/webhook/testing",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/apis/admissionregistration/v1beta1:go_default_library",
         "//vendor/k8s.io/api/admission/v1beta1:go_default_library",
         "//vendor/k8s.io/api/admissionregistration/v1beta1:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",
