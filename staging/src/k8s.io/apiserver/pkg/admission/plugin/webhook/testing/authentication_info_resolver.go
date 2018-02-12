@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package fake
+package testing
 
 import (
 	"sync/atomic"
@@ -24,7 +24,13 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func NewAuthenticationInfoResolver(count *int32) config.AuthenticationInfoResolver {
+func Wrapper(r config.AuthenticationInfoResolver) func(config.AuthenticationInfoResolver) config.AuthenticationInfoResolver {
+	return func(config.AuthenticationInfoResolver) config.AuthenticationInfoResolver {
+		return r
+	}
+}
+
+func NewAuthenticationInfoResolver(cacheMisses *int32) config.AuthenticationInfoResolver {
 	return &authenticationInfoResolver{
 		restConfig: &rest.Config{
 			TLSClientConfig: rest.TLSClientConfig{
@@ -33,21 +39,21 @@ func NewAuthenticationInfoResolver(count *int32) config.AuthenticationInfoResolv
 				KeyData:  testcerts.ClientKey,
 			},
 		},
-		cachedCount: count,
+		cacheMisses: cacheMisses,
 	}
 }
 
 type authenticationInfoResolver struct {
 	restConfig  *rest.Config
-	cachedCount *int32
+	cacheMisses *int32
 }
 
 func (a *authenticationInfoResolver) ClientConfigFor(server string) (*rest.Config, error) {
-	atomic.AddInt32(a.cachedCount, 1)
+	atomic.AddInt32(a.cacheMisses, 1)
 	return a.restConfig, nil
 }
 
 func (a *authenticationInfoResolver) ClientConfigForService(serviceName, serviceNamespace string) (*rest.Config, error) {
-	atomic.AddInt32(a.cachedCount, 1)
+	atomic.AddInt32(a.cacheMisses, 1)
 	return a.restConfig, nil
 }

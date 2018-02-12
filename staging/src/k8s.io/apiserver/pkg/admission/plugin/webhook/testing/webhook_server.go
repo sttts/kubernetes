@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package fake
+package testing
 
 import (
 	"crypto/tls"
@@ -84,7 +84,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 				Allowed: true,
 			},
 		})
-	case "/nilResposne":
+	case "/nilResponse":
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(&v1beta1.AdmissionReview{})
 	default:

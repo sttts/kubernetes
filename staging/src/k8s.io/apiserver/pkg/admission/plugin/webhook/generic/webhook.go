@@ -125,16 +125,16 @@ func (a *Webhook) SetExternalKubeInformerFactory(f informers.SharedInformerFacto
 // ValidateInitialization implements the InitializationValidator interface.
 func (a *Webhook) ValidateInitialization() error {
 	if a.hookSource == nil {
-		return fmt.Errorf("MutatingWebhook admission plugin requires a Kubernetes client to be provided")
+		return fmt.Errorf("kubernetes client is not properly setup")
 	}
 	if err := a.namespaceMatcher.Validate(); err != nil {
-		return fmt.Errorf("MutatingWebhook.namespaceMatcher is not properly setup: %v", err)
+		return fmt.Errorf("namespaceMatcher is not properly setup: %v", err)
 	}
 	if err := a.clientManager.Validate(); err != nil {
-		return fmt.Errorf("MutatingWebhook.clientManager is not properly setup: %v", err)
+		return fmt.Errorf("clientManager is not properly setup: %v", err)
 	}
 	if err := a.convertor.Validate(); err != nil {
-		return fmt.Errorf("MutatingWebhook.convertor is not properly setup: %v", err)
+		return fmt.Errorf("convertor is not properly setup: %v", err)
 	}
 	return nil
 }
@@ -198,34 +198,4 @@ func (a *Webhook) Dispatch(attr admission.Attributes) error {
 		versionedAttr.Object = out
 	}
 	return a.dispatcher.Dispatch(ctx, &versionedAttr, relevantHooks)
-}
-
-// GetConvertor returns the versioned convertor.
-func (a *Webhook) GetConvertor() *versioned.Convertor {
-	return a.convertor
-}
-
-// SetHookSource currently used for test.
-func (a *Webhook) SetHookSource(hook Source) {
-	a.hookSource = hook
-}
-
-// SetClientManager currently used for test.
-func (a *Webhook) SetClientManager(clientManager *config.ClientManager) {
-	a.clientManager = clientManager
-}
-
-// SetClientManager currently used for test.
-func (a *Webhook) GetClientManager() *config.ClientManager {
-	return a.clientManager
-}
-
-// SetDispatcher currently used for test.
-func (a *Webhook) SetDispatcher(dispatcher Dispatcher) {
-	a.dispatcher = dispatcher
-}
-
-// SetNamespaceMatcher currently used for test.
-func (a *Webhook) SetNamespaceMatcher(matcher *namespace.Matcher) {
-	a.namespaceMatcher = matcher
 }

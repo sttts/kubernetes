@@ -24,12 +24,8 @@ import (
 	"k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apiserver/pkg/admission/plugin/webhook/fake"
-	"k8s.io/apiserver/pkg/admission/plugin/webhook/namespace"
-	"k8s.io/client-go/informers"
-	fakeclientset "k8s.io/client-go/kubernetes/fake"
+	webhooktesting "k8s.io/apiserver/pkg/admission/plugin/webhook/testing"
 )
 
 // TestAdmit tests that MutatingWebhook#Admit works as expected
@@ -38,63 +34,53 @@ func TestAdmit(t *testing.T) {
 	v1beta1.AddToScheme(scheme)
 	corev1.AddToScheme(scheme)
 
-	testServer := fake.NewTestServer(t)
+	testServer := webhooktesting.NewTestServer(t)
 	testServer.StartTLS()
 	defer testServer.Close()
 	serverURL, err := url.ParseRequestURI(testServer.URL)
 	if err != nil {
 		t.Fatalf("this should never happen? %v", err)
 	}
-	wh, err := NewMutatingWebhook(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	wh.Webhook.GetClientManager().SetAuthenticationInfoResolver(fake.NewAuthenticationInfoResolver(new(int32)))
-	wh.Webhook.GetClientManager().SetServiceResolver(fake.NewServiceResolver(*serverURL))
-	wh.SetScheme(scheme)
-	if err = wh.Webhook.GetClientManager().Validate(); err != nil {
-		t.Fatal(err)
-	}
 
-	ns := "webhook-test"
-	client := fakeclientset.NewSimpleClientset(&corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: ns,
-			Labels: map[string]string{
-				"runlevel": "0",
-			},
-		},
-	})
-	informerFactory := informers.NewSharedInformerFactory(client, 0)
-	stop := make(chan struct{})
-	defer close(stop)
-	informerFactory.Start(stop)
-	informerFactory.WaitForCacheSync(stop)
+	stopCh := make(chan struct{})
+	defer close(stopCh)
 
-	fakeNamespaceMatcher := namespace.Matcher{
-		NamespaceLister: informerFactory.Core().V1().Namespaces().Lister(),
-		Client:          client,
-	}
-	wh.Webhook.SetNamespaceMatcher(&fakeNamespaceMatcher)
-
-	table := fake.NewTestCases(serverURL)
-	for name, tt := range table {
-		if !strings.Contains(name, "no match") {
+	for _, tt := range webhooktesting.NewTestCases(serverURL) {
+		wh, err := NewMutatingWebhook(nil)
+		if err != nil {
+			t.Errorf("%s: failed to create mutating webhook: %v", tt.Name, err)
 			continue
 		}
-		wh.Webhook.SetHookSource(tt.HookSource)
-		err = wh.Admit(fake.NewAttribute(ns))
+
+		ns := "webhook-test"
+		client, informer := webhooktesting.NewFakeDataSource(ns, tt.Webhooks, true, stopCh)
+
+		wh.SetAuthenticationInfoResolverWrapper(webhooktesting.Wrapper(webhooktesting.NewAuthenticationInfoResolver(new(int32))))
+		wh.SetServiceResolver(webhooktesting.NewServiceResolver(*serverURL))
+		wh.SetScheme(scheme)
+		wh.SetExternalKubeClientSet(client)
+		wh.SetExternalKubeInformerFactory(informer)
+
+		informer.Start(stopCh)
+		informer.WaitForCacheSync(stopCh)
+
+		if err = wh.ValidateInitialization(); err != nil {
+			t.Errorf("%s: failed to validate initialization: %v", tt.Name, err)
+			continue
+		}
+
+		err = wh.Admit(webhooktesting.NewAttribute(ns))
 		if tt.ExpectAllow != (err == nil) {
-			t.Errorf("%s: expected allowed=%v, but got err=%v", name, tt.ExpectAllow, err)
+			t.Errorf("%s: expected allowed=%v, but got err=%v", tt.Name, tt.ExpectAllow, err)
 		}
 		// ErrWebhookRejected is not an error for our purposes
 		if tt.ErrorContains != "" {
 			if err == nil || !strings.Contains(err.Error(), tt.ErrorContains) {
-				t.Errorf("%s: expected an error saying %q, but got %v", name, tt.ErrorContains, err)
+				t.Errorf("%s: expected an error saying %q, but got: %v", tt.Name, tt.ErrorContains, err)
 			}
 		}
 		if _, isStatusErr := err.(*errors.StatusError); err != nil && !isStatusErr {
-			t.Errorf("%s: expected a StatusError, got %T", name, err)
+			t.Errorf("%s: expected a StatusError, got %T", tt.Name, err)
 		}
 	}
 }
@@ -105,44 +91,53 @@ func TestAdmitCachedClient(t *testing.T) {
 	v1beta1.AddToScheme(scheme)
 	corev1.AddToScheme(scheme)
 
-	testServer := fake.NewTestServer(t)
+	testServer := webhooktesting.NewTestServer(t)
 	testServer.StartTLS()
 	defer testServer.Close()
 	serverURL, err := url.ParseRequestURI(testServer.URL)
 	if err != nil {
 		t.Fatalf("this should never happen? %v", err)
 	}
+
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
 	wh, err := NewMutatingWebhook(nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create mutating webhook: %v", err)
 	}
-	wh.Webhook.GetClientManager().SetServiceResolver(fake.NewServiceResolver(*serverURL))
+	wh.SetServiceResolver(webhooktesting.NewServiceResolver(*serverURL))
 	wh.SetScheme(scheme)
-	ns := "webhook-test"
 
-	wh.Webhook.SetNamespaceMatcher(fake.NewNamespaceMatcher(ns))
+	for _, tt := range webhooktesting.NewCachedClientTestcases(serverURL) {
+		ns := "webhook-test"
+		client, informer := webhooktesting.NewFakeDataSource(ns, tt.Webhooks, true, stopCh)
 
-	cases := fake.NewCachedClientTestcases(serverURL)
-	for _, testcase := range cases {
-		wh.Webhook.SetHookSource(testcase.HookSource)
-		authInfoResolverCount := new(int32)
-		r := fake.NewAuthenticationInfoResolver(authInfoResolverCount)
-		wh.Webhook.GetClientManager().SetAuthenticationInfoResolver(r)
-		if err = wh.Webhook.GetClientManager().Validate(); err != nil {
-			t.Fatal(err)
+		// override the webhook source. The client cache will stay the same.
+		cacheMisses := new(int32)
+		wh.SetAuthenticationInfoResolverWrapper(webhooktesting.Wrapper(webhooktesting.NewAuthenticationInfoResolver(cacheMisses)))
+		wh.SetExternalKubeClientSet(client)
+		wh.SetExternalKubeInformerFactory(informer)
+
+		informer.Start(stopCh)
+		informer.WaitForCacheSync(stopCh)
+
+		if err = wh.ValidateInitialization(); err != nil {
+			t.Errorf("%s: failed to validate initialization: %v", tt.Name, err)
+			continue
 		}
 
-		err = wh.Admit(fake.NewAttribute(ns))
-		if testcase.ExpectAllow != (err == nil) {
-			t.Errorf("%s: expected allowed=%v, but got err=%v", testcase.Name, testcase.ExpectAllow, err)
+		err = wh.Admit(webhooktesting.NewAttribute(ns))
+		if tt.ExpectAllow != (err == nil) {
+			t.Errorf("%s: expected allowed=%v, but got err=%v", tt.Name, tt.ExpectAllow, err)
 		}
 
-		if testcase.ExpectCache && *authInfoResolverCount != 1 {
-			t.Errorf("%s: expected cacheclient, but got none", testcase.Name)
+		if tt.ExpectCacheMiss && *cacheMisses == 0 {
+			t.Errorf("%s: expected cache miss, but got no AuthenticationInfoResolver call", tt.Name)
 		}
 
-		if !testcase.ExpectCache && *authInfoResolverCount != 0 {
-			t.Errorf("%s: expected not cacheclient, but got cache", testcase.Name)
+		if !tt.ExpectCacheMiss && *cacheMisses > 0 {
+			t.Errorf("%s: expected client to be cached, but got %d AuthenticationInfoResolver calls", tt.Name, *cacheMisses)
 		}
 	}
 }

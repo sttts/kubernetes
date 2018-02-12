@@ -84,10 +84,10 @@ func (a *Plugin) ValidateInitialization() error {
 		return err
 	}
 	if a.defaulter == nil {
-		return fmt.Errorf("MutatingWebhook.defaulter is not properly setup")
+		return fmt.Errorf("defaulter is not properly setup")
 	}
 	if a.jsonSerializer == nil {
-		return fmt.Errorf("MutatingWebhook admission plugin's JsonSerializer is not properly setup")
+		return fmt.Errorf("jsonSerializer is not properly setup")
 	}
 	return nil
 }
