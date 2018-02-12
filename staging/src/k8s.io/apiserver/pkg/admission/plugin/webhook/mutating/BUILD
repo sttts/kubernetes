@@ -38,12 +38,8 @@ go_test(
         "//vendor/k8s.io/api/admission/v1beta1:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/api/errors:go_default_library",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/runtime:go_default_library",
-        "//vendor/k8s.io/apiserver/pkg/admission/plugin/webhook/fake:go_default_library",
-        "//vendor/k8s.io/apiserver/pkg/admission/plugin/webhook/namespace:go_default_library",
-        "//vendor/k8s.io/client-go/informers:go_default_library",
-        "//vendor/k8s.io/client-go/kubernetes/fake:go_default_library",
+        "//vendor/k8s.io/apiserver/pkg/admission/plugin/webhook/testing:go_default_library",
     ],
 )
 
