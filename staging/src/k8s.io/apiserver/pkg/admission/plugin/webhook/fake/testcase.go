@@ -22,13 +22,14 @@ import (
 	registrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/apiserver/pkg/admission/plugin/webhook/generic"
-	"k8s.io/apiserver/pkg/admission/plugin/webhook/namespace"
 	"k8s.io/apiserver/pkg/admission/plugin/webhook/testcerts"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	fakeclientset "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/kubernetes/pkg/apis/admissionregistration/v1beta1"
 )
 
 var matchEverythingRules = []registrationv1beta1.RuleWithOperations{{
@@ -40,21 +41,41 @@ var matchEverythingRules = []registrationv1beta1.RuleWithOperations{{
 	},
 }}
 
-func NewNamespaceMatcher(name string) *namespace.Matcher {
-	client := fakeclientset.NewSimpleClientset(&corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"runlevel": "0",
+func NewFakeDataSource(name string, webhooks []registrationv1beta1.Webhook, mutating bool, stopCh <-chan struct{}) (clientset kubernetes.Interface, factory informers.SharedInformerFactory) {
+	var objs = []runtime.Object{
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+				Labels: map[string]string{
+					"runlevel": "0",
+				},
 			},
 		},
-	})
+	}
+	if mutating {
+		hook := &registrationv1beta1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-webhooks",
+			},
+			Webhooks: webhooks,
+		}
+		v1beta1.SetObjectDefaults_MutatingWebhookConfiguration(hook) // set label selector and other missing fields
+		objs = append(objs, hook)
+	} else {
+		hook := &registrationv1beta1.ValidatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-webhooks",
+			},
+			Webhooks: webhooks,
+		}
+		v1beta1.SetObjectDefaults_ValidatingWebhookConfiguration(hook) // set label selector and other missing fields
+		objs = append(objs, hook)
+	}
+
+	client := fakeclientset.NewSimpleClientset(objs...)
 	informerFactory := informers.NewSharedInformerFactory(client, 0)
 
-	return &namespace.Matcher{
-		NamespaceLister: informerFactory.Core().V1().Namespaces().Lister(),
-		Client:          client,
-	}
+	return client, informerFactory
 }
 
 func NewAttribute(namespace string) admission.Attributes {
@@ -103,185 +124,184 @@ func (c urlConfigGenerator) ccfgURL(urlPath string) registrationv1beta1.WebhookC
 }
 
 type Test struct {
-	HookSource    generic.Source
+	Name          string
+	Webhooks      []registrationv1beta1.Webhook
 	Path          string
 	ExpectAllow   bool
 	ErrorContains string
 }
 
-func NewTestCases(url *url.URL) map[string]Test {
+func NewTestCases(url *url.URL) []Test {
 	policyFail := registrationv1beta1.Fail
 	policyIgnore := registrationv1beta1.Ignore
 	ccfgURL := urlConfigGenerator{url}.ccfgURL
 
-	return map[string]Test{
-		"no match": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:         "nomatch",
-					ClientConfig: ccfgSVC("disallow"),
-					Rules: []registrationv1beta1.RuleWithOperations{{
-						Operations: []registrationv1beta1.OperationType{registrationv1beta1.Create},
-					}},
-				}}, nil),
+	return []Test{
+		{
+			Name: "no match",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:         "nomatch",
+				ClientConfig: ccfgSVC("disallow"),
+				Rules: []registrationv1beta1.RuleWithOperations{{
+					Operations: []registrationv1beta1.OperationType{registrationv1beta1.Create},
+				}},
+			}},
 			ExpectAllow: true,
 		},
-		"match & allow": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:         "allow",
-					ClientConfig: ccfgSVC("allow"),
-					Rules:        matchEverythingRules,
-				}}, nil),
+		{
+			Name: "match & allow",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:         "allow",
+				ClientConfig: ccfgSVC("allow"),
+				Rules:        matchEverythingRules,
+			}},
 			ExpectAllow: true,
 		},
-		"match & disallow": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:         "disallow",
-					ClientConfig: ccfgSVC("disallow"),
-					Rules:        matchEverythingRules,
-				}}, nil),
+		{
+			Name: "match & disallow",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:         "disallow",
+				ClientConfig: ccfgSVC("disallow"),
+				Rules:        matchEverythingRules,
+			}},
 			ErrorContains: "without explanation",
 		},
-		"match & disallow ii": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:         "disallowReason",
-					ClientConfig: ccfgSVC("disallowReason"),
-					Rules:        matchEverythingRules,
-				}}, nil),
+		{
+			Name: "match & disallow ii",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:         "disallowReason",
+				ClientConfig: ccfgSVC("disallowReason"),
+				Rules:        matchEverythingRules,
+			}},
 
 			ErrorContains: "you shall not pass",
 		},
-		"match & disallow & but allowed because namespaceSelector exempt the ns": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:         "disallow",
-					ClientConfig: ccfgSVC("disallow"),
-					Rules:        newMatchEverythingRules(),
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "runlevel",
-							Values:   []string{"1"},
-							Operator: metav1.LabelSelectorOpIn,
-						}},
-					},
-				}}, nil),
+		{
+			Name: "match & disallow & but allowed because namespaceSelector exempt the ns",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:         "disallow",
+				ClientConfig: ccfgSVC("disallow"),
+				Rules:        newMatchEverythingRules(),
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      "runlevel",
+						Values:   []string{"1"},
+						Operator: metav1.LabelSelectorOpIn,
+					}},
+				},
+			}},
 
 			ExpectAllow: true,
 		},
-		"match & disallow & but allowed because namespaceSelector exempt the ns ii": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:         "disallow",
-					ClientConfig: ccfgSVC("disallow"),
-					Rules:        newMatchEverythingRules(),
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "runlevel",
-							Values:   []string{"0"},
-							Operator: metav1.LabelSelectorOpNotIn,
-						}},
-					},
-				}}, nil),
+		{
+			Name: "match & disallow & but allowed because namespaceSelector exempt the ns ii",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:         "disallow",
+				ClientConfig: ccfgSVC("disallow"),
+				Rules:        newMatchEverythingRules(),
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      "runlevel",
+						Values:   []string{"0"},
+						Operator: metav1.LabelSelectorOpNotIn,
+					}},
+				},
+			}},
 			ExpectAllow: true,
 		},
-		"match & fail (but allow because fail open)": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:          "internalErr A",
-					ClientConfig:  ccfgSVC("internalErr"),
-					Rules:         matchEverythingRules,
-					FailurePolicy: &policyIgnore,
-				}, {
-					Name:          "internalErr B",
-					ClientConfig:  ccfgSVC("internalErr"),
-					Rules:         matchEverythingRules,
-					FailurePolicy: &policyIgnore,
-				}, {
-					Name:          "internalErr C",
-					ClientConfig:  ccfgSVC("internalErr"),
-					Rules:         matchEverythingRules,
-					FailurePolicy: &policyIgnore,
-				}}, nil),
+		{
+			Name: "match & fail (but allow because fail open)",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:          "internalErr A",
+				ClientConfig:  ccfgSVC("internalErr"),
+				Rules:         matchEverythingRules,
+				FailurePolicy: &policyIgnore,
+			}, {
+				Name:          "internalErr B",
+				ClientConfig:  ccfgSVC("internalErr"),
+				Rules:         matchEverythingRules,
+				FailurePolicy: &policyIgnore,
+			}, {
+				Name:          "internalErr C",
+				ClientConfig:  ccfgSVC("internalErr"),
+				Rules:         matchEverythingRules,
+				FailurePolicy: &policyIgnore,
+			}},
 
 			ExpectAllow: true,
 		},
-		"match & fail (but disallow because fail closed on nil)": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:         "internalErr A",
-					ClientConfig: ccfgSVC("internalErr"),
-					Rules:        matchEverythingRules,
-				}, {
-					Name:         "internalErr B",
-					ClientConfig: ccfgSVC("internalErr"),
-					Rules:        matchEverythingRules,
-				}, {
-					Name:         "internalErr C",
-					ClientConfig: ccfgSVC("internalErr"),
-					Rules:        matchEverythingRules,
-				}}, nil),
+		{
+			Name: "match & fail (but disallow because fail closed on nil)",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:         "internalErr A",
+				ClientConfig: ccfgSVC("internalErr"),
+				Rules:        matchEverythingRules,
+			}, {
+				Name:         "internalErr B",
+				ClientConfig: ccfgSVC("internalErr"),
+				Rules:        matchEverythingRules,
+			}, {
+				Name:         "internalErr C",
+				ClientConfig: ccfgSVC("internalErr"),
+				Rules:        matchEverythingRules,
+			}},
 			ExpectAllow: false,
 		},
-		"match & fail (but fail because fail closed)": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:          "internalErr A",
-					ClientConfig:  ccfgSVC("internalErr"),
-					Rules:         matchEverythingRules,
-					FailurePolicy: &policyFail,
-				}, {
-					Name:          "internalErr B",
-					ClientConfig:  ccfgSVC("internalErr"),
-					Rules:         matchEverythingRules,
-					FailurePolicy: &policyFail,
-				}, {
-					Name:          "internalErr C",
-					ClientConfig:  ccfgSVC("internalErr"),
-					Rules:         matchEverythingRules,
-					FailurePolicy: &policyFail,
-				}}, nil),
+		{
+			Name: "match & fail (but fail because fail closed)",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:          "internalErr A",
+				ClientConfig:  ccfgSVC("internalErr"),
+				Rules:         matchEverythingRules,
+				FailurePolicy: &policyFail,
+			}, {
+				Name:          "internalErr B",
+				ClientConfig:  ccfgSVC("internalErr"),
+				Rules:         matchEverythingRules,
+				FailurePolicy: &policyFail,
+			}, {
+				Name:          "internalErr C",
+				ClientConfig:  ccfgSVC("internalErr"),
+				Rules:         matchEverythingRules,
+				FailurePolicy: &policyFail,
+			}},
 			ExpectAllow: false,
 		},
-		"match & allow (url)": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:         "allow",
-					ClientConfig: ccfgURL("allow"),
-					Rules:        matchEverythingRules,
-				}}, nil),
+		{
+			Name: "match & allow (url)",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:         "allow",
+				ClientConfig: ccfgURL("allow"),
+				Rules:        matchEverythingRules,
+			}},
 			ExpectAllow: true,
 		},
-		"match & disallow (url)": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:         "disallow",
-					ClientConfig: ccfgURL("disallow"),
-					Rules:        matchEverythingRules,
-				}}, nil),
+		{
+			Name: "match & disallow (url)",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:         "disallow",
+				ClientConfig: ccfgURL("disallow"),
+				Rules:        matchEverythingRules,
+			}},
 			ErrorContains: "without explanation",
-		},
-		"absent response and fail open": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:          "nilResponse",
-					ClientConfig:  ccfgURL("nilResponse"),
-					FailurePolicy: &policyIgnore,
-					Rules:         matchEverythingRules,
-				}}, nil),
-
+		}, {
+			Name: "absent response and fail open",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:          "nilResponse",
+				ClientConfig:  ccfgURL("nilResponse"),
+				FailurePolicy: &policyIgnore,
+				Rules:         matchEverythingRules,
+			}},
 			ExpectAllow: true,
 		},
-		"absent response and fail closed": {
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:          "nilResponse",
-					ClientConfig:  ccfgURL("nilResponse"),
-					FailurePolicy: &policyFail,
-					Rules:         matchEverythingRules,
-				}}, nil),
+		{
+			Name: "absent response and fail closed",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:          "nilResponse",
+				ClientConfig:  ccfgURL("nilResponse"),
+				FailurePolicy: &policyFail,
+				Rules:         matchEverythingRules,
+			}},
 			ErrorContains: "Webhook response was absent",
 		},
 		// No need to test everything with the url case, since only the
@@ -290,10 +310,10 @@ func NewTestCases(url *url.URL) map[string]Test {
 }
 
 type CachedTest struct {
-	Name        string
-	HookSource  generic.Source
-	ExpectAllow bool
-	ExpectCache bool
+	Name            string
+	Webhooks        []registrationv1beta1.Webhook
+	ExpectAllow     bool
+	ExpectCacheMiss bool
 }
 
 func NewCachedClientTestcases(url *url.URL) []CachedTest {
@@ -302,64 +322,59 @@ func NewCachedClientTestcases(url *url.URL) []CachedTest {
 
 	return []CachedTest{
 		{
-			Name: "cache 1",
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:          "cache1",
-					ClientConfig:  ccfgSVC("allow"),
-					Rules:         newMatchEverythingRules(),
-					FailurePolicy: &policyIgnore,
-				}}, nil),
-			ExpectAllow: true,
-			ExpectCache: true,
+			Name: "uncached: service webhook, path 'allow'",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:          "cache1",
+				ClientConfig:  ccfgSVC("allow"),
+				Rules:         newMatchEverythingRules(),
+				FailurePolicy: &policyIgnore,
+			}},
+			ExpectAllow:     true,
+			ExpectCacheMiss: true,
 		},
 		{
-			Name: "cache 2",
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:          "cache2",
-					ClientConfig:  ccfgSVC("internalErr"),
-					Rules:         newMatchEverythingRules(),
-					FailurePolicy: &policyIgnore,
-				}}, nil),
-			ExpectAllow: true,
-			ExpectCache: true,
+			Name: "uncached: service webhook, path 'internalErr'",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:          "cache2",
+				ClientConfig:  ccfgSVC("internalErr"),
+				Rules:         newMatchEverythingRules(),
+				FailurePolicy: &policyIgnore,
+			}},
+			ExpectAllow:     true,
+			ExpectCacheMiss: true,
 		},
 		{
-			Name: "cache 3",
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:          "cache3",
-					ClientConfig:  ccfgSVC("allow"),
-					Rules:         newMatchEverythingRules(),
-					FailurePolicy: &policyIgnore,
-				}}, nil),
-			ExpectAllow: true,
-			ExpectCache: false,
+			Name: "cached: service webhook, path 'allow'",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:          "cache3",
+				ClientConfig:  ccfgSVC("allow"),
+				Rules:         newMatchEverythingRules(),
+				FailurePolicy: &policyIgnore,
+			}},
+			ExpectAllow:     true,
+			ExpectCacheMiss: false,
 		},
 		{
-			Name: "cache 4",
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:          "cache4",
-					ClientConfig:  ccfgURL("allow"),
-					Rules:         newMatchEverythingRules(),
-					FailurePolicy: &policyIgnore,
-				}}, nil),
-			ExpectAllow: true,
-			ExpectCache: true,
+			Name: "uncached: url webhook, path 'allow'",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:          "cache4",
+				ClientConfig:  ccfgURL("allow"),
+				Rules:         newMatchEverythingRules(),
+				FailurePolicy: &policyIgnore,
+			}},
+			ExpectAllow:     true,
+			ExpectCacheMiss: true,
 		},
 		{
-			Name: "cache 5",
-			HookSource: NewSource(
-				[]registrationv1beta1.Webhook{{
-					Name:          "cache5",
-					ClientConfig:  ccfgURL("allow"),
-					Rules:         newMatchEverythingRules(),
-					FailurePolicy: &policyIgnore,
-				}}, nil),
-			ExpectAllow: true,
-			ExpectCache: false,
+			Name: "cached: service webhook, path 'allow'",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:          "cache5",
+				ClientConfig:  ccfgURL("allow"),
+				Rules:         newMatchEverythingRules(),
+				FailurePolicy: &policyIgnore,
+			}},
+			ExpectAllow:     true,
+			ExpectCacheMiss: false,
 		},
 	}
 }
