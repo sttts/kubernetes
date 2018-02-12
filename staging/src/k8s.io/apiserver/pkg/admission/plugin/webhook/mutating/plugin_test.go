@@ -46,11 +46,6 @@ func TestAdmit(t *testing.T) {
 	defer close(stopCh)
 
 	for _, tt := range webhooktesting.NewTestCases(serverURL) {
-		// TODO: re-enable all tests
-		if !strings.Contains(tt.Name, "no match") {
-			continue
-		}
-
 		wh, err := NewMutatingWebhook(nil)
 		if err != nil {
 			t.Errorf("%s: failed to create mutating webhook: %v", tt.Name, err)
@@ -81,7 +76,7 @@ func TestAdmit(t *testing.T) {
 		// ErrWebhookRejected is not an error for our purposes
 		if tt.ErrorContains != "" {
 			if err == nil || !strings.Contains(err.Error(), tt.ErrorContains) {
-				t.Errorf("%s: expected an error saying %q, but got %v", tt.Name, tt.ErrorContains, err)
+				t.Errorf("%s: expected an error saying %q, but got: %v", tt.Name, tt.ErrorContains, err)
 			}
 		}
 		if _, isStatusErr := err.(*errors.StatusError); err != nil && !isStatusErr {

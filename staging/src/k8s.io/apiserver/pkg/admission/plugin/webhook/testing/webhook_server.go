@@ -84,7 +84,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 				Allowed: true,
 			},
 		})
-	case "/nilResposne":
+	case "/nilResponse":
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(&v1beta1.AdmissionReview{})
 	default:

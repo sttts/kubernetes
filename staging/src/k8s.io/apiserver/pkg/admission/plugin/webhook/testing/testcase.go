@@ -231,7 +231,7 @@ func NewTestCases(url *url.URL) []Test {
 			ExpectAllow: true,
 		},
 		{
-			Name: "match & fail (but disallow because fail closed on nil)",
+			Name: "match & fail (but allow because fail open on nil FailurePolicy)",
 			Webhooks: []registrationv1beta1.Webhook{{
 				Name:         "internalErr A",
 				ClientConfig: ccfgSVC("internalErr"),
@@ -245,7 +245,7 @@ func NewTestCases(url *url.URL) []Test {
 				ClientConfig: ccfgSVC("internalErr"),
 				Rules:        matchEverythingRules,
 			}},
-			ExpectAllow: false,
+			ExpectAllow: true,
 		},
 		{
 			Name: "match & fail (but fail because fail closed)",
