@@ -29,7 +29,6 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	fakeclientset "k8s.io/client-go/kubernetes/fake"
-	"k8s.io/kubernetes/pkg/apis/admissionregistration/v1beta1"
 )
 
 var matchEverythingRules = []registrationv1beta1.RuleWithOperations{{
@@ -53,23 +52,19 @@ func NewFakeDataSource(name string, webhooks []registrationv1beta1.Webhook, muta
 		},
 	}
 	if mutating {
-		hook := &registrationv1beta1.MutatingWebhookConfiguration{
+		objs = append(objs, &registrationv1beta1.MutatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-webhooks",
 			},
 			Webhooks: webhooks,
-		}
-		v1beta1.SetObjectDefaults_MutatingWebhookConfiguration(hook) // set label selector and other missing fields
-		objs = append(objs, hook)
+		})
 	} else {
-		hook := &registrationv1beta1.ValidatingWebhookConfiguration{
+		objs = append(objs, &registrationv1beta1.ValidatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-webhooks",
 			},
 			Webhooks: webhooks,
-		}
-		v1beta1.SetObjectDefaults_ValidatingWebhookConfiguration(hook) // set label selector and other missing fields
-		objs = append(objs, hook)
+		})
 	}
 
 	client := fakeclientset.NewSimpleClientset(objs...)
@@ -145,33 +140,37 @@ func NewTestCases(url *url.URL) []Test {
 				Rules: []registrationv1beta1.RuleWithOperations{{
 					Operations: []registrationv1beta1.OperationType{registrationv1beta1.Create},
 				}},
+				NamespaceSelector: &metav1.LabelSelector{},
 			}},
 			ExpectAllow: true,
 		},
 		{
 			Name: "match & allow",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:         "allow",
-				ClientConfig: ccfgSVC("allow"),
-				Rules:        matchEverythingRules,
+				Name:              "allow",
+				ClientConfig:      ccfgSVC("allow"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
 			}},
 			ExpectAllow: true,
 		},
 		{
 			Name: "match & disallow",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:         "disallow",
-				ClientConfig: ccfgSVC("disallow"),
-				Rules:        matchEverythingRules,
+				Name:              "disallow",
+				ClientConfig:      ccfgSVC("disallow"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
 			}},
 			ErrorContains: "without explanation",
 		},
 		{
 			Name: "match & disallow ii",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:         "disallowReason",
-				ClientConfig: ccfgSVC("disallowReason"),
-				Rules:        matchEverythingRules,
+				Name:              "disallowReason",
+				ClientConfig:      ccfgSVC("disallowReason"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
 			}},
 
 			ErrorContains: "you shall not pass",
@@ -212,20 +211,23 @@ func NewTestCases(url *url.URL) []Test {
 		{
 			Name: "match & fail (but allow because fail open)",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:          "internalErr A",
-				ClientConfig:  ccfgSVC("internalErr"),
-				Rules:         matchEverythingRules,
-				FailurePolicy: &policyIgnore,
+				Name:              "internalErr A",
+				ClientConfig:      ccfgSVC("internalErr"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyIgnore,
 			}, {
-				Name:          "internalErr B",
-				ClientConfig:  ccfgSVC("internalErr"),
-				Rules:         matchEverythingRules,
-				FailurePolicy: &policyIgnore,
+				Name:              "internalErr B",
+				ClientConfig:      ccfgSVC("internalErr"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyIgnore,
 			}, {
-				Name:          "internalErr C",
-				ClientConfig:  ccfgSVC("internalErr"),
-				Rules:         matchEverythingRules,
-				FailurePolicy: &policyIgnore,
+				Name:              "internalErr C",
+				ClientConfig:      ccfgSVC("internalErr"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyIgnore,
 			}},
 
 			ExpectAllow: true,
@@ -233,74 +235,84 @@ func NewTestCases(url *url.URL) []Test {
 		{
 			Name: "match & fail (but allow because fail open on nil FailurePolicy)",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:         "internalErr A",
-				ClientConfig: ccfgSVC("internalErr"),
-				Rules:        matchEverythingRules,
+				Name:              "internalErr A",
+				ClientConfig:      ccfgSVC("internalErr"),
+				NamespaceSelector: &metav1.LabelSelector{},
+				Rules:             matchEverythingRules,
 			}, {
-				Name:         "internalErr B",
-				ClientConfig: ccfgSVC("internalErr"),
-				Rules:        matchEverythingRules,
+				Name:              "internalErr B",
+				ClientConfig:      ccfgSVC("internalErr"),
+				NamespaceSelector: &metav1.LabelSelector{},
+				Rules:             matchEverythingRules,
 			}, {
-				Name:         "internalErr C",
-				ClientConfig: ccfgSVC("internalErr"),
-				Rules:        matchEverythingRules,
+				Name:              "internalErr C",
+				ClientConfig:      ccfgSVC("internalErr"),
+				NamespaceSelector: &metav1.LabelSelector{},
+				Rules:             matchEverythingRules,
 			}},
 			ExpectAllow: true,
 		},
 		{
 			Name: "match & fail (but fail because fail closed)",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:          "internalErr A",
-				ClientConfig:  ccfgSVC("internalErr"),
-				Rules:         matchEverythingRules,
-				FailurePolicy: &policyFail,
+				Name:              "internalErr A",
+				ClientConfig:      ccfgSVC("internalErr"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyFail,
 			}, {
-				Name:          "internalErr B",
-				ClientConfig:  ccfgSVC("internalErr"),
-				Rules:         matchEverythingRules,
-				FailurePolicy: &policyFail,
+				Name:              "internalErr B",
+				ClientConfig:      ccfgSVC("internalErr"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyFail,
 			}, {
-				Name:          "internalErr C",
-				ClientConfig:  ccfgSVC("internalErr"),
-				Rules:         matchEverythingRules,
-				FailurePolicy: &policyFail,
+				Name:              "internalErr C",
+				ClientConfig:      ccfgSVC("internalErr"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyFail,
 			}},
 			ExpectAllow: false,
 		},
 		{
 			Name: "match & allow (url)",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:         "allow",
-				ClientConfig: ccfgURL("allow"),
-				Rules:        matchEverythingRules,
+				Name:              "allow",
+				ClientConfig:      ccfgURL("allow"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
 			}},
 			ExpectAllow: true,
 		},
 		{
 			Name: "match & disallow (url)",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:         "disallow",
-				ClientConfig: ccfgURL("disallow"),
-				Rules:        matchEverythingRules,
+				Name:              "disallow",
+				ClientConfig:      ccfgURL("disallow"),
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
 			}},
 			ErrorContains: "without explanation",
 		}, {
 			Name: "absent response and fail open",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:          "nilResponse",
-				ClientConfig:  ccfgURL("nilResponse"),
-				FailurePolicy: &policyIgnore,
-				Rules:         matchEverythingRules,
+				Name:              "nilResponse",
+				ClientConfig:      ccfgURL("nilResponse"),
+				FailurePolicy:     &policyIgnore,
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
 			}},
 			ExpectAllow: true,
 		},
 		{
 			Name: "absent response and fail closed",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:          "nilResponse",
-				ClientConfig:  ccfgURL("nilResponse"),
-				FailurePolicy: &policyFail,
-				Rules:         matchEverythingRules,
+				Name:              "nilResponse",
+				ClientConfig:      ccfgURL("nilResponse"),
+				FailurePolicy:     &policyFail,
+				Rules:             matchEverythingRules,
+				NamespaceSelector: &metav1.LabelSelector{},
 			}},
 			ErrorContains: "Webhook response was absent",
 		},
@@ -324,10 +336,11 @@ func NewCachedClientTestcases(url *url.URL) []CachedTest {
 		{
 			Name: "uncached: service webhook, path 'allow'",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:          "cache1",
-				ClientConfig:  ccfgSVC("allow"),
-				Rules:         newMatchEverythingRules(),
-				FailurePolicy: &policyIgnore,
+				Name:              "cache1",
+				ClientConfig:      ccfgSVC("allow"),
+				Rules:             newMatchEverythingRules(),
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyIgnore,
 			}},
 			ExpectAllow:     true,
 			ExpectCacheMiss: true,
@@ -335,10 +348,11 @@ func NewCachedClientTestcases(url *url.URL) []CachedTest {
 		{
 			Name: "uncached: service webhook, path 'internalErr'",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:          "cache2",
-				ClientConfig:  ccfgSVC("internalErr"),
-				Rules:         newMatchEverythingRules(),
-				FailurePolicy: &policyIgnore,
+				Name:              "cache2",
+				ClientConfig:      ccfgSVC("internalErr"),
+				Rules:             newMatchEverythingRules(),
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyIgnore,
 			}},
 			ExpectAllow:     true,
 			ExpectCacheMiss: true,
@@ -346,10 +360,11 @@ func NewCachedClientTestcases(url *url.URL) []CachedTest {
 		{
 			Name: "cached: service webhook, path 'allow'",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:          "cache3",
-				ClientConfig:  ccfgSVC("allow"),
-				Rules:         newMatchEverythingRules(),
-				FailurePolicy: &policyIgnore,
+				Name:              "cache3",
+				ClientConfig:      ccfgSVC("allow"),
+				Rules:             newMatchEverythingRules(),
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyIgnore,
 			}},
 			ExpectAllow:     true,
 			ExpectCacheMiss: false,
@@ -357,10 +372,11 @@ func NewCachedClientTestcases(url *url.URL) []CachedTest {
 		{
 			Name: "uncached: url webhook, path 'allow'",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:          "cache4",
-				ClientConfig:  ccfgURL("allow"),
-				Rules:         newMatchEverythingRules(),
-				FailurePolicy: &policyIgnore,
+				Name:              "cache4",
+				ClientConfig:      ccfgURL("allow"),
+				Rules:             newMatchEverythingRules(),
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyIgnore,
 			}},
 			ExpectAllow:     true,
 			ExpectCacheMiss: true,
@@ -368,10 +384,11 @@ func NewCachedClientTestcases(url *url.URL) []CachedTest {
 		{
 			Name: "cached: service webhook, path 'allow'",
 			Webhooks: []registrationv1beta1.Webhook{{
-				Name:          "cache5",
-				ClientConfig:  ccfgURL("allow"),
-				Rules:         newMatchEverythingRules(),
-				FailurePolicy: &policyIgnore,
+				Name:              "cache5",
+				ClientConfig:      ccfgURL("allow"),
+				Rules:             newMatchEverythingRules(),
+				NamespaceSelector: &metav1.LabelSelector{},
+				FailurePolicy:     &policyIgnore,
 			}},
 			ExpectAllow:     true,
 			ExpectCacheMiss: false,
