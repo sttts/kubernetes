@@ -24,12 +24,16 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// Wrapper turns an AuthenticationInfoResolver into a AuthenticationInfoResolverWrapper that unconditionally
+// returns the given AuthenticationInfoResolver.
 func Wrapper(r config.AuthenticationInfoResolver) func(config.AuthenticationInfoResolver) config.AuthenticationInfoResolver {
 	return func(config.AuthenticationInfoResolver) config.AuthenticationInfoResolver {
 		return r
 	}
 }
 
+// NewAuthenticationInfoResolver creates a fake AuthenticationInfoResolver that counts cache misses on
+// every call to its methods.
 func NewAuthenticationInfoResolver(cacheMisses *int32) config.AuthenticationInfoResolver {
 	return &authenticationInfoResolver{
 		restConfig: &rest.Config{

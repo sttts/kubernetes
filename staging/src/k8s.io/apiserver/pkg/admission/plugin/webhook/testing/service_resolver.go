@@ -27,6 +27,8 @@ type serviceResolver struct {
 	base url.URL
 }
 
+// NewServiceResolver returns a static service resolve that return the given URL or
+// an error for the failResolve namespace.
 func NewServiceResolver(base url.URL) config.ServiceResolver {
 	return &serviceResolver{base}
 }

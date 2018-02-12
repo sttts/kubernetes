@@ -30,6 +30,7 @@ import (
 	"k8s.io/apiserver/pkg/admission/plugin/webhook/testcerts"
 )
 
+// NewTestServer returns a webhook test HTTPS server with fixed webhook test certs.
 func NewTestServer(t *testing.T) *httptest.Server {
 	// Create the test webhook server
 	sCert, err := tls.X509KeyPair(testcerts.ServerCert, testcerts.ServerKey)

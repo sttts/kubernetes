@@ -40,6 +40,7 @@ var matchEverythingRules = []registrationv1beta1.RuleWithOperations{{
 	},
 }}
 
+// NewFakeDataSource returns a mock client and informer returning the given webhooks.
 func NewFakeDataSource(name string, webhooks []registrationv1beta1.Webhook, mutating bool, stopCh <-chan struct{}) (clientset kubernetes.Interface, factory informers.SharedInformerFactory) {
 	var objs = []runtime.Object{
 		&corev1.Namespace{
@@ -73,6 +74,7 @@ func NewFakeDataSource(name string, webhooks []registrationv1beta1.Webhook, muta
 	return client, informerFactory
 }
 
+// NewAttribute returns static admission Attributes for testing.
 func NewAttribute(namespace string) admission.Attributes {
 	// Set up a test object for the call
 	kind := corev1.SchemeGroupVersion.WithKind("Pod")
@@ -118,6 +120,7 @@ func (c urlConfigGenerator) ccfgURL(urlPath string) registrationv1beta1.WebhookC
 	}
 }
 
+// Test is a webhook test case.
 type Test struct {
 	Name          string
 	Webhooks      []registrationv1beta1.Webhook
@@ -126,6 +129,7 @@ type Test struct {
 	ErrorContains string
 }
 
+// NewTestCases returns test cases with a given base url.
 func NewTestCases(url *url.URL) []Test {
 	policyFail := registrationv1beta1.Fail
 	policyIgnore := registrationv1beta1.Ignore
@@ -321,6 +325,7 @@ func NewTestCases(url *url.URL) []Test {
 	}
 }
 
+// CachedTest is a test case for the client manager.
 type CachedTest struct {
 	Name            string
 	Webhooks        []registrationv1beta1.Webhook
@@ -328,6 +333,7 @@ type CachedTest struct {
 	ExpectCacheMiss bool
 }
 
+// NewCachedClientTestcases returns a set of client manager test cases.
 func NewCachedClientTestcases(url *url.URL) []CachedTest {
 	policyIgnore := registrationv1beta1.Ignore
 	ccfgURL := urlConfigGenerator{url}.ccfgURL
