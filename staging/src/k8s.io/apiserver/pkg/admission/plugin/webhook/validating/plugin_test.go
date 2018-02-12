@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apiserver/pkg/admission/plugin/webhook/fake"
+	webhooktesting "k8s.io/apiserver/pkg/admission/plugin/webhook/testing"
 )
 
 // TestValidate tests that ValidatingWebhook#Validate works as expected
@@ -34,7 +34,7 @@ func TestValidate(t *testing.T) {
 	v1beta1.AddToScheme(scheme)
 	corev1.AddToScheme(scheme)
 
-	testServer := fake.NewTestServer(t)
+	testServer := webhooktesting.NewTestServer(t)
 	testServer.StartTLS()
 	defer testServer.Close()
 
@@ -46,7 +46,7 @@ func TestValidate(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	for _, tt := range fake.NewTestCases(serverURL) {
+	for _, tt := range webhooktesting.NewTestCases(serverURL) {
 		// TODO: re-enable all tests
 		if !strings.Contains(tt.Name, "no match") {
 			continue
@@ -59,10 +59,10 @@ func TestValidate(t *testing.T) {
 		}
 
 		ns := "webhook-test"
-		client, informer := fake.NewFakeDataSource(ns, tt.Webhooks, false, stopCh)
+		client, informer := webhooktesting.NewFakeDataSource(ns, tt.Webhooks, false, stopCh)
 
-		wh.SetAuthenticationInfoResolverWrapper(fake.Wrapper(fake.NewAuthenticationInfoResolver(new(int32))))
-		wh.SetServiceResolver(fake.NewServiceResolver(*serverURL))
+		wh.SetAuthenticationInfoResolverWrapper(webhooktesting.Wrapper(webhooktesting.NewAuthenticationInfoResolver(new(int32))))
+		wh.SetServiceResolver(webhooktesting.NewServiceResolver(*serverURL))
 		wh.SetScheme(scheme)
 		wh.SetExternalKubeClientSet(client)
 		wh.SetExternalKubeInformerFactory(informer)
@@ -75,7 +75,7 @@ func TestValidate(t *testing.T) {
 			continue
 		}
 
-		err = wh.Validate(fake.NewAttribute(ns))
+		err = wh.Validate(webhooktesting.NewAttribute(ns))
 		if tt.ExpectAllow != (err == nil) {
 			t.Errorf("%s: expected allowed=%v, but got err=%v", tt.Name, tt.ExpectAllow, err)
 		}
@@ -97,7 +97,7 @@ func TestValidateCachedClient(t *testing.T) {
 	v1beta1.AddToScheme(scheme)
 	corev1.AddToScheme(scheme)
 
-	testServer := fake.NewTestServer(t)
+	testServer := webhooktesting.NewTestServer(t)
 	testServer.StartTLS()
 	defer testServer.Close()
 	serverURL, err := url.ParseRequestURI(testServer.URL)
@@ -112,16 +112,16 @@ func TestValidateCachedClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create validating webhook: %v", err)
 	}
-	wh.SetServiceResolver(fake.NewServiceResolver(*serverURL))
+	wh.SetServiceResolver(webhooktesting.NewServiceResolver(*serverURL))
 	wh.SetScheme(scheme)
 
-	for _, tt := range fake.NewCachedClientTestcases(serverURL) {
+	for _, tt := range webhooktesting.NewCachedClientTestcases(serverURL) {
 		ns := "webhook-test"
-		client, informer := fake.NewFakeDataSource(ns, tt.Webhooks, false, stopCh)
+		client, informer := webhooktesting.NewFakeDataSource(ns, tt.Webhooks, false, stopCh)
 
 		// override the webhook source. The client cache will stay the same.
 		cacheMisses := new(int32)
-		wh.SetAuthenticationInfoResolverWrapper(fake.Wrapper(fake.NewAuthenticationInfoResolver(cacheMisses)))
+		wh.SetAuthenticationInfoResolverWrapper(webhooktesting.Wrapper(webhooktesting.NewAuthenticationInfoResolver(cacheMisses)))
 		wh.SetExternalKubeClientSet(client)
 		wh.SetExternalKubeInformerFactory(informer)
 
@@ -133,7 +133,7 @@ func TestValidateCachedClient(t *testing.T) {
 			continue
 		}
 
-		err = wh.Validate(fake.NewAttribute(ns))
+		err = wh.Validate(webhooktesting.NewAttribute(ns))
 		if tt.ExpectAllow != (err == nil) {
 			t.Errorf("%s: expected allowed=%v, but got err=%v", tt.Name, tt.ExpectAllow, err)
 		}
