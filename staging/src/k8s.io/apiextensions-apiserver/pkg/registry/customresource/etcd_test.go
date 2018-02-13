@@ -18,6 +18,7 @@ package customresource_test
 
 import (
 	"io"
+	"strings"
 	"testing"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -237,6 +238,31 @@ func TestScaleGet(t *testing.T) {
 	}
 }
 
+func TestScaleGetWithoutSpecReplicas(t *testing.T) {
+	storage, server := newStorage(t)
+	defer server.Terminate(t)
+	defer storage.CustomResource.Store.DestroyFunc()
+
+	name := "foo"
+
+	var cr unstructured.Unstructured
+	ctx := genericapirequest.WithNamespace(genericapirequest.NewContext(), metav1.NamespaceDefault)
+	key := "/noxus/" + metav1.NamespaceDefault + "/" + name
+	withoutSpecReplicas := validCustomResource.DeepCopy()
+	unstructured.RemoveNestedField(withoutSpecReplicas.Object, "spec", "replicas")
+	if err := storage.CustomResource.Storage.Create(ctx, key, withoutSpecReplicas, &cr, 0); err != nil {
+		t.Fatalf("error setting new custom resource (key: %s) %v: %v", key, withoutSpecReplicas, err)
+	}
+
+	_, err := storage.Scale.Get(ctx, name, &metav1.GetOptions{})
+	if err == nil {
+		t.Fatalf("error expected for %s", name)
+	}
+	if expected := `the spec replicas field ".spec.replicas" does not exist`; !strings.Contains(err.Error(), expected) {
+		t.Fatalf("expected error string %q, got: %v", expected, err)
+	}
+}
+
 func TestScaleUpdate(t *testing.T) {
 	storage, server := newStorage(t)
 	defer server.Terminate(t)
@@ -286,6 +312,47 @@ func TestScaleUpdate(t *testing.T) {
 
 	if _, _, err = storage.Scale.Update(ctx, update.Name, rest.DefaultUpdatedObjectInfo(&update), rest.ValidateAllObjectFunc, rest.ValidateAllObjectUpdateFunc); err != nil && !errors.IsConflict(err) {
 		t.Fatalf("unexpected error, expecting an update conflict but got %v", err)
+	}
+}
+
+func TestScaleUpdateWithoutSpecReplicas(t *testing.T) {
+	storage, server := newStorage(t)
+	defer server.Terminate(t)
+	defer storage.CustomResource.Store.DestroyFunc()
+
+	name := "foo"
+
+	var cr unstructured.Unstructured
+	ctx := genericapirequest.WithNamespace(genericapirequest.NewContext(), metav1.NamespaceDefault)
+	key := "/noxus/" + metav1.NamespaceDefault + "/" + name
+	withoutSpecReplicas := validCustomResource.DeepCopy()
+	unstructured.RemoveNestedField(withoutSpecReplicas.Object, "spec", "replicas")
+	if err := storage.CustomResource.Storage.Create(ctx, key, withoutSpecReplicas, &cr, 0); err != nil {
+		t.Fatalf("error setting new custom resource (key: %s) %v: %v", key, withoutSpecReplicas, err)
+	}
+
+	replicas := 12
+	update := autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            name,
+			ResourceVersion: cr.GetResourceVersion(),
+		},
+		Spec: autoscalingv1.ScaleSpec{
+			Replicas: int32(replicas),
+		},
+	}
+
+	if _, _, err := storage.Scale.Update(ctx, update.Name, rest.DefaultUpdatedObjectInfo(&update), rest.ValidateAllObjectFunc, rest.ValidateAllObjectUpdateFunc); err != nil {
+		t.Fatalf("error updating scale %v: %v", update, err)
+	}
+
+	obj, err := storage.Scale.Get(ctx, name, &metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("error fetching scale for %s: %v", name, err)
+	}
+	scale := obj.(*autoscalingv1.Scale)
+	if scale.Spec.Replicas != int32(replicas) {
+		t.Errorf("wrong replicas count: expected: %d got: %d", replicas, scale.Spec.Replicas)
 	}
 }
 

@@ -142,9 +142,12 @@ func (r *ScaleREST) Get(ctx genericapirequest.Context, name string, options *met
 		return nil, err
 	}
 
-	scaleObject, err := scaleFromCustomResource(cr, r.specReplicasPath, r.statusReplicasPath, r.labelSelectorPath)
+	scaleObject, replicasFound, err := scaleFromCustomResource(cr, r.specReplicasPath, r.statusReplicasPath, r.labelSelectorPath)
 	if err != nil {
 		return nil, err
+	}
+	if !replicasFound {
+		return nil, apierrors.NewInternalError(fmt.Errorf("the spec replicas field %q does not exist", r.specReplicasPath))
 	}
 	return scaleObject, err
 }
@@ -155,9 +158,13 @@ func (r *ScaleREST) Update(ctx genericapirequest.Context, name string, objInfo r
 		return nil, false, err
 	}
 
-	oldScale, err := scaleFromCustomResource(cr, r.specReplicasPath, r.statusReplicasPath, r.labelSelectorPath)
+	const invalidSpecReplicas = -2147483648 // smallest int32
+	oldScale, replicasFound, err := scaleFromCustomResource(cr, r.specReplicasPath, r.statusReplicasPath, r.labelSelectorPath)
 	if err != nil {
 		return nil, false, err
+	}
+	if !replicasFound {
+		oldScale.Spec.Replicas = invalidSpecReplicas // signal that this was not set before
 	}
 
 	obj, err := objInfo.UpdatedObject(ctx, oldScale)
@@ -173,6 +180,10 @@ func (r *ScaleREST) Update(ctx genericapirequest.Context, name string, objInfo r
 		return nil, false, apierrors.NewBadRequest(fmt.Sprintf("wrong object passed to Scale update: %v", obj))
 	}
 
+	if scale.Spec.Replicas == invalidSpecReplicas {
+		return nil, false, apierrors.NewBadRequest(fmt.Sprintf("the spec replicas field %q cannot be empty", r.specReplicasPath))
+	}
+
 	specReplicasPath := strings.TrimPrefix(r.specReplicasPath, ".") // ignore leading period
 	if err = unstructured.SetNestedField(cr.Object, int64(scale.Spec.Replicas), strings.Split(specReplicasPath, ".")...); err != nil {
 		return nil, false, err
@@ -184,37 +195,39 @@ func (r *ScaleREST) Update(ctx genericapirequest.Context, name string, objInfo r
 		return nil, false, err
 	}
 
-	newScale, err := scaleFromCustomResource(cr, r.specReplicasPath, r.statusReplicasPath, r.labelSelectorPath)
+	newScale, _, err := scaleFromCustomResource(cr, r.specReplicasPath, r.statusReplicasPath, r.labelSelectorPath)
 	if err != nil {
 		return nil, false, apierrors.NewBadRequest(err.Error())
 	}
 	return newScale, false, err
 }
 
-// scaleFromCustomResource returns a scale subresource for a customresource.
-func scaleFromCustomResource(cr *unstructured.Unstructured, specReplicasPath, statusReplicasPath, labelSelectorPath string) (*autoscalingv1.Scale, error) {
+// scaleFromCustomResource returns a scale subresource for a customresource and a bool signalling wether
+// the specReplicas value was found.
+func scaleFromCustomResource(cr *unstructured.Unstructured, specReplicasPath, statusReplicasPath, labelSelectorPath string) (*autoscalingv1.Scale, bool, error) {
 	specReplicasPath = strings.TrimPrefix(specReplicasPath, ".") // ignore leading period
-	specReplicas, found, err := unstructured.NestedInt64(cr.UnstructuredContent(), strings.Split(specReplicasPath, ".")...)
+	specReplicas, foundSpecReplicas, err := unstructured.NestedInt64(cr.UnstructuredContent(), strings.Split(specReplicasPath, ".")...)
 	if err != nil {
-		return nil, err
-	} else if !found {
-		specReplicas = 1
+		return nil, false, err
+	} else if !foundSpecReplicas {
+		specReplicas = 0
 	}
 
 	statusReplicasPath = strings.TrimPrefix(statusReplicasPath, ".") // ignore leading period
 	statusReplicas, found, err := unstructured.NestedInt64(cr.UnstructuredContent(), strings.Split(statusReplicasPath, ".")...)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	} else if !found {
 		statusReplicas = 0
 	}
 
-	labelSelectorPath = strings.TrimPrefix(labelSelectorPath, ".") // ignore leading period
-	labelSelector, found, err := unstructured.NestedString(cr.UnstructuredContent(), strings.Split(labelSelectorPath, ".")...)
-	if err != nil {
-		return nil, err
-	} else if !found {
-		labelSelector = ""
+	var labelSelector string
+	if len(labelSelectorPath) > 0 {
+		labelSelectorPath = strings.TrimPrefix(labelSelectorPath, ".") // ignore leading period
+		labelSelector, found, err = unstructured.NestedString(cr.UnstructuredContent(), strings.Split(labelSelectorPath, ".")...)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 
 	scale := &autoscalingv1.Scale{
@@ -234,5 +247,5 @@ func scaleFromCustomResource(cr *unstructured.Unstructured, specReplicasPath, st
 		},
 	}
 
-	return scale, nil
+	return scale, foundSpecReplicas, nil
 }
