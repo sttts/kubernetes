@@ -458,3 +458,30 @@ func TestValidateCustomResourceDefinitionUpdate(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateSimpleJSONPath(t *testing.T) {
+	tests := []struct {
+		s           string
+		expectError bool
+	}{
+		{".", false},
+		{".foo", false},
+		{".foo.bar", false},
+		{".foo", false},
+		{"", true},
+		{"foo", true},
+		{".föö", true},
+		{".foo[1]", true},
+		{"[]", true},
+		{".*", true},
+		{".foo[]", true},
+	}
+	for i, tt := range tests {
+		errs := ValidateSimpleJSONPath(tt.s, field.NewPath("foo"))
+		if tt.expectError && len(errs) == 0 {
+			t.Errorf("%d: expected error, got none", i)
+		} else if !tt.expectError && len(errs) > 0 {
+			t.Errorf("%d: expected no error, got: %v", i, errs)
+		}
+	}
+}

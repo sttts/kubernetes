@@ -363,37 +363,59 @@ func ValidateCustomResourceDefinitionSubResources(subResources *apiextensions.Cu
 	if subResources.Scale != nil {
 		if len(subResources.Scale.SpecReplicasPath) == 0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.specReplicasPath"), subResources.Scale.SpecReplicasPath, "cannot be empty"))
-		}
-
-		// should be constrained json path under .spec
-		specReplicasPath := strings.TrimPrefix(subResources.Scale.SpecReplicasPath, ".")
-		splitSpecReplicasPath := strings.Split(specReplicasPath, ".")
-		if len(splitSpecReplicasPath) <= 1 || splitSpecReplicasPath[0] != "spec" {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.specReplicasPath"), subResources.Scale.SpecReplicasPath, "should be a json path under .spec"))
+		} else {
+			// should be constrained json path under .spec
+			if errs := ValidateSimpleJSONPath(subResources.Scale.SpecReplicasPath, fldPath.Child("scale.specReplicasPath")); len(errs) > 0 {
+				allErrs = append(allErrs, errs...)
+			} else if !strings.HasPrefix(subResources.Scale.SpecReplicasPath, ".spec.") {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.specReplicasPath"), subResources.Scale.SpecReplicasPath, "should be a json path under .spec"))
+			}
 		}
 
 		if len(subResources.Scale.StatusReplicasPath) == 0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.statusReplicasPath"), subResources.Scale.StatusReplicasPath, "cannot be empty"))
-		}
-
-		// should be constrained json path under .status
-		statusReplicasPath := strings.TrimPrefix(subResources.Scale.StatusReplicasPath, ".")
-		splitStatusReplicasPath := strings.Split(statusReplicasPath, ".")
-		if len(splitStatusReplicasPath) <= 1 || splitStatusReplicasPath[0] != "status" {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.statusReplicasPath"), subResources.Scale.StatusReplicasPath, "should be a json path under .status"))
+		} else {
+			// should be constrained json path under .status
+			if errs := ValidateSimpleJSONPath(subResources.Scale.StatusReplicasPath, fldPath.Child("scale.statusReplicasPath")); len(errs) > 0 {
+				allErrs = append(allErrs, errs...)
+			} else if !strings.HasPrefix(subResources.Scale.StatusReplicasPath, ".status.") {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.specReplicasPath"), subResources.Scale.StatusReplicasPath, "should be a json path under .status"))
+			}
 		}
 
 		// if labelSelectorPath is present, it should be a constrained json path.
 		if len(subResources.Scale.LabelSelectorPath) > 0 {
-			labelSelectorPath := strings.TrimPrefix(subResources.Scale.LabelSelectorPath, ".")
-			splitLabelSelectorPath := strings.Split(labelSelectorPath, ".")
-			if len(splitLabelSelectorPath) <= 1 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.labelSelectorPatch"), subResources.Scale.LabelSelectorPath, "should be a valid json path"))
+			if errs := ValidateSimpleJSONPath(subResources.Scale.StatusReplicasPath, fldPath.Child("scale.labelSelectorPatch")); len(errs) > 0 {
+				allErrs = append(allErrs, errs...)
 			}
 		}
 
 		if subResources.Scale.ScaleGroupVersion != "autoscaling/v1" {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.scaleGroupVersion"), subResources.Scale.ScaleGroupVersion, "must be autoscaling/v1"))
+		}
+	}
+
+	return allErrs
+}
+
+func ValidateSimpleJSONPath(s string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(s) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath, s, "must not be empty"))
+	} else if s[0] != '.' {
+		allErrs = append(allErrs, field.Invalid(fldPath, s, "must be a simple json path starting with ."))
+	} else {
+		var cs []string
+		if s != "." {
+			cs = strings.Split(s[1:], ".")
+		}
+		for i, c := range cs {
+			if errs := genericvalidation.NameIsDNSLabel(c, false); len(errs) > 0 {
+				for _, err := range errs {
+					allErrs = append(allErrs, field.Invalid(fldPath.Index(i), c, err))
+				}
+			}
 		}
 	}
 
