@@ -43,4 +43,24 @@ func SetDefaults_CustomResourceDefinitionSpec(obj *CustomResourceDefinitionSpec)
 	if len(obj.Names.ListKind) == 0 && len(obj.Names.Kind) > 0 {
 		obj.Names.ListKind = obj.Names.Kind + "List"
 	}
+	// If there is no list of versions, create on using deprecated Version field.
+	if len(obj.Versions) == 0 && len(obj.Version) != 0 {
+		obj.Versions = []CustomResourceDefinitionVersion{
+			{
+				Name:    obj.Version,
+				Served:  true,
+				Storage: true,
+			},
+		}
+	}
+	// For backward compatibility set the version field to the storage version
+	// if it does not exists.
+	if len(obj.Version) == 0 && len(obj.Versions) != 0 {
+		for _, version := range obj.Versions {
+			if version.Storage {
+				obj.Version = version.Name
+				break
+			}
+		}
+	}
 }
