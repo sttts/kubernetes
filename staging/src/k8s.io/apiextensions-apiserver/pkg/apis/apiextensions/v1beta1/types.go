@@ -23,6 +23,7 @@ type CustomResourceDefinitionSpec struct {
 	// Group is the group this resource belongs in
 	Group string `json:"group" protobuf:"bytes,1,opt,name=group"`
 	// Version is the version this resource belongs in
+	// Should be always first item in Versions field if provided.
 	Version string `json:"version" protobuf:"bytes,2,opt,name=version"`
 	// Names are the names used to describe this custom resource
 	Names CustomResourceDefinitionNames `json:"names" protobuf:"bytes,3,opt,name=names"`
@@ -31,6 +32,22 @@ type CustomResourceDefinitionSpec struct {
 	// Validation describes the validation methods for CustomResources
 	// +optional
 	Validation *CustomResourceValidation `json:"validation,omitempty" protobuf:"bytes,5,opt,name=validation"`
+	// Versions is the list of all supported versions for this resource.
+	// Validation: All versions must use the same validation schema for now. i.e., top
+	// level Validation field is applied to all of these versions.
+	// Order: The order of these versions is used to determine the order in discovery API
+	// (preferred version first).
+	Versions []CustomResourceDefinitionVersion `protobuf:"bytes,6,rep,name=versions"`
+}
+
+type CustomResourceDefinitionVersion struct {
+	// Name is the version name, e.g. “v1”, “v2beta1”, etc.
+	Name string `protobuf:"bytes,1,opt,name=name"`
+	// Served is a flag enabling/disabling this version from being served via REST APIs
+	Served bool `protobuf:"varint,2,opt,name=served"`
+	// Storage flags the release as a storage version. There can be only one version
+	// flagged as Storage.
+	Storage bool `protobuf:"varint,3,opt,name=storage"`
 }
 
 // CustomResourceDefinitionNames indicates the names to serve this CustomResourceDefinition
@@ -109,6 +126,13 @@ type CustomResourceDefinitionStatus struct {
 	// AcceptedNames are the names that are actually being used to serve discovery
 	// They may be different than the names in spec.
 	AcceptedNames CustomResourceDefinitionNames `json:"acceptedNames" protobuf:"bytes,2,opt,name=acceptedNames"`
+
+	// StoredVersions are all versions ever marked as storage in spec. Tracking these
+	// versions allow a migration path for stored version in etcd. The field is mutable
+	// so the migration controller can first make sure a version is certified (i.e. all
+	// stored objects is that version) then remove the rest of the versions from this list.
+	// None of the versions in this list can be removed from the spec.Versions field.
+	StoredVersions []string `protobuf:"bytes,3,rep,name=storedVersions"`
 }
 
 // CustomResourceCleanupFinalizer is the name of the finalizer which will delete instances of
