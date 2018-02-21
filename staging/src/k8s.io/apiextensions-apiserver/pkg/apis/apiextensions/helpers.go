@@ -116,3 +116,28 @@ func CRDRemoveFinalizer(crd *CustomResourceDefinition, needle string) {
 	}
 	crd.Finalizers = newFinalizers
 }
+
+func HasCRDVersion(crd *CustomResourceDefinition, version string) bool {
+	for _, v := range crd.Spec.Versions {
+		if v.Name == version {
+			return true
+		}
+	}
+	return false
+}
+
+func GetCRDStorageVersion(crd *CustomResourceDefinition) string {
+	for _, v := range crd.Spec.Versions {
+		if v.Storage {
+			return v.Name
+		}
+	}
+	// This should not happened if crd is valid
+	return ""
+}
+
+func ConvertCRDVersion(crd *CustomResourceDefinition, newVersion string) *CustomResourceDefinition {
+	newCrd := crd.DeepCopy()
+	crd.TypeMeta.APIVersion = crd.GroupVersionKind().Group + "/" + newVersion
+	return newCrd
+}

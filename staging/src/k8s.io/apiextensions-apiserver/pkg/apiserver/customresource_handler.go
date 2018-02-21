@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"path"
 	"strings"
@@ -87,8 +88,9 @@ type crdInfo struct {
 	spec          *apiextensions.CustomResourceDefinitionSpec
 	acceptedNames *apiextensions.CustomResourceDefinitionNames
 
-	storage      *customresource.REST
-	requestScope handlers.RequestScope
+	storage        *customresource.REST
+	requestScopes  map[string]handlers.RequestScope
+	storageVersion string
 }
 
 // crdStorageMap goes from customresourcedefinition to its storage
@@ -164,7 +166,7 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if crd.Spec.Version != requestInfo.APIVersion {
+	if !apiextensions.HasCRDVersion(crd, requestInfo.APIVersion) {
 		r.delegate.ServeHTTP(w, req)
 		return
 	}
@@ -186,7 +188,7 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	storage := crdInfo.storage
-	requestScope := crdInfo.requestScope
+	requestScope := crdInfo.requestScopes[requestInfo.APIVersion]
 	minRequestTimeout := 1 * time.Minute
 
 	verb := strings.ToUpper(requestInfo.Verb)
@@ -210,13 +212,13 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
 			return
 		}
-		handler = handlers.CreateResource(storage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)
+		handler = handlers.CreateResource(storage, crdInfo.requestScopes[crdInfo.storageVersion], discovery.NewUnstructuredObjectTyper(nil), r.admission)
 	case "update":
 		if terminating {
 			http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
 			return
 		}
-		handler = handlers.UpdateResource(storage, requestScope, discovery.NewUnstructuredObjectTyper(nil), r.admission)
+		handler = handlers.UpdateResource(storage, crdInfo.requestScopes[crdInfo.storageVersion], discovery.NewUnstructuredObjectTyper(nil), r.admission)
 	case "patch":
 		if terminating {
 			http.Error(w, fmt.Sprintf("%v not allowed while CustomResourceDefinition is terminating", requestInfo.Verb), http.StatusMethodNotAllowed)
@@ -296,7 +298,7 @@ func (r *crdHandler) removeDeadStorage() {
 			}
 		}
 		if !found {
-			glog.V(4).Infof("Removing dead CRD storage for %v", s.requestScope.Resource)
+			glog.V(4).Infof("Removing dead CRD storage")
 			s.storage.DestroyFunc()
 			delete(storageMap2, uid)
 		}
@@ -328,10 +330,12 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 		return ret, nil
 	}
 
+	storageVersion := apiextensions.GetCRDStorageVersion(crd)
+
 	// In addition to Unstructured objects (Custom Resources), we also may sometimes need to
 	// decode unversioned Options objects, so we delegate to parameterScheme for such types.
 	parameterScheme := runtime.NewScheme()
-	parameterScheme.AddUnversionedTypes(schema.GroupVersion{Group: crd.Spec.Group, Version: crd.Spec.Version},
+	parameterScheme.AddUnversionedTypes(schema.GroupVersion{Group: crd.Spec.Group, Version: storageVersion},
 		&metav1.ListOptions{},
 		&metav1.ExportOptions{},
 		&metav1.GetOptions{},
@@ -339,7 +343,7 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 	)
 	parameterCodec := runtime.NewParameterCodec(parameterScheme)
 
-	kind := schema.GroupVersionKind{Group: crd.Spec.Group, Version: crd.Spec.Version, Kind: crd.Status.AcceptedNames.Kind}
+	kind := schema.GroupVersionKind{Group: crd.Spec.Group, Version: storageVersion, Kind: crd.Status.AcceptedNames.Kind}
 	typer := unstructuredObjectTyper{
 		delegate:          parameterScheme,
 		unstructuredTyper: discovery.NewUnstructuredObjectTyper(nil),
@@ -353,7 +357,7 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 
 	storage := customresource.NewREST(
 		schema.GroupResource{Group: crd.Spec.Group, Resource: crd.Status.AcceptedNames.Plural},
-		schema.GroupVersionKind{Group: crd.Spec.Group, Version: crd.Spec.Version, Kind: crd.Status.AcceptedNames.ListKind},
+		schema.GroupVersionKind{Group: crd.Spec.Group, Version: storageVersion, Kind: crd.Status.AcceptedNames.ListKind},
 		customresource.NewStrategy(
 			typer,
 			crd.Spec.Scope == apiextensions.NamespaceScoped,
@@ -366,53 +370,57 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 	selfLinkPrefix := ""
 	switch crd.Spec.Scope {
 	case apiextensions.ClusterScoped:
-		selfLinkPrefix = "/" + path.Join("apis", crd.Spec.Group, crd.Spec.Version) + "/" + crd.Status.AcceptedNames.Plural + "/"
+		selfLinkPrefix = "/" + path.Join("apis", crd.Spec.Group, storageVersion) + "/" + crd.Status.AcceptedNames.Plural + "/"
 	case apiextensions.NamespaceScoped:
-		selfLinkPrefix = "/" + path.Join("apis", crd.Spec.Group, crd.Spec.Version, "namespaces") + "/"
+		selfLinkPrefix = "/" + path.Join("apis", crd.Spec.Group, storageVersion, "namespaces") + "/"
 	}
 
 	clusterScoped := crd.Spec.Scope == apiextensions.ClusterScoped
 
-	requestScope := handlers.RequestScope{
-		Namer: handlers.ContextBasedNaming{
-			GetContext: func(req *http.Request) apirequest.Context {
+	requestScopes := map[string]handlers.RequestScope{}
+	for _, v := range crd.Spec.Versions {
+		requestScopes[v.Name] = handlers.RequestScope{
+			Namer: handlers.ContextBasedNaming{
+				GetContext: func(req *http.Request) apirequest.Context {
+					ret, _ := r.requestContextMapper.Get(req)
+					return ret
+				},
+				SelfLinker:         meta.NewAccessor(),
+				ClusterScoped:      clusterScoped,
+				SelfLinkPathPrefix: selfLinkPrefix,
+			},
+			ContextFunc: func(req *http.Request) apirequest.Context {
 				ret, _ := r.requestContextMapper.Get(req)
 				return ret
 			},
-			SelfLinker:         meta.NewAccessor(),
-			ClusterScoped:      clusterScoped,
-			SelfLinkPathPrefix: selfLinkPrefix,
-		},
-		ContextFunc: func(req *http.Request) apirequest.Context {
-			ret, _ := r.requestContextMapper.Get(req)
-			return ret
-		},
 
-		Serializer:     unstructuredNegotiatedSerializer{typer: typer, creator: creator},
-		ParameterCodec: parameterCodec,
+			Serializer:     unstructuredNegotiatedSerializer{typer: typer, creator: creator},
+			ParameterCodec: parameterCodec,
 
-		Creater: creator,
-		Convertor: crdObjectConverter{
-			UnstructuredObjectConverter: unstructured.UnstructuredObjectConverter{},
-			clusterScoped:               clusterScoped,
-		},
-		Defaulter:       unstructuredDefaulter{parameterScheme},
-		Typer:           typer,
-		UnsafeConvertor: unstructured.UnstructuredObjectConverter{},
+			Creater: creator,
+			Convertor: crdObjectConverter{
+				UnstructuredObjectConverter: unstructured.UnstructuredObjectConverter{},
+				clusterScoped:               clusterScoped,
+			},
+			Defaulter:       unstructuredDefaulter{parameterScheme},
+			Typer:           typer,
+			UnsafeConvertor: unstructured.UnstructuredObjectConverter{},
 
-		Resource:    schema.GroupVersionResource{Group: crd.Spec.Group, Version: crd.Spec.Version, Resource: crd.Status.AcceptedNames.Plural},
-		Kind:        kind,
-		Subresource: "",
+			Resource:    schema.GroupVersionResource{Group: crd.Spec.Group, Version: v.Name, Resource: crd.Status.AcceptedNames.Plural},
+			Kind:        schema.GroupVersionKind{Group: crd.Spec.Group, Version: v.Name, Kind: crd.Status.AcceptedNames.Kind},
+			Subresource: "",
 
-		MetaGroupVersion: metav1.SchemeGroupVersion,
+			MetaGroupVersion: metav1.SchemeGroupVersion,
+		}
 	}
 
 	ret := &crdInfo{
 		spec:          &crd.Spec,
 		acceptedNames: &crd.Status.AcceptedNames,
 
-		storage:      storage,
-		requestScope: requestScope,
+		storage:        storage,
+		requestScopes:   requestScopes,
+		storageVersion: storageVersion,
 	}
 
 	// Copy because we cannot write to storageMap without a race
@@ -469,12 +477,38 @@ func (s unstructuredNegotiatedSerializer) SupportedMediaTypes() []runtime.Serial
 	}
 }
 
+type CustomResourceEncoderDecoder struct {
+	decoder runtime.Decoder
+	encoder runtime.Encoder
+	gv runtime.GroupVersioner
+}
+
+var _ runtime.Decoder = CustomResourceEncoderDecoder{}
+var _ runtime.Encoder = CustomResourceEncoderDecoder{}
+
+func (c CustomResourceEncoderDecoder) Decode(data []byte, defaults *schema.GroupVersionKind, into runtime.Object) (runtime.Object, *schema.GroupVersionKind, error) {
+	object, _, err := c.decoder.Decode(data, defaults, into)
+	if err == nil {
+		object.GetObjectKind().SetGroupVersionKind(*defaults)
+	}
+	return object, defaults, err
+}
+
+func (c CustomResourceEncoderDecoder) Encode(obj runtime.Object, w io.Writer) error {
+	if crdObj, ok := obj.(runtime.Unstructured); ok {
+		if gv2, ok2 := c.gv.(schema.GroupVersion); ok2 {
+			crdObj.GetObjectKind().SetGroupVersionKind(gv2.WithKind(crdObj.GetObjectKind().GroupVersionKind().Kind))
+		}
+	}
+	return c.encoder.Encode(obj, w)
+}
+
 func (s unstructuredNegotiatedSerializer) EncoderForVersion(encoder runtime.Encoder, gv runtime.GroupVersioner) runtime.Encoder {
-	return versioning.NewDefaultingCodecForScheme(Scheme, encoder, nil, gv, nil)
+	return versioning.NewDefaultingCodecForScheme(Scheme, CustomResourceEncoderDecoder{encoder: encoder, gv: gv}, nil, gv, nil)
 }
 
 func (s unstructuredNegotiatedSerializer) DecoderToVersion(decoder runtime.Decoder, gv runtime.GroupVersioner) runtime.Decoder {
-	return versioning.NewDefaultingCodecForScheme(Scheme, nil, decoder, nil, gv)
+	return versioning.NewDefaultingCodecForScheme(Scheme, nil, CustomResourceEncoderDecoder{decoder: decoder}, nil, gv)
 }
 
 type unstructuredObjectTyper struct {
