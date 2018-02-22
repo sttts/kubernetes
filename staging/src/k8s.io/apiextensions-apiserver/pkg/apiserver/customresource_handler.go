@@ -18,7 +18,6 @@ package apiserver
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"path"
 	"strings"
@@ -52,6 +51,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	crconversion "k8s.io/apiextensions-apiserver/pkg/apiserver/conversion"
 	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/internalversion/apiextensions/internalversion"
 	listers "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/internalversion"
@@ -376,8 +376,8 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 	}
 
 	clusterScoped := crd.Spec.Scope == apiextensions.ClusterScoped
-
 	requestScopes := map[string]handlers.RequestScope{}
+	converter := crconversion.NewNoConversionConverter(clusterScoped)
 	for _, v := range crd.Spec.Versions {
 		requestScopes[v.Name] = handlers.RequestScope{
 			Namer: handlers.ContextBasedNaming{
@@ -394,14 +394,11 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 				return ret
 			},
 
-			Serializer:     unstructuredNegotiatedSerializer{typer: typer, creator: creator},
+			Serializer:     unstructuredNegotiatedSerializer{typer: typer, creator: creator, converter: converter},
 			ParameterCodec: parameterCodec,
 
-			Creater: creator,
-			Convertor: crdObjectConverter{
-				UnstructuredObjectConverter: unstructured.UnstructuredObjectConverter{},
-				clusterScoped:               clusterScoped,
-			},
+			Creater:         creator,
+			Convertor:       converter,
 			Defaulter:       unstructuredDefaulter{parameterScheme},
 			Typer:           typer,
 			UnsafeConvertor: unstructured.UnstructuredObjectConverter{},
@@ -419,7 +416,7 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 		acceptedNames: &crd.Status.AcceptedNames,
 
 		storage:        storage,
-		requestScopes:   requestScopes,
+		requestScopes:  requestScopes,
 		storageVersion: storageVersion,
 	}
 
@@ -433,27 +430,10 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 	return ret, nil
 }
 
-// crdObjectConverter is a converter that supports field selectors for CRDs.
-type crdObjectConverter struct {
-	unstructured.UnstructuredObjectConverter
-	clusterScoped bool
-}
-
-func (c crdObjectConverter) ConvertFieldLabel(version, kind, label, value string) (string, string, error) {
-	// We currently only support metadata.namespace and metadata.name.
-	switch {
-	case label == "metadata.name":
-		return label, value, nil
-	case !c.clusterScoped && label == "metadata.namespace":
-		return label, value, nil
-	default:
-		return "", "", fmt.Errorf("field label not supported: %s", label)
-	}
-}
-
 type unstructuredNegotiatedSerializer struct {
-	typer   runtime.ObjectTyper
-	creator runtime.ObjectCreater
+	typer     runtime.ObjectTyper
+	creator   runtime.ObjectCreater
+	converter runtime.ObjectConvertor
 }
 
 func (s unstructuredNegotiatedSerializer) SupportedMediaTypes() []runtime.SerializerInfo {
@@ -477,38 +457,12 @@ func (s unstructuredNegotiatedSerializer) SupportedMediaTypes() []runtime.Serial
 	}
 }
 
-type CustomResourceEncoderDecoder struct {
-	decoder runtime.Decoder
-	encoder runtime.Encoder
-	gv runtime.GroupVersioner
-}
-
-var _ runtime.Decoder = CustomResourceEncoderDecoder{}
-var _ runtime.Encoder = CustomResourceEncoderDecoder{}
-
-func (c CustomResourceEncoderDecoder) Decode(data []byte, defaults *schema.GroupVersionKind, into runtime.Object) (runtime.Object, *schema.GroupVersionKind, error) {
-	object, _, err := c.decoder.Decode(data, defaults, into)
-	if err == nil {
-		object.GetObjectKind().SetGroupVersionKind(*defaults)
-	}
-	return object, defaults, err
-}
-
-func (c CustomResourceEncoderDecoder) Encode(obj runtime.Object, w io.Writer) error {
-	if crdObj, ok := obj.(runtime.Unstructured); ok {
-		if gv2, ok2 := c.gv.(schema.GroupVersion); ok2 {
-			crdObj.GetObjectKind().SetGroupVersionKind(gv2.WithKind(crdObj.GetObjectKind().GroupVersionKind().Kind))
-		}
-	}
-	return c.encoder.Encode(obj, w)
-}
-
 func (s unstructuredNegotiatedSerializer) EncoderForVersion(encoder runtime.Encoder, gv runtime.GroupVersioner) runtime.Encoder {
-	return versioning.NewDefaultingCodecForScheme(Scheme, CustomResourceEncoderDecoder{encoder: encoder, gv: gv}, nil, gv, nil)
+	return versioning.NewCodec(encoder, nil, s.converter, Scheme, Scheme, Scheme, gv, nil)
 }
 
 func (s unstructuredNegotiatedSerializer) DecoderToVersion(decoder runtime.Decoder, gv runtime.GroupVersioner) runtime.Decoder {
-	return versioning.NewDefaultingCodecForScheme(Scheme, nil, CustomResourceEncoderDecoder{decoder: decoder}, nil, gv)
+	return versioning.NewCodec(nil, decoder, s.converter, Scheme, Scheme, Scheme, nil, gv)
 }
 
 type unstructuredObjectTyper struct {
