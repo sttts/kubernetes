@@ -138,7 +138,8 @@ func (o *Options) ApplyTo(c *schedulerappconfig.Config) error {
 			return err
 		}
 	} else {
-		if cfg, err := loadConfigFromFile(o.ConfigFile); err != nil {
+		cfg, err := loadConfigFromFile(o.ConfigFile)
+		if err != nil {
 			return err
 		}
 		c.ComponentConfig = *cfg
