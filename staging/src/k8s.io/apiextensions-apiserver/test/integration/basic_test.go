@@ -401,6 +401,12 @@ func testSimpleVersionedCRUD(t *testing.T, ns string, noxuDefinition *apiextensi
 				t.Errorf("missing watch event")
 			}
 		}
+
+		// Delete test
+		if err := noxuResourceClient.DeleteCollection(v1.NewDeleteOptions(0), v1.ListOptions{}); err != nil {
+			t.Fatal(err)
+		}
+
 	}
 }
 

@@ -603,11 +603,11 @@ func (s unstructuredNegotiatedSerializer) SupportedMediaTypes() []runtime.Serial
 }
 
 func (s unstructuredNegotiatedSerializer) EncoderForVersion(encoder runtime.Encoder, gv runtime.GroupVersioner) runtime.Encoder {
-	return versioning.NewCodec(encoder, nil, s.converter, unstructuredCreator{}, newUnstructuredObjectTyper(Scheme), Scheme, gv, nil)
+	return versioning.NewCodec(encoder, nil, s.converter, Scheme, Scheme, Scheme, gv, nil)
 }
 
 func (s unstructuredNegotiatedSerializer) DecoderToVersion(decoder runtime.Decoder, gv runtime.GroupVersioner) runtime.Decoder {
-	return versioning.NewCodec(nil, decoder, s.converter, unstructuredCreator{}, newUnstructuredObjectTyper(Scheme), Scheme, nil, gv)
+	return versioning.NewDefaultingCodecForScheme(Scheme, nil, decoder, nil, gv)
 }
 
 type UnstructuredObjectTyper struct {
