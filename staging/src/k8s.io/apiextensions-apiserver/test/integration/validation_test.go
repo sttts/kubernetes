@@ -348,14 +348,11 @@ func TestCRValidationOnCRDUpdate(t *testing.T) {
 		t.Fatalf("unexpected non-error: CR should be rejected")
 	}
 
-	gottenCRD, err := apiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get("noxus.mygroup.example.com", metav1.GetOptions{})
+	_, err = UpdateCustomResourceDefinition(apiExtensionClient, "noxus.mygroup.example.com", func(crd *apiextensionsv1beta1.CustomResourceDefinition) {
+		// update the CRD to a less stricter schema
+		crd.Spec.Validation.OpenAPIV3Schema.Required = []string{"alpha", "beta"}
+	})
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	// update the CRD to a less stricter schema
-	gottenCRD.Spec.Validation.OpenAPIV3Schema.Required = []string{"alpha", "beta"}
-	if _, err = apiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Update(gottenCRD); err != nil {
 		t.Fatal(err)
 	}
 

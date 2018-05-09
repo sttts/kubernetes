@@ -22,7 +22,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-	"time"
 
 	autoscaling "k8s.io/api/autoscaling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	utilfeaturetesting "k8s.io/apiserver/pkg/util/feature/testing"
 	"k8s.io/client-go/dynamic"
@@ -443,58 +441,31 @@ func TestValidateOnlyStatus(t *testing.T) {
 		t.Fatalf("unable to create noxu instance: %v", err)
 	}
 
-	gottenCRD, err := apiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get("noxus.mygroup.example.com", metav1.GetOptions{})
+	// update the spec with .spec.num = 5, expecting no error
+	err = unstructured.SetNestedField(createdNoxuInstance.Object, int64(5), "spec", "num")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("unexpected error setting .spec.num: %v", err)
 	}
-
-	// update the crd so that max value of spec.num = 5 and status.num = 10
-	gottenCRD.Spec.Validation.OpenAPIV3Schema = &apiextensionsv1beta1.JSONSchemaProps{
-		Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-			"spec": {
-				Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-					"num": {
-						Type:    "integer",
-						Maximum: float64Ptr(5),
-					},
-				},
-			},
-			"status": {
-				Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-					"num": {
-						Type:    "integer",
-						Maximum: float64Ptr(10),
-					},
-				},
-			},
-		},
-	}
-
-	if _, err = apiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Update(gottenCRD); err != nil {
-		t.Fatal(err)
-	}
-
-	// update the status with .status.num = 5
-	err = unstructured.SetNestedField(createdNoxuInstance.Object, int64(5), "status", "num")
+	createdNoxuInstance, err = noxuStatusResourceClient.Update(createdNoxuInstance)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Errorf("unexpected error: %v", err)
 	}
 
-	// cr is updated even though spec is invalid
-	err = wait.Poll(500*time.Millisecond, wait.ForeverTestTimeout, func() (bool, error) {
-		_, err := noxuStatusResourceClient.Update(createdNoxuInstance)
-		if statusError, isStatus := err.(*apierrors.StatusError); isStatus {
-			if strings.Contains(statusError.Error(), "is invalid") {
-				return false, nil
-			}
-		}
-		if err != nil {
-			return false, err
-		}
-		return true, nil
-	})
+	// update with .status.num = 15, expecting an error
+	err = unstructured.SetNestedField(createdNoxuInstance.Object, int64(15), "status", "num")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("unexpected error setting .status.num: %v", err)
+	}
+	createdNoxuInstance, err = noxuStatusResourceClient.Update(createdNoxuInstance)
+	if err == nil {
+		t.Fatal("expected error, but got none")
+	}
+	statusError, isStatus := err.(*apierrors.StatusError)
+	if !isStatus || statusError == nil {
+		t.Fatalf("expected status error, got %T: %v", err, err)
+	}
+	if !strings.Contains(statusError.Error(), "cannot be handled as") {
+		t.Fatalf("expected 'is invalid' in error, got: %v", err)
 	}
 }
 
