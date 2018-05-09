@@ -30,7 +30,6 @@ import (
 	"github.com/go-openapi/validate"
 	"github.com/golang/glog"
 
-	"k8s.io/apiextensions-apiserver/pkg/apiserver/conversion"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -59,8 +58,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/conversion"
 	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
-	client "k8s.io/apiextensions-apiserver/pkg/client/clientset/internalclientset/typed/apiextensions/internalversion"
+	apiextensionsinternalversion "k8s.io/apiextensions-apiserver/pkg/client/clientset/internalclientset/typed/apiextensions/internalversion"
 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/internalversion/apiextensions/internalversion"
 	listers "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/internalversion"
 	"k8s.io/apiextensions-apiserver/pkg/controller/finalizer"
@@ -94,7 +94,7 @@ type crdHandler struct {
 	delegate          http.Handler
 	restOptionsGetter generic.RESTOptionsGetter
 	admission         admission.Interface
-	crdGetter         client.CustomResourceDefinitionsGetter
+	crdClient         apiextensionsinternalversion.ApiextensionsInterface
 }
 
 // crdInfo stores enough information to serve the storage for the custom resource
@@ -130,7 +130,7 @@ func NewCustomResourceDefinitionHandler(
 	delegate http.Handler,
 	restOptionsGetter generic.RESTOptionsGetter,
 	admission admission.Interface,
-	crdGetter client.CustomResourceDefinitionsGetter) *crdHandler {
+	crdClient apiextensionsinternalversion.ApiextensionsInterface) *crdHandler {
 	ret := &crdHandler{
 		versionDiscoveryHandler: versionDiscoveryHandler,
 		groupDiscoveryHandler:   groupDiscoveryHandler,
@@ -139,7 +139,7 @@ func NewCustomResourceDefinitionHandler(
 		delegate:                delegate,
 		restOptionsGetter:       restOptionsGetter,
 		admission:               admission,
-		crdGetter:               crdGetter,
+		crdClient:               crdClient,
 	}
 	crdInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: ret.updateCustomResourceDefinition,
@@ -205,18 +205,17 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// synchronously ensure that status.storedVersions is complete
 	switch requestInfo.Verb {
 	case "create", "update", "patch":
-		found := false
-		for _, v := range crd.Status.StoredVersions {
-			if crdInfo.storageVersion == v {
-				found = true
-				break
-			}
-		}
-		if !found {
-			crd.Status.StoredVersions = append(crd.Status.StoredVersions, crdInfo.storageVersion)
-			crd, err = r.crdGetter.CustomResourceDefinitions().UpdateStatus(crd)
+		if !isStoragedVersion(crd, crdInfo.storageVersion) {
+			_, err := updateCustomResourceDefinitionStatus(r.crdClient, crd.Name, func(crd *apiextensions.CustomResourceDefinition) bool {
+				if isStoragedVersion(crd, crdInfo.storageVersion) {
+					return true
+				}
+				crd.Status.StoredVersions = append(crd.Status.StoredVersions, crdInfo.storageVersion)
+				return false
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
