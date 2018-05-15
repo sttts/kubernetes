@@ -39,8 +39,8 @@ type CustomResourceStorage struct {
 	Scale          *ScaleREST
 }
 
-func NewStorage(resource schema.GroupResource, listKind schema.GroupVersionKind, strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, categories []string, tableConvertor rest.TableConvertor) CustomResourceStorage {
-	customResourceREST, customResourceStatusREST := newREST(resource, listKind, strategy, optsGetter, categories, tableConvertor)
+func NewStorage(resource schema.GroupResource, kind, listKind schema.GroupVersionKind, strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, categories []string, tableConvertor rest.TableConvertor) CustomResourceStorage {
+	customResourceREST, customResourceStatusREST := newREST(resource, kind, listKind, strategy, optsGetter, categories, tableConvertor)
 	customResourceRegistry := NewRegistry(customResourceREST)
 
 	s := CustomResourceStorage{
@@ -75,9 +75,13 @@ type REST struct {
 }
 
 // newREST returns a RESTStorage object that will work against API services.
-func newREST(resource schema.GroupResource, listKind schema.GroupVersionKind, strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, categories []string, tableConvertor rest.TableConvertor) (*REST, *StatusREST) {
+func newREST(resource schema.GroupResource, kind, listKind schema.GroupVersionKind, strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, categories []string, tableConvertor rest.TableConvertor) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
-		NewFunc: func() runtime.Object { return &unstructured.Unstructured{} },
+		NewFunc: func() runtime.Object {
+			u := &unstructured.Unstructured{}
+			u.SetGroupVersionKind(kind)
+			return u
+		},
 		NewListFunc: func() runtime.Object {
 			// lists are never stored, only manufactured, so stomp in the right kind
 			ret := &unstructured.UnstructuredList{}

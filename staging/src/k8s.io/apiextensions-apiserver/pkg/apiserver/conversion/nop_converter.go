@@ -67,17 +67,20 @@ func (c *nopConverter) Convert(in, out, context interface{}) error {
 }
 
 func (c *nopConverter) convertToVersion(in runtime.Object, target runtime.GroupVersioner) error {
-	if kind := in.GetObjectKind().GroupVersionKind(); !kind.Empty() {
-		gvk, ok := target.KindForGroupVersionKinds([]schema.GroupVersionKind{kind})
-		if !ok {
-			// TODO: should this be a typed error?
-			return fmt.Errorf("%v is unstructured and is not suitable for converting to %q", kind, target)
-		}
-		if !apiextensions.HasCRDVersion(c.crd, gvk.Version) {
-			return fmt.Errorf("request to convert CRD to an invalid version: %s", gvk.String())
-		}
-		in.GetObjectKind().SetGroupVersionKind(gvk)
+	kind := in.GetObjectKind().GroupVersionKind()
+	if kind.Empty() {
+		return fmt.Errorf("kind cannot be empty")
 	}
+
+	gvk, ok := target.KindForGroupVersionKinds([]schema.GroupVersionKind{kind})
+	if !ok {
+		// TODO: should this be a typed error?
+		return fmt.Errorf("%v is unstructured and is not suitable for converting to %q", kind, target)
+	}
+	if !apiextensions.HasCRDVersion(c.crd, gvk.Version) {
+		return fmt.Errorf("request to convert CRD to an invalid version: %s", gvk.String())
+	}
+	in.GetObjectKind().SetGroupVersionKind(gvk)
 	return nil
 }
 
