@@ -25,6 +25,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -200,10 +201,10 @@ func (qm *QuotaMonitor) controllerAndListerFor(resource schema.GroupVersionResou
 	}
 
 	// TODO: consider store in one storage with GC.
-	glog.Infof("create storage for resource %s", resource.String())
+	glog.Infof("QuotaMonitor creating generic storage for resource %s", resource.String())
 	indexer, monitor := cache.NewIndexerInformer(
 		listWatcher(qm.dynamicClient, resource),
-		nil,
+		&unstructured.Unstructured{},
 		qm.resyncPeriod(),
 		// don't need to clone because it's not from shared cache
 		handlers,
