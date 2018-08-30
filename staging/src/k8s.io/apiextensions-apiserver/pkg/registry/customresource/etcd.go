@@ -19,6 +19,7 @@ package customresource
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"strings"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -230,6 +231,8 @@ func (r *ScaleREST) Update(ctx context.Context, name string, objInfo rest.Update
 		return nil, false, err
 	}
 	cr := obj.(*unstructured.Unstructured)
+	debug.PrintStack()
+	fmt.Println(cr.Object)
 
 	const invalidSpecReplicas = -2147483648 // smallest int32
 	oldScale, replicasFound, err := scaleFromCustomResource(cr, r.specReplicasPath, r.statusReplicasPath, r.labelSelectorPath)

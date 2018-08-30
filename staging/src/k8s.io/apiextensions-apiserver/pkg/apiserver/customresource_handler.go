@@ -428,19 +428,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 
 	for _, v := range crd.Spec.Versions {
 		safeConverter, unsafeConverter := conversion.NewCRDConverter(crd)
+
 		// In addition to Unstructured objects (Custom Resources), we also may sometimes need to
-		// decode unversioned Options objects, so we delegate to parameterScheme for such types.
-		parameterScheme := runtime.NewScheme()
-		parameterScheme.AddUnversionedTypes(schema.GroupVersion{Group: crd.Spec.Group, Version: v.Name},
-			&metav1.ListOptions{},
-			&metav1.ExportOptions{},
-			&metav1.GetOptions{},
-			&metav1.DeleteOptions{},
-		)
-		parameterCodec := runtime.NewParameterCodec(parameterScheme)
+		// decode unversioned Options objects, so we delegate to fallbackScheme for such types.
+		fallbackScheme := runtime.NewScheme()
+		metav1.AddToGroupVersion(fallbackScheme, schema.GroupVersion{Group: crd.Spec.Group, Version: v.Name})
+		parameterCodec := runtime.NewParameterCodec(fallbackScheme)
 
 		kind := schema.GroupVersionKind{Group: crd.Spec.Group, Version: v.Name, Kind: crd.Status.AcceptedNames.Kind}
-		typer := newUnstructuredObjectTyper(parameterScheme)
+		typer := newUnstructuredObjectTyper(fallbackScheme)
 		creator := unstructuredCreator{}
 
 		validator, _, err := apiservervalidation.NewSchemaValidator(crd.Spec.Validation)
@@ -506,19 +502,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 		}
 
 		clusterScoped := crd.Spec.Scope == apiextensions.ClusterScoped
-
+		defaulter := unstructuredDefaulter{fallbackScheme}
+		gv := schema.GroupVersion{Group: crd.Spec.Group, Version: v.Name}
 		requestScopes[v.Name] = handlers.RequestScope{
 			Namer: handlers.ContextBasedNaming{
 				SelfLinker:         meta.NewAccessor(),
 				ClusterScoped:      clusterScoped,
 				SelfLinkPathPrefix: selfLinkPrefix,
 			},
-			Serializer:     unstructuredNegotiatedSerializer{typer: typer, creator: creator, converter: safeConverter},
+			Serializer:     unstructuredNegotiatedSerializer{typer: typer, creator: creator, safeConverter: safeConverter, defaulter: defaulter, gv: gv},
 			ParameterCodec: parameterCodec,
 
 			Creater:         creator,
 			Convertor:       safeConverter,
-			Defaulter:       unstructuredDefaulter{parameterScheme},
+			Defaulter:       defaulter,
 			Typer:           typer,
 			UnsafeConvertor: unsafeConverter,
 
@@ -579,9 +576,11 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 }
 
 type unstructuredNegotiatedSerializer struct {
-	typer     runtime.ObjectTyper
-	creator   runtime.ObjectCreater
-	converter runtime.ObjectConvertor
+	typer         runtime.ObjectTyper
+	creator       runtime.ObjectCreater
+	safeConverter runtime.ObjectConvertor
+	defaulter     runtime.ObjectDefaulter
+	gv            schema.GroupVersion
 }
 
 func (s unstructuredNegotiatedSerializer) SupportedMediaTypes() []runtime.SerializerInfo {
@@ -606,12 +605,18 @@ func (s unstructuredNegotiatedSerializer) SupportedMediaTypes() []runtime.Serial
 }
 
 func (s unstructuredNegotiatedSerializer) EncoderForVersion(encoder runtime.Encoder, gv runtime.GroupVersioner) runtime.Encoder {
-	return versioning.NewCodec(encoder, nil, s.converter, Scheme, Scheme, Scheme, gv, nil, "crdNegotiatedSerializer")
+	return versioning.NewCodec(encoder, nil, s.safeConverter, s.creator, s.typer, s.defaulter, gv, nil, "unstructuredNegotiatedSerializer")
 }
 
 func (s unstructuredNegotiatedSerializer) DecoderToVersion(decoder runtime.Decoder, gv runtime.GroupVersioner) runtime.Decoder {
 	d := schemaCoercingDecoder{delegate: decoder, validator: unstructuredSchemaCoercer{}}
-	return versioning.NewDefaultingCodecForScheme(Scheme, nil, d, nil, gv)
+
+	// ignore the target version (which is __internal) and actually convert to our fake internal version which equal the handler version.
+	if groupVersion, ok := gv.(schema.GroupVersion); ok && groupVersion.Group == s.gv.Group {
+		gv = s.gv
+	}
+
+	return versioning.NewCodec(nil, d, s.safeConverter, s.creator, s.typer, s.defaulter, nil, gv, "unstructuredNegotiatedSerializer")
 }
 
 type UnstructuredObjectTyper struct {

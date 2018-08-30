@@ -17,6 +17,7 @@ limitations under the License.
 package integration
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"sort"
@@ -52,6 +53,18 @@ func NewNoxuSubresourcesCRD(scope apiextensionsv1beta1.ResourceScope) *apiextens
 				ListKind:   "NoxuItemList",
 			},
 			Scope: scope,
+			Versions: []apiextensionsv1beta1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1beta1",
+					Served:  true,
+					Storage: false,
+				},
+				{
+					Name:    "v1",
+					Served:  true,
+					Storage: true,
+				},
+			},
 			Subresources: &apiextensionsv1beta1.CustomResourceSubresources{
 				Status: &apiextensionsv1beta1.CustomResourceSubresourceStatus{},
 				Scale: &apiextensionsv1beta1.CustomResourceSubresourceScale{
@@ -65,9 +78,13 @@ func NewNoxuSubresourcesCRD(scope apiextensionsv1beta1.ResourceScope) *apiextens
 }
 
 func NewNoxuSubresourceInstance(namespace, name string) *unstructured.Unstructured {
+	return NewVersionedNoxuSubresourceInstance(namespace, name, "v1beta1")
+}
+
+func NewVersionedNoxuSubresourceInstance(namespace, name, version string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "mygroup.example.com/v1beta1",
+			"apiVersion": "mygroup.example.com/" + version,
 			"kind":       "WishIHadChosenNoxu",
 			"metadata": map[string]interface{}{
 				"namespace": namespace,
@@ -98,95 +115,101 @@ func TestStatusSubresource(t *testing.T) {
 	}
 
 	ns := "not-the-default"
-	noxuResourceClient := newNamespacedCustomResourceClient(ns, dynamicClient, noxuDefinition)
-	_, err = instantiateCustomResource(t, NewNoxuSubresourceInstance(ns, "foo"), noxuResourceClient, noxuDefinition)
-	if err != nil {
-		t.Fatalf("unable to create noxu instance: %v", err)
-	}
 
-	gottenNoxuInstance, err := noxuResourceClient.Get("foo", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, version := range noxuDefinition.Spec.Versions {
+		t.Run(version.Name, func(t *testing.T) {
+			noxuResourceClient := newNamespacedCustomResourceVersionedClient(ns, dynamicClient, noxuDefinition, version.Name)
+			_, err = instantiateVersionedCustomResource(t, NewVersionedNoxuSubresourceInstance(ns, "foo", version.Name), noxuResourceClient, noxuDefinition, version.Name)
+			if err != nil {
+				t.Fatalf("unable to create noxu instance: %v", err)
+			}
+			defer noxuResourceClient.Delete("foo", &metav1.DeleteOptions{})
 
-	// status should not be set after creation
-	if val, ok := gottenNoxuInstance.Object["status"]; ok {
-		t.Fatalf("status should not be set after creation, got %v", val)
-	}
+			gottenNoxuInstance, err := noxuResourceClient.Get("foo", metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// .status.num = 20
-	err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(20), "status", "num")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+			// status should not be set after creation
+			if val, ok := gottenNoxuInstance.Object["status"]; ok {
+				t.Fatalf("status should not be set after creation, got %v", val)
+			}
 
-	// .spec.num = 20
-	err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(20), "spec", "num")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+			// .status.num = 20
+			err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(20), "status", "num")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-	// UpdateStatus should not update spec.
-	// Check that .spec.num = 10 and .status.num = 20
-	updatedStatusInstance, err := noxuResourceClient.UpdateStatus(gottenNoxuInstance, metav1.UpdateOptions{})
-	if err != nil {
-		t.Fatalf("unable to update status: %v", err)
-	}
+			// .spec.num = 20
+			err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(20), "spec", "num")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-	specNum, found, err := unstructured.NestedInt64(updatedStatusInstance.Object, "spec", "num")
-	if !found || err != nil {
-		t.Fatalf("unable to get .spec.num")
-	}
-	if specNum != int64(10) {
-		t.Fatalf(".spec.num: expected: %v, got: %v", int64(10), specNum)
-	}
+			// UpdateStatus should not update spec.
+			// Check that .spec.num = 10 and .status.num = 20
+			updatedStatusInstance, err := noxuResourceClient.UpdateStatus(gottenNoxuInstance, metav1.UpdateOptions{})
+			if err != nil {
+				t.Fatalf("unable to update status: %v", err)
+			}
 
-	statusNum, found, err := unstructured.NestedInt64(updatedStatusInstance.Object, "status", "num")
-	if !found || err != nil {
-		t.Fatalf("unable to get .status.num")
-	}
-	if statusNum != int64(20) {
-		t.Fatalf(".status.num: expected: %v, got: %v", int64(20), statusNum)
-	}
+			specNum, found, err := unstructured.NestedInt64(updatedStatusInstance.Object, "spec", "num")
+			if !found || err != nil {
+				t.Fatalf("unable to get .spec.num")
+			}
+			if specNum != int64(10) {
+				t.Fatalf(".spec.num: expected: %v, got: %v", int64(10), specNum)
+			}
 
-	gottenNoxuInstance, err = noxuResourceClient.Get("foo", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
+			statusNum, found, err := unstructured.NestedInt64(updatedStatusInstance.Object, "status", "num")
+			if !found || err != nil {
+				t.Fatalf("unable to get .status.num")
+			}
+			if statusNum != int64(20) {
+				t.Fatalf(".status.num: expected: %v, got: %v", int64(20), statusNum)
+			}
 
-	// .status.num = 40
-	err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(40), "status", "num")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+			gottenNoxuInstance, err = noxuResourceClient.Get("foo", metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// .spec.num = 40
-	err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(40), "spec", "num")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+			// .status.num = 40
+			err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(40), "status", "num")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-	// Update should not update status.
-	// Check that .spec.num = 40 and .status.num = 20
-	updatedInstance, err := noxuResourceClient.Update(gottenNoxuInstance, metav1.UpdateOptions{})
-	if err != nil {
-		t.Fatalf("unable to update instance: %v", err)
-	}
+			// .spec.num = 40
+			err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(40), "spec", "num")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-	specNum, found, err = unstructured.NestedInt64(updatedInstance.Object, "spec", "num")
-	if !found || err != nil {
-		t.Fatalf("unable to get .spec.num")
-	}
-	if specNum != int64(40) {
-		t.Fatalf(".spec.num: expected: %v, got: %v", int64(40), specNum)
-	}
+			// Update should not update status.
+			// Check that .spec.num = 40 and .status.num = 20
+			updatedInstance, err := noxuResourceClient.Update(gottenNoxuInstance, metav1.UpdateOptions{})
+			if err != nil {
+				t.Fatalf("unable to update instance: %v", err)
+			}
 
-	statusNum, found, err = unstructured.NestedInt64(updatedInstance.Object, "status", "num")
-	if !found || err != nil {
-		t.Fatalf("unable to get .status.num")
-	}
-	if statusNum != int64(20) {
-		t.Fatalf(".status.num: expected: %v, got: %v", int64(20), statusNum)
+			specNum, found, err = unstructured.NestedInt64(updatedInstance.Object, "spec", "num")
+			if !found || err != nil {
+				t.Fatalf("unable to get .spec.num")
+			}
+			if specNum != int64(40) {
+				t.Fatalf(".spec.num: expected: %v, got: %v", int64(40), specNum)
+			}
+
+			statusNum, found, err = unstructured.NestedInt64(updatedInstance.Object, "status", "num")
+			if !found || err != nil {
+				t.Fatalf("unable to get .status.num")
+			}
+			if statusNum != int64(20) {
+				t.Fatalf(".status.num: expected: %v, got: %v", int64(20), statusNum)
+			}
+		})
 	}
 }
 
@@ -227,97 +250,103 @@ func TestScaleSubresource(t *testing.T) {
 	}
 
 	ns := "not-the-default"
-	noxuResourceClient := newNamespacedCustomResourceClient(ns, dynamicClient, noxuDefinition)
-	_, err = instantiateCustomResource(t, NewNoxuSubresourceInstance(ns, "foo"), noxuResourceClient, noxuDefinition)
-	if err != nil {
-		t.Fatalf("unable to create noxu instance: %v", err)
-	}
 
-	scaleClient, err := fixtures.CreateNewScaleClient(noxuDefinition, config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, version := range noxuDefinition.Spec.Versions {
+		t.Run(version.Name, func(t *testing.T) {
+			noxuResourceClient := newNamespacedCustomResourceVersionedClient(ns, dynamicClient, noxuDefinition, version.Name)
+			_, err = instantiateVersionedCustomResource(t, NewVersionedNoxuSubresourceInstance(ns, "foo", version.Name), noxuResourceClient, noxuDefinition, version.Name)
+			if err != nil {
+				t.Fatalf("unable to create noxu instance: %v", err)
+			}
+			defer noxuResourceClient.Delete("foo", &metav1.DeleteOptions{})
 
-	// set .status.labelSelector = bar
-	gottenNoxuInstance, err := noxuResourceClient.Get("foo", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = unstructured.SetNestedField(gottenNoxuInstance.Object, "bar", "status", "labelSelector")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	_, err = noxuResourceClient.UpdateStatus(gottenNoxuInstance, metav1.UpdateOptions{})
-	if err != nil {
-		t.Fatalf("unable to update status: %v", err)
-	}
+			scaleClient, err := fixtures.CreateNewVersionedScaleClient(noxuDefinition, config, version.Name)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// get the scale object
-	gottenScale, err := scaleClient.Scales("not-the-default").Get(groupResource, "foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if gottenScale.Spec.Replicas != 3 {
-		t.Fatalf("Scale.Spec.Replicas: expected: %v, got: %v", 3, gottenScale.Spec.Replicas)
-	}
-	if gottenScale.Status.Selector != "bar" {
-		t.Fatalf("Scale.Status.Selector: expected: %v, got: %v", "bar", gottenScale.Status.Selector)
-	}
+			// set .status.labelSelector = bar
+			gottenNoxuInstance, err := noxuResourceClient.Get("foo", metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = unstructured.SetNestedField(gottenNoxuInstance.Object, "bar", "status", "labelSelector")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			_, err = noxuResourceClient.UpdateStatus(gottenNoxuInstance, metav1.UpdateOptions{})
+			if err != nil {
+				t.Fatalf("unable to update status: %v", err)
+			}
 
-	// check self link
-	expectedSelfLink := "/apis/mygroup.example.com/v1beta1/namespaces/not-the-default/noxus/foo/scale"
-	if gottenScale.GetSelfLink() != expectedSelfLink {
-		t.Fatalf("Scale.Metadata.SelfLink: expected: %v, got: %v", expectedSelfLink, gottenScale.GetSelfLink())
-	}
+			// get the scale object
+			gottenScale, err := scaleClient.Scales("not-the-default").Get(groupResource, "foo")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if gottenScale.Spec.Replicas != 3 {
+				t.Fatalf("Scale.Spec.Replicas: expected: %v, got: %v", 3, gottenScale.Spec.Replicas)
+			}
+			if gottenScale.Status.Selector != "bar" {
+				t.Fatalf("Scale.Status.Selector: expected: %v, got: %v", "bar", gottenScale.Status.Selector)
+			}
 
-	// update the scale object
-	// check that spec is updated, but status is not
-	gottenScale.Spec.Replicas = 5
-	gottenScale.Status.Selector = "baz"
-	updatedScale, err := scaleClient.Scales("not-the-default").Update(groupResource, gottenScale)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if updatedScale.Spec.Replicas != 5 {
-		t.Fatalf("replicas: expected: %v, got: %v", 5, updatedScale.Spec.Replicas)
-	}
-	if updatedScale.Status.Selector != "bar" {
-		t.Fatalf("scale should not update status: expected %v, got: %v", "bar", updatedScale.Status.Selector)
-	}
+			// check self link
+			expectedSelfLink := fmt.Sprintf("/apis/mygroup.example.com/%s/namespaces/not-the-default/noxus/foo/scale", version.Name)
+			if gottenScale.GetSelfLink() != expectedSelfLink {
+				t.Fatalf("Scale.Metadata.SelfLink: expected: %v, got: %v", expectedSelfLink, gottenScale.GetSelfLink())
+			}
 
-	// check that .spec.replicas = 5, but status is not updated
-	updatedNoxuInstance, err := noxuResourceClient.Get("foo", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	specReplicas, found, err := unstructured.NestedInt64(updatedNoxuInstance.Object, "spec", "replicas")
-	if !found || err != nil {
-		t.Fatalf("unable to get .spec.replicas")
-	}
-	if specReplicas != 5 {
-		t.Fatalf("replicas: expected: %v, got: %v", 5, specReplicas)
-	}
-	statusLabelSelector, found, err := unstructured.NestedString(updatedNoxuInstance.Object, "status", "labelSelector")
-	if !found || err != nil {
-		t.Fatalf("unable to get .status.labelSelector")
-	}
-	if statusLabelSelector != "bar" {
-		t.Fatalf("scale should not update status: expected %v, got: %v", "bar", statusLabelSelector)
-	}
+			// update the scale object
+			// check that spec is updated, but status is not
+			gottenScale.Spec.Replicas = 5
+			gottenScale.Status.Selector = "baz"
+			updatedScale, err := scaleClient.Scales("not-the-default").Update(groupResource, gottenScale)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if updatedScale.Spec.Replicas != 5 {
+				t.Fatalf("replicas: expected: %v, got: %v", 5, updatedScale.Spec.Replicas)
+			}
+			if updatedScale.Status.Selector != "bar" {
+				t.Fatalf("scale should not update status: expected %v, got: %v", "bar", updatedScale.Status.Selector)
+			}
 
-	// validate maximum value
-	// set .spec.replicas = math.MaxInt64
-	gottenNoxuInstance, err = noxuResourceClient.Get("foo", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(math.MaxInt64), "spec", "replicas")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	_, err = noxuResourceClient.Update(gottenNoxuInstance, metav1.UpdateOptions{})
-	if err == nil {
-		t.Fatalf("unexpected non-error: .spec.replicas should be less than 2147483647")
+			// check that .spec.replicas = 5, but status is not updated
+			updatedNoxuInstance, err := noxuResourceClient.Get("foo", metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			specReplicas, found, err := unstructured.NestedInt64(updatedNoxuInstance.Object, "spec", "replicas")
+			if !found || err != nil {
+				t.Fatalf("unable to get .spec.replicas")
+			}
+			if specReplicas != 5 {
+				t.Fatalf("replicas: expected: %v, got: %v", 5, specReplicas)
+			}
+			statusLabelSelector, found, err := unstructured.NestedString(updatedNoxuInstance.Object, "status", "labelSelector")
+			if !found || err != nil {
+				t.Fatalf("unable to get .status.labelSelector")
+			}
+			if statusLabelSelector != "bar" {
+				t.Fatalf("scale should not update status: expected %v, got: %v", "bar", statusLabelSelector)
+			}
+
+			// validate maximum value
+			// set .spec.replicas = math.MaxInt64
+			gottenNoxuInstance, err = noxuResourceClient.Get("foo", metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = unstructured.SetNestedField(gottenNoxuInstance.Object, int64(math.MaxInt64), "spec", "replicas")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			_, err = noxuResourceClient.Update(gottenNoxuInstance, metav1.UpdateOptions{})
+			if err == nil {
+				t.Fatalf("unexpected non-error: .spec.replicas should be less than 2147483647")
+			}
+		})
 	}
 }
 

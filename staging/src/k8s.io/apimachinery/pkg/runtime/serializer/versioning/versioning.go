@@ -90,26 +90,33 @@ func (c *codec) Decode(data []byte, defaultGVK *schema.GroupVersionKind, into ru
 		into = versioned.Last()
 	}
 
-	obj, gvk, err := c.decoder.Decode(data, defaultGVK, into)
+	obj, objGVK, err := c.decoder.Decode(data, defaultGVK, into)
 	if err != nil {
-		return nil, gvk, err
+		return nil, objGVK, err
 	}
 
 	if d, ok := obj.(runtime.NestedObjectDecoder); ok {
 		if err := d.DecodeNestedObjects(DirectDecoder{c.decoder}); err != nil {
-			return nil, gvk, err
+			return nil, objGVK, err
 		}
 	}
 
-	// if we specify a target, use generic conversion.
-	if into != nil {
-		if into == obj {
+	// happy path if into has been used and the GVK matches what we expect
+	if objGVK != nil && into == obj {
+		targetGVK, ok := c.decodeVersion.KindForGroupVersionKinds([]schema.GroupVersionKind{*objGVK})
+		// Legacy behaviour: keep going in case of error. The converter below will eventually fix it.
+		if ok && targetGVK == *objGVK {
 			if isVersioned {
-				return versioned, gvk, nil
+				return versioned, objGVK, nil
 			}
-			return into, gvk, nil
+			return obj, objGVK, nil
 		}
+	}
 
+	// if we specify a target object but it was not used, use generic conversion to convert into it.
+	// Potentially, we reach this point with into == obj, but wrong objGVK. Then fall through
+	// as we cannot reuse the target object.
+	if into != nil && into != obj {
 		// perform defaulting if requested
 		if c.defaulter != nil {
 			// create a copy to ensure defaulting is not applied to the original versioned objects
@@ -124,14 +131,14 @@ func (c *codec) Decode(data []byte, defaultGVK *schema.GroupVersionKind, into ru
 		}
 
 		if err := c.convertor.Convert(obj, into, c.decodeVersion); err != nil {
-			return nil, gvk, err
+			return nil, objGVK, err
 		}
 
 		if isVersioned {
 			versioned.Objects = append(versioned.Objects, into)
-			return versioned, gvk, nil
+			return versioned, objGVK, nil
 		}
-		return into, gvk, nil
+		return into, objGVK, nil
 	}
 
 	// Convert if needed.
@@ -147,15 +154,15 @@ func (c *codec) Decode(data []byte, defaultGVK *schema.GroupVersionKind, into ru
 
 	out, err := c.convertor.ConvertToVersion(obj, c.decodeVersion)
 	if err != nil {
-		return nil, gvk, err
+		return nil, objGVK, err
 	}
 	if isVersioned {
 		if versioned.Last() != out {
 			versioned.Objects = append(versioned.Objects, out)
 		}
-		return versioned, gvk, nil
+		return versioned, objGVK, nil
 	}
-	return out, gvk, nil
+	return out, objGVK, nil
 }
 
 // Encode ensures the provided object is output in the appropriate group and version, invoking

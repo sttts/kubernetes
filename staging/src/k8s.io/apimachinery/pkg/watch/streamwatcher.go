@@ -17,6 +17,7 @@ limitations under the License.
 package watch
 
 import (
+	"fmt"
 	"io"
 	"sync"
 
@@ -111,6 +112,7 @@ func (sw *StreamWatcher) receive() {
 			}
 			return
 		}
+		fmt.Println(1, action)
 		sw.result <- Event{
 			Type:   action,
 			Object: obj,

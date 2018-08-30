@@ -56,6 +56,14 @@ func AddToGroupVersion(scheme *runtime.Scheme, groupVersion schema.GroupVersion)
 		&CreateOptions{},
 		&UpdateOptions{},
 	)
+	scheme.AddKnownTypes(SchemeGroupVersion,
+		&ListOptions{},
+		&ExportOptions{},
+		&GetOptions{},
+		&DeleteOptions{},
+		&CreateOptions{},
+		&UpdateOptions{},
+	)
 	utilruntime.Must(scheme.AddConversionFuncs(
 		Convert_v1_WatchEvent_To_watch_Event,
 		Convert_v1_InternalEvent_To_v1_WatchEvent,

@@ -259,7 +259,7 @@ func NewConfig(codecs serializer.CodecFactory) *Config {
 		EnableMetrics:                true,
 		MaxRequestsInFlight:          400,
 		MaxMutatingRequestsInFlight:  200,
-		RequestTimeout:               time.Duration(60) * time.Second,
+		RequestTimeout:               time.Duration(6000) * time.Second,
 		MinRequestTimeout:            1800,
 		EnableAPIResponseCompression: utilfeature.DefaultFeatureGate.Enabled(features.APIResponseCompression),
 
@@ -456,7 +456,7 @@ func (c completedConfig) New(name string, delegationTarget DelegationTarget) (*G
 		delegationTarget:       delegationTarget,
 		HandlerChainWaitGroup:  c.HandlerChainWaitGroup,
 
-		minRequestTimeout: time.Duration(c.MinRequestTimeout) * time.Second,
+		minRequestTimeout: time.Duration(c.MinRequestTimeout) * time.Second * 100,
 		ShutdownTimeout:   c.RequestTimeout,
 
 		SecureServingInfo: c.SecureServing,

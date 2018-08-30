@@ -79,8 +79,9 @@ func DeleteResource(r rest.GracefulDeleter, allowsOptions bool, scope RequestSco
 				}
 				// For backwards compatibility, we need to allow existing clients to submit per group DeleteOptions
 				// It is also allowed to pass a body with meta.k8s.io/v1.DeleteOptions
-				defaultGVK := scope.MetaGroupVersion.WithKind("DeleteOptions")
-				obj, _, err := metainternalversion.Codecs.DecoderToVersion(s.Serializer, defaultGVK.GroupVersion()).Decode(body, &defaultGVK, options)
+				defaultGVK := scope.Resource.GroupVersion().WithKind("DeleteOptions")
+				gv := runtime.GroupVersioners{defaultGVK.GroupVersion(), scope.Resource.GroupVersion(), schema.GroupVersion{Version: "v1"}}
+				obj, _, err := metainternalversion.Codecs.DecoderToVersion(s.Serializer, gv).Decode(body, &defaultGVK, options)
 				if err != nil {
 					scope.err(err, w, req)
 					return
