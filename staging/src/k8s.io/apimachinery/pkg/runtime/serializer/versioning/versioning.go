@@ -102,7 +102,8 @@ func (c *codec) Decode(data []byte, defaultGVK *schema.GroupVersionKind, into ru
 	}
 
 	// happy path if into has been used and the GVK matches what we expect
-	if objGVK != nil && into == obj {
+	_, isUnstructed := obj.(runtime.Unstructured)
+	if objGVK != nil && into == obj && isUnstructed {
 		targetGVK, ok := c.decodeVersion.KindForGroupVersionKinds([]schema.GroupVersionKind{*objGVK})
 		// Legacy behaviour: keep going in case of error. The converter below will eventually fix it.
 		if ok && targetGVK == *objGVK {
@@ -116,7 +117,7 @@ func (c *codec) Decode(data []byte, defaultGVK *schema.GroupVersionKind, into ru
 	// if we specify a target object but it was not used, use generic conversion to convert into it.
 	// Potentially, we reach this point with into == obj, but wrong objGVK. Then fall through
 	// as we cannot reuse the target object.
-	if into != nil && into != obj {
+	if into != nil && into != obj && !isUnstructed {
 		// perform defaulting if requested
 		if c.defaulter != nil {
 			// create a copy to ensure defaulting is not applied to the original versioned objects
