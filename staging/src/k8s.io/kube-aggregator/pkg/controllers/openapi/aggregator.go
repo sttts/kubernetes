@@ -53,6 +53,12 @@ type specAggregator struct {
 	// provided for dynamic OpenAPI spec
 	openAPIService          *handler.OpenAPIService
 	openAPIVersionedService *handler.OpenAPIService
+
+	// Record delegation API services' name. If delegation API services' OpenAPI
+	// spec is dynamic (e.g. apiExtensionsServer), the recorded delegationAPIServices
+	// can be exposed to aggregation controller, which periodically try syncing the
+	// OpenAPI specs based on the API services' name as key
+	delegationAPIServices []string
 }
 
 var _ AggregationManager = &specAggregator{}
@@ -67,6 +73,15 @@ func (s *specAggregator) addLocalSpec(spec *spec.Swagger, localHandler http.Hand
 		handler:    localHandler,
 		spec:       spec,
 	}
+	// Record delegation target API services' names
+	if localHandler != nil {
+		s.delegationAPIServices = append(s.delegationAPIServices, name)
+	}
+}
+
+// GetDelegationAPIServicesName returns the names of delegation target API services
+func (s *specAggregator) GetDelegationAPIServiceNames() []string {
+	return s.delegationAPIServices
 }
 
 // BuildAndRegisterAggregator registered OpenAPI aggregator handler. This function is not thread safe as it only being called on startup.

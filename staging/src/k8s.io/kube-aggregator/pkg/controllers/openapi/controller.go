@@ -49,6 +49,12 @@ type AggregationManager interface {
 	UpdateAPIServiceSpec(apiServiceName string, spec *spec.Swagger, etag string) error
 	RemoveAPIServiceSpec(apiServiceName string) error
 	GetAPIServiceInfo(apiServiceName string) (handler http.Handler, etag string, exists bool)
+
+	// Recorded delegation API services' names. If delegation API services' OpenAPI
+	// specs are dynamic (e.g. apiExtensionsServer), the recorded delegationAPIServices
+	// can be exposed to aggregation controller, which periodically try syncing the
+	// OpenAPI specs based on the API services' names as keys
+	GetDelegationAPIServiceNames() []string
 }
 
 // AggregationController periodically check for changes in OpenAPI specs of APIServices and update/remove
@@ -72,6 +78,10 @@ func NewAggregationController(downloader *Downloader, openAPIAggregationManager 
 	}
 
 	c.syncHandler = c.sync
+	// Add delegation target API services to queue, to aggregate dynamic OpenAPI spec from delegation target
+	for _, name := range openAPIAggregationManager.GetDelegationAPIServiceNames() {
+		c.queue.AddAfter(name, time.Second)
+	}
 
 	return c
 }
