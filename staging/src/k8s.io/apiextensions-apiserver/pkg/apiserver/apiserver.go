@@ -41,6 +41,7 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/controller/establish"
 	"k8s.io/apiextensions-apiserver/pkg/controller/finalizer"
 	"k8s.io/apiextensions-apiserver/pkg/controller/status"
+	openapiaggregator "k8s.io/apiextensions-apiserver/pkg/openapi"
 	"k8s.io/apiextensions-apiserver/pkg/registry/customresourcedefinition"
 
 	_ "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -191,7 +192,18 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 	s.GenericAPIServer.Handler.NonGoRestfulMux.Handle("/apis", crdHandler)
 	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
 
-	crdController := NewDiscoveryController(s.Informers.Apiextensions().InternalVersion().CustomResourceDefinitions(), versionDiscoveryHandler, groupDiscoveryHandler)
+	// This will wire up openapi for extension api server
+	s.GenericAPIServer.PrepareRun()
+
+	// crdOpenAPIAggregationManager exposes an interface to manage apiExtensionsServer's OpenAPI
+	// services, which allows aggregating OpenAPI spec for new CRD API services with the
+	// existing static OpenAPI spec
+	crdOpenAPIAggregationManager, err := openapiaggregator.NewAggregationManager(s.GenericAPIServer.OpenAPIService, s.GenericAPIServer.OpenAPIVersionedService, s.GenericAPIServer.StaticOpenAPISpec)
+	if err != nil {
+		return nil, err
+	}
+
+	crdController := NewDiscoveryController(s.Informers.Apiextensions().InternalVersion().CustomResourceDefinitions(), versionDiscoveryHandler, groupDiscoveryHandler, crdOpenAPIAggregationManager)
 	namingController := status.NewNamingConditionController(s.Informers.Apiextensions().InternalVersion().CustomResourceDefinitions(), crdClient.Apiextensions())
 	finalizingController := finalizer.NewCRDFinalizer(
 		s.Informers.Apiextensions().InternalVersion().CustomResourceDefinitions(),

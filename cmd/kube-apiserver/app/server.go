@@ -184,9 +184,6 @@ func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan
 	// this wires up openapi
 	kubeAPIServer.GenericAPIServer.PrepareRun()
 
-	// This will wire up openapi for extension api server
-	apiExtensionsServer.GenericAPIServer.PrepareRun()
-
 	// aggregator comes last in the chain
 	aggregatorConfig, err := createAggregatorConfig(*kubeAPIServerConfig.GenericConfig, completedOptions.ServerRunOptions, kubeAPIServerConfig.ExtraConfig.VersionedInformers, serviceResolver, proxyTransport, pluginInitializer)
 	if err != nil {
