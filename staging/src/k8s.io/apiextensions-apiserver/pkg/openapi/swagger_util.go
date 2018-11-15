@@ -210,7 +210,7 @@ func CustomResourceDefinitionOpenAPISpec(crdSpec *apiextensions.CustomResourceDe
 	schema := &spec.Schema{}
 	if validationSchema != nil && validationSchema.OpenAPIV3Schema != nil {
 		var err error
-		schema, err = Convert_v1beta1_JSONSchemaProps_To_spec_Schema(validationSchema.OpenAPIV3Schema)
+		schema, err = ConvertJSONSchemaPropsToOpenAPIv2Schema(validationSchema.OpenAPIV3Schema)
 		if err != nil {
 			return nil, "", err
 		}

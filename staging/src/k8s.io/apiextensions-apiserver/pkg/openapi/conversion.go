@@ -23,11 +23,11 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
-// Convert_v1beta1_JSONSchemaProps_To_spec_Schema converts our internal OpenAPI v3 schema
+// ConvertJSONSchemaPropsToOpenAPIv2Schema converts our internal OpenAPI v3 schema
 // (*apiextensions.JSONSchemaProps) to an OpenAPI v2 schema (*spec.Schema).
 // NOTE: we use versioned type (v1beta1) here so that we can properly marshal the object
 // using the JSON tags
-func Convert_v1beta1_JSONSchemaProps_To_spec_Schema(in *v1beta1.JSONSchemaProps) (*spec.Schema, error) {
+func ConvertJSONSchemaPropsToOpenAPIv2Schema(in *v1beta1.JSONSchemaProps) (*spec.Schema, error) {
 	if in == nil {
 		return nil, nil
 	}

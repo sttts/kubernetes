@@ -25,7 +25,7 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
-func Test_Convert_v1beta1_JSONSchemaProps_To_spec_Schema(t *testing.T) {
+func Test_ConvertJSONSchemaPropsToOpenAPIv2Schema(t *testing.T) {
 	testStr := "test"
 	testStr2 := "test2"
 	testFloat64 := float64(6.4)
@@ -437,7 +437,7 @@ func Test_Convert_v1beta1_JSONSchemaProps_To_spec_Schema(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		out, err := Convert_v1beta1_JSONSchemaProps_To_spec_Schema(test.in)
+		out, err := ConvertJSONSchemaPropsToOpenAPIv2Schema(test.in)
 		if err != nil {
 			t.Errorf("unexpected error in converting openapi schema: %v", test.name)
 		}
