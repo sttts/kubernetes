@@ -121,10 +121,9 @@ type GenericAPIServer struct {
 	swaggerConfig *swagger.Config
 	openAPIConfig *openapicommon.Config
 
-	// Expose the registered OpenAPI Services and built static OpenAPI spec
-	// if openAPIConfig is non-nil
-	OpenAPIService          *handler.OpenAPIService
-	OpenAPIVersionedService *handler.OpenAPIService
+	// Expose the registered OpenAPI Services and built static OpenAPI spec if openAPIConfig is non-nil
+	OpenAPIService          *handler.OpenAPIService // for endpoint /swagger.json
+	OpenAPIVersionedService *handler.OpenAPIService // for endpoint /openapi/v2
 	StaticOpenAPISpec       *spec.Swagger
 
 	// PostStartHooks are each called after the server has started listening, in a separate go func for each
