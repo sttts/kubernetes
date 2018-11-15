@@ -215,7 +215,10 @@ func CustomResourceDefinitionOpenAPISpec(crdSpec *apiextensions.CustomResourceDe
 			return nil, "", err
 		}
 	}
-	crdSwaggerConstructor := NewSwaggerConstructor(schema, crdSpec, version)
+	crdSwaggerConstructor, err := NewSwaggerConstructor(schema, crdSpec, version)
+	if err != nil {
+		return nil, "", err
+	}
 	crdOpenAPISpec := crdSwaggerConstructor.ConstructCRDOpenAPISpec()
 	etag, err := calcSwaggerEtag(crdOpenAPISpec)
 	if err != nil {

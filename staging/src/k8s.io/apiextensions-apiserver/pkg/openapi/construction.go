@@ -48,6 +48,8 @@ type SwaggerConstructor struct {
 	// schema is the CRD's OpenAPI v2 schema
 	schema *spec.Schema
 
+	status, scale bool
+
 	group    string
 	version  string
 	kind     string
@@ -58,8 +60,8 @@ type SwaggerConstructor struct {
 
 // NewSwaggerConstructor creates a new SwaggerConstructor using the CRD OpenAPI schema
 // and CustomResourceDefinitionSpec
-func NewSwaggerConstructor(schema *spec.Schema, crdSpec *apiextensions.CustomResourceDefinitionSpec, version string) *SwaggerConstructor {
-	return &SwaggerConstructor{
+func NewSwaggerConstructor(schema *spec.Schema, crdSpec *apiextensions.CustomResourceDefinitionSpec, version string) (*SwaggerConstructor, error) {
+	ret := &SwaggerConstructor{
 		schema:   schema,
 		group:    crdSpec.Group,
 		version:  version,
@@ -68,6 +70,17 @@ func NewSwaggerConstructor(schema *spec.Schema, crdSpec *apiextensions.CustomRes
 		plural:   crdSpec.Names.Plural,
 		scope:    crdSpec.Scope,
 	}
+
+	sub, err := getSubresourcesForVersion(crdSpec, version)
+	if err != nil {
+		return nil, err
+	}
+	if sub != nil {
+		ret.status = sub.Status != nil
+		ret.scale = sub.Scale != nil
+	}
+
+	return ret, nil
 }
 
 // ConstructCRDOpenAPISpec constructs the complete OpenAPI swagger (spec).
@@ -85,7 +98,7 @@ func (c *SwaggerConstructor) ConstructCRDOpenAPISpec() *spec.Swagger {
 		schema = *c.schema
 	}
 
-	return &spec.Swagger{
+	ret := &spec.Swagger{
 		SwaggerProps: spec.SwaggerProps{
 			Paths: &spec.Paths{
 				Paths: map[string]spec.PathItem{
@@ -106,38 +119,46 @@ func (c *SwaggerConstructor) ConstructCRDOpenAPISpec() *spec.Swagger {
 							Parameters: pathParameters(),
 						},
 					},
-					fmt.Sprintf("%s/{name}/status", basePath): {
-						PathItemProps: spec.PathItemProps{
-							Get:        c.readOperation(Status),
-							Put:        c.replaceOperation(Status),
-							Patch:      c.patchOperation(Status),
-							Parameters: pathParameters(),
-						},
-					},
-					fmt.Sprintf("%s/{name}/scale", basePath): {
-						PathItemProps: spec.PathItemProps{
-							Get:        c.readOperation(Scale),
-							Put:        c.replaceOperation(Scale),
-							Patch:      c.patchOperation(Scale),
-							Parameters: pathParameters(),
-						},
-					},
 				},
 			},
 			Definitions: spec.Definitions{
 				model:     schema,
 				listModel: *c.listSchema(),
-				// TODO(roycaihw): this is a hack to let apiExtension apiserver and generic kube-apiserver
-				// to have the same io.k8s.api.autoscaling.v1.Scale definition, so that aggregator server won't
-				// detect name conflict and create a duplicate io.k8s.api.autoscaling.v1.Scale_V2 schema
-				// when aggregating the openapi spec. It would be better if apiExtension apiserver serves
-				// identical definition through the same code path (using routes) as generic kube-apiserver.
-				"io.k8s.api.autoscaling.v1.Scale":       *scaleSchema(),
-				"io.k8s.api.autoscaling.v1.ScaleSpec":   *scaleSpecSchema(),
-				"io.k8s.api.autoscaling.v1.ScaleStatus": *scaleStatusSchema(),
 			},
 		},
 	}
+
+	if c.status {
+		ret.SwaggerProps.Paths.Paths[fmt.Sprintf("%s/{name}/status", basePath)] = spec.PathItem{
+			PathItemProps: spec.PathItemProps{
+				Get:        c.readOperation(Status),
+				Put:        c.replaceOperation(Status),
+				Patch:      c.patchOperation(Status),
+				Parameters: pathParameters(),
+			},
+		}
+	}
+
+	if c.scale {
+		ret.SwaggerProps.Paths.Paths[fmt.Sprintf("%s/{name}/scale", basePath)] = spec.PathItem{
+			PathItemProps: spec.PathItemProps{
+				Get:        c.readOperation(Scale),
+				Put:        c.replaceOperation(Scale),
+				Patch:      c.patchOperation(Scale),
+				Parameters: pathParameters(),
+			},
+		}
+		// TODO(roycaihw): this is a hack to let apiExtension apiserver and generic kube-apiserver
+		// to have the same io.k8s.api.autoscaling.v1.Scale definition, so that aggregator server won't
+		// detect name conflict and create a duplicate io.k8s.api.autoscaling.v1.Scale_V2 schema
+		// when aggregating the openapi spec. It would be better if apiExtension apiserver serves
+		// identical definition through the same code path (using routes) as generic kube-apiserver.
+		ret.SwaggerProps.Definitions["io.k8s.api.autoscaling.v1.Scale"] = *scaleSchema()
+		ret.SwaggerProps.Definitions["io.k8s.api.autoscaling.v1.ScaleSpec"] = *scaleSpecSchema()
+		ret.SwaggerProps.Definitions["io.k8s.api.autoscaling.v1.ScaleStatus"] = *scaleStatusSchema()
+	}
+
+	return ret
 }
 
 // baseOperation initializes a base operation that all operations build upon
@@ -321,4 +342,30 @@ func (c *SwaggerConstructor) constructDescription(kind ResourceKind, action stri
 		descriptionTemplate = "scale of "
 	}
 	return fmt.Sprintf("%s %sthe specified %s", action, descriptionTemplate, c.kind)
+}
+
+// hasPerVersionSubresources returns true if a CRD spec uses per-version subresources.
+func hasPerVersionSubresources(versions []apiextensions.CustomResourceDefinitionVersion) bool {
+	for _, v := range versions {
+		if v.Subresources != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// getSubresourcesForVersion returns the subresources for given version in given CRD spec.
+func getSubresourcesForVersion(spec *apiextensions.CustomResourceDefinitionSpec, version string) (*apiextensions.CustomResourceSubresources, error) {
+	if !hasPerVersionSubresources(spec.Versions) {
+		return spec.Subresources, nil
+	}
+	if spec.Subresources != nil {
+		return nil, fmt.Errorf("malformed CustomResourceDefinitionSpec version %s: top-level and per-version subresources must be mutual exclusive", version)
+	}
+	for _, v := range spec.Versions {
+		if version == v.Name {
+			return v.Subresources, nil
+		}
+	}
+	return nil, fmt.Errorf("version %s not found in CustomResourceDefinitionSpec", version)
 }
