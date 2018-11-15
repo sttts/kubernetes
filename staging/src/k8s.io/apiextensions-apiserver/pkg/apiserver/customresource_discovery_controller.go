@@ -58,14 +58,12 @@ type DiscoveryController struct {
 	openAPIAggregationManager apiextensionsopenapi.AggregationManager
 }
 
-func NewDiscoveryController(crdInformer informers.CustomResourceDefinitionInformer, versionHandler *versionDiscoveryHandler, groupHandler *groupDiscoveryHandler, crdOpenAPIAggregationManager apiextensionsopenapi.AggregationManager) *DiscoveryController {
+func NewDiscoveryController(crdInformer informers.CustomResourceDefinitionInformer, versionHandler *versionDiscoveryHandler, groupHandler *groupDiscoveryHandler) *DiscoveryController {
 	c := &DiscoveryController{
 		versionHandler: versionHandler,
 		groupHandler:   groupHandler,
 		crdLister:      crdInformer.Lister(),
 		crdsSynced:     crdInformer.Informer().HasSynced,
-
-		openAPIAggregationManager: crdOpenAPIAggregationManager,
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DiscoveryController"),
 	}
@@ -247,12 +245,14 @@ func sortGroupDiscoveryByKubeAwareVersion(gd []metav1.GroupVersionForDiscovery) 
 	})
 }
 
-func (c *DiscoveryController) Run(stopCh <-chan struct{}) {
+func (c *DiscoveryController) Run(stopCh <-chan struct{}, crdOpenAPIAggregationManager apiextensionsopenapi.AggregationManager) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 	defer klog.Infof("Shutting down DiscoveryController")
 
 	klog.Infof("Starting DiscoveryController")
+
+	c.openAPIAggregationManager = crdOpenAPIAggregationManager
 
 	if !cache.WaitForCacheSync(stopCh, c.crdsSynced) {
 		utilruntime.HandleError(fmt.Errorf("timed out waiting for caches to sync"))

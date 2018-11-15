@@ -192,18 +192,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 	s.GenericAPIServer.Handler.NonGoRestfulMux.Handle("/apis", crdHandler)
 	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
 
-	// This will wire up openapi for extension api server
-	s.GenericAPIServer.PrepareRun()
-
-	// crdOpenAPIAggregationManager exposes an interface to manage apiExtensionsServer's OpenAPI
-	// services, which allows aggregating OpenAPI spec for new CRD API services with the
-	// existing static OpenAPI spec
-	crdOpenAPIAggregationManager, err := openapiaggregator.NewAggregationManager(s.GenericAPIServer.OpenAPIService, s.GenericAPIServer.OpenAPIVersionedService, s.GenericAPIServer.StaticOpenAPISpec)
-	if err != nil {
-		return nil, err
-	}
-
-	crdController := NewDiscoveryController(s.Informers.Apiextensions().InternalVersion().CustomResourceDefinitions(), versionDiscoveryHandler, groupDiscoveryHandler, crdOpenAPIAggregationManager)
+	crdController := NewDiscoveryController(s.Informers.Apiextensions().InternalVersion().CustomResourceDefinitions(), versionDiscoveryHandler, groupDiscoveryHandler)
 	namingController := status.NewNamingConditionController(s.Informers.Apiextensions().InternalVersion().CustomResourceDefinitions(), crdClient.Apiextensions())
 	finalizingController := finalizer.NewCRDFinalizer(
 		s.Informers.Apiextensions().InternalVersion().CustomResourceDefinitions(),
@@ -216,7 +205,13 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		return nil
 	})
 	s.GenericAPIServer.AddPostStartHook("start-apiextensions-controllers", func(context genericapiserver.PostStartHookContext) error {
-		go crdController.Run(context.StopCh)
+		// create OpenAPI aggregation manager in the last step because only now genericapiserver's the OpenAPI services and spec is available (after PrepareRun).
+		crdOpenAPIAggregationManager, err := openapiaggregator.NewAggregationManager(s.GenericAPIServer.OpenAPIService, s.GenericAPIServer.OpenAPIVersionedService, s.GenericAPIServer.StaticOpenAPISpec)
+		if err != nil {
+			return err
+		}
+
+		go crdController.Run(context.StopCh, crdOpenAPIAggregationManager)
 		go namingController.Run(context.StopCh)
 		go establishingController.Run(context.StopCh)
 		go finalizingController.Run(5, context.StopCh)
