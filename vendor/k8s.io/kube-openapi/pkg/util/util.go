@@ -41,9 +41,17 @@ func ToCanonicalName(name string) string {
 	return strings.Join(nameParts, ".")
 }
 
+// CanonicalTypeNamer is an interface for models without Go types to seed model name
+type CanonicalTypeNamer interface {
+	CanonicalTypeName() string
+}
+
 // GetCanonicalTypeName will find the canonical type name of a sample object, removing
 // the "vendor" part of the path
 func GetCanonicalTypeName(model interface{}) string {
+	if namer, ok := model.(CanonicalTypeNamer); ok {
+		return namer.CanonicalTypeName()
+	}
 	t := reflect.TypeOf(model)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
