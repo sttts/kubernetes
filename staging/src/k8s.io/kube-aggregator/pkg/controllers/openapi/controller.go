@@ -49,6 +49,7 @@ type AggregationManager interface {
 	UpdateAPIServiceSpec(apiServiceName string, spec *spec.Swagger, etag string) error
 	RemoveAPIServiceSpec(apiServiceName string) error
 	GetAPIServiceInfo(apiServiceName string) (handler http.Handler, etag string, exists bool)
+	AddUpdateLocalAPIServiceSpec(name string, spec *spec.Swagger, etag string) error
 }
 
 // AggregationController periodically check for changes in OpenAPI specs of APIServices and update/remove
