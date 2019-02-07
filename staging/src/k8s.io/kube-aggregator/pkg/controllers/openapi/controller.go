@@ -31,14 +31,16 @@ import (
 )
 
 const (
-	successfulUpdateDelay   = time.Minute
-	failedUpdateMaxExpDelay = time.Hour
+	successfulUpdateDelay      = time.Minute
+	successfulUpdateDelayLocal = time.Second
+	failedUpdateMaxExpDelay    = time.Hour
 )
 
 type syncAction int
 
 const (
 	syncRequeue syncAction = iota
+	syncRequeueLocal
 	syncRequeueRateLimited
 	syncNothing
 )
@@ -50,6 +52,10 @@ type AggregationManager interface {
 	RemoveAPIServiceSpec(apiServiceName string) error
 	GetAPIServiceInfo(apiServiceName string) (handler http.Handler, etag string, exists bool)
 	AddUpdateLocalAPIServiceSpec(name string, spec *spec.Swagger, etag string) error
+
+	// GetAPIServicesName returns the names of APIServices recorded in AggregationManager.
+	GetAPIServiceNames() []string
+	IsLocalAPIService(apiServiceName string) bool
 }
 
 // AggregationController periodically check for changes in OpenAPI specs of APIServices and update/remove
@@ -73,6 +79,18 @@ func NewAggregationController(downloader *Downloader, openAPIAggregationManager 
 	}
 
 	c.syncHandler = c.sync
+	// During initialization, openAPIAggregationManager only has record of local APIServices. There must be
+	// no aggregated APIService recorded, because aggregated APIServices only get added to openAPIAggregationManager
+	// by calling AggregationController.AddAPIService or AggregationController.UpdateAPIService after the
+	// controller is initialized.
+	// Here we add delegation target API services to queue, to periodically sync dynamic OpenAPI spec from
+	// delegation target.
+	// NOTE: openAPIAggregationManager.GetAPIServiceNames() will also return the APIService of non-name spec
+	// for aggregator, which has no http.Handler. The first time sync (when popping off from queue) for
+	// this APIService will be a no-op, and the controller will drop the APIService from queue.
+	for _, name := range openAPIAggregationManager.GetAPIServiceNames() {
+		c.queue.AddAfter(name, time.Second)
+	}
 
 	return c
 }
@@ -116,6 +134,9 @@ func (c *AggregationController) processNextWorkItem() bool {
 	case syncRequeue:
 		klog.Infof("OpenAPI AggregationController: action for item %s: Requeue.", key)
 		c.queue.AddAfter(key, successfulUpdateDelay)
+	case syncRequeueLocal:
+		klog.Infof("OpenAPI AggregationController: action for item %s: Requeue local apiservice.", key)
+		c.queue.AddAfter(key, successfulUpdateDelayLocal)
 	case syncRequeueRateLimited:
 		klog.Infof("OpenAPI AggregationController: action for item %s: Rate Limited Requeue.", key)
 		c.queue.AddRateLimited(key)
@@ -142,6 +163,9 @@ func (c *AggregationController) sync(key string) (syncAction, error) {
 		if err := c.openAPIAggregationManager.UpdateAPIServiceSpec(key, returnSpec, newEtag); err != nil {
 			return syncRequeueRateLimited, err
 		}
+	}
+	if c.openAPIAggregationManager.IsLocalAPIService(key) {
+		return syncRequeueLocal, nil
 	}
 	return syncRequeue, nil
 }

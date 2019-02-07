@@ -27,9 +27,9 @@ import (
 	"github.com/go-openapi/spec"
 
 	v1 "k8s.io/api/autoscaling/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apiserver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1beta1 "k8s.io/apimachinery/pkg/apis/meta/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/endpoints"
 	"k8s.io/apiserver/pkg/endpoints/openapi"
 	openapiutil "k8s.io/apiserver/pkg/util/openapi"
@@ -322,7 +322,7 @@ func getDefinition(name string) spec.Schema {
 }
 
 func buildDefinitionsFunc() {
-	namer = openapi.NewDefinitionNamer(apiserver.Scheme)
+	namer = openapi.NewDefinitionNamer(runtime.NewScheme())
 	definitions = generatedopenapi.GetOpenAPIDefinitions(func(name string) spec.Ref {
 		defName, _ := namer.GetDefinitionName(name)
 		return spec.MustCreateRef(definitionPrefix + common.EscapeJsonPointer(defName))

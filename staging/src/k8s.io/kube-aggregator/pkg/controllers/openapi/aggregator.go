@@ -71,7 +71,19 @@ func (s *specAggregator) addLocalSpec(spec *spec.Swagger, localHandler http.Hand
 		apiService: localAPIService,
 		handler:    localHandler,
 		spec:       spec,
+		local:      true,
 	}
+}
+
+// GetAPIServicesName returns the names of APIServices recorded in specAggregator.openAPISpecs.
+// We use this function to pass the names of local APIServices to the controller in this package,
+// so that the controller can periodically sync the OpenAPI spec from delegation API servers.
+func (s *specAggregator) GetAPIServiceNames() []string {
+	names := make([]string, len(s.openAPISpecs))
+	for key := range s.openAPISpecs {
+		names = append(names, key)
+	}
+	return names
 }
 
 // BuildAndRegisterAggregator registered OpenAPI aggregator handler. This function is not thread safe as it only being called on startup.
@@ -134,6 +146,7 @@ type openAPISpecInfo struct {
 	spec    *spec.Swagger
 	handler http.Handler
 	etag    string
+	local   bool
 }
 
 // byPriority can be used in sort.Sort to sort specs with their priorities.
@@ -360,4 +373,15 @@ func (s *specAggregator) GetAPIServiceInfo(apiServiceName string) (handler http.
 		return info.handler, info.etag, true
 	}
 	return nil, "", false
+}
+
+// GetAPIServiceSpec returns api service spec info
+func (s *specAggregator) IsLocalAPIService(apiServiceName string) bool {
+	s.rwMutex.RLock()
+	defer s.rwMutex.RUnlock()
+
+	if info, existingService := s.openAPISpecs[apiServiceName]; existingService {
+		return info.local
+	}
+	return false
 }

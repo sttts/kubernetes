@@ -44,6 +44,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	"k8s.io/apiserver/pkg/util/webhook"
+	"k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver/pkg/controller/openapi"
 )
 
 var (
@@ -197,12 +198,18 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		crdClient.Apiextensions(),
 		crdHandler,
 	)
+	openapiController := openapi.NewController(s.Informers.Apiextensions().InternalVersion().CustomResourceDefinitions())
 
 	s.GenericAPIServer.AddPostStartHook("start-apiextensions-informers", func(context genericapiserver.PostStartHookContext) error {
 		s.Informers.Start(context.StopCh)
 		return nil
 	})
 	s.GenericAPIServer.AddPostStartHook("start-apiextensions-controllers", func(context genericapiserver.PostStartHookContext) error {
+		crdOpenAPIAggregationManager, err := openapi.NewAggregationManager(s.GenericAPIServer.OpenAPIVersionedService, s.GenericAPIServer.StaticOpenAPISpec)
+		if err != nil {
+			return err
+		}
+		go openapiController.Run(context.StopCh, crdOpenAPIAggregationManager)
 		go crdController.Run(context.StopCh)
 		go namingController.Run(context.StopCh)
 		go establishingController.Run(context.StopCh)
