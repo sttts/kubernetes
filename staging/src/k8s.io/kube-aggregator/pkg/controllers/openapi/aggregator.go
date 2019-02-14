@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,7 +38,8 @@ import (
 const (
 	aggregatorUser                = "system:aggregator"
 	specDownloadTimeout           = 60 * time.Second
-	localDelegateChainNamePattern = "k8s_internal_local_delegation_chain_%010d"
+	localDelegateChainNamePrefix  = "k8s_internal_local_delegation_chain_"
+	localDelegateChainNamePattern = localDelegateChainNamePrefix + "%010d"
 
 	// A randomly generated UUID to differentiate local and remote eTags.
 	locallyGeneratedEtagPrefix = "\"6E8F849B434D4B98A569B9D7718876E9-"
@@ -55,6 +57,11 @@ type specAggregator struct {
 }
 
 var _ AggregationManager = &specAggregator{}
+
+// IsLocalAPIService returns true for local specs from delegates.
+func IsLocalAPIService(apiServiceName string) bool {
+	return strings.HasPrefix(apiServiceName, localDelegateChainNamePrefix)
+}
 
 // This function is not thread safe as it only being called on startup.
 func (s *specAggregator) addLocalSpec(spec *spec.Swagger, localHandler http.Handler, name, etag string) {
@@ -366,15 +373,4 @@ func (s *specAggregator) GetAPIServiceInfo(apiServiceName string) (handler http.
 		return info.handler, info.etag, true
 	}
 	return nil, "", false
-}
-
-// GetAPIServiceSpec returns api service spec info
-func (s *specAggregator) IsLocalAPIService(apiServiceName string) bool {
-	s.rwMutex.RLock()
-	defer s.rwMutex.RUnlock()
-
-	if info, existingService := s.openAPISpecs[apiServiceName]; existingService {
-		return info.local
-	}
-	return false
 }
