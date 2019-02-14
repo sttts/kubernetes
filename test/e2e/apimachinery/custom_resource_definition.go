@@ -80,7 +80,7 @@ var _ = SIGDescribe("CustomResourceDefinition resources", func() {
 			}()
 		})
 
-		It("has OpenAPI spec served with CRD Validation chema", func() {
+		It("has OpenAPI spec served with CRD Validation schema", func() {
 			framework.SkipUnlessServerVersionGTE(crdPublishOpenAPIVersion, f.ClientSet.Discovery())
 
 			testcrd, err := framework.CreateTestCRD(f)
@@ -349,12 +349,23 @@ var _ = SIGDescribe("CustomResourceDefinition resources", func() {
 				framework.Failf("failed to wait for apiserver to serve openapi spec for registered CRD: %v; lastMsg: %s", err, lastMsg)
 			}
 
-			// kubectl should return error when explaining crd that doesn't have schema
-			if _, err := framework.RunKubectl("explain", testcrd.GetPluralName()); err == nil || !strings.Contains(err.Error(), `Couldn't find resource for`) {
-				framework.Failf("unexpected no error when explaining crd that doesn't have schema")
+			result, err := framework.RunKubectl("explain", testcrd.GetPluralName())
+			if err != nil {
+				framework.Failf("failed to explain CRD.spec.bars: %v", err)
+			}
+			// Example of expected result:
+			//
+			// KIND:     E2e-test-custom-resource-definition-7177-crd
+			// VERSION:  custom-resource-definition-crd-test.k8s.io/v1
+
+			// DESCRIPTION:
+			// 	 <empty>
+			pattern := regexp.MustCompile(`(?s)KIND:.*test-custom-resource-definition.*VERSION:.*crd-test.k8s.io/v1.*DESCRIPTION:.*<empty>`)
+			if !pattern.Match([]byte(result)) {
+				framework.Failf("CRD.spec.bars explain result doesn't contain proper object description and field description: %s", result)
 			}
 
-			// kubectl should not fail client-side validation for crd that doesn't have schema
+			By("Having kubectl ignore client-side validation when schema is missing")
 			input := fmt.Sprintf("{\"kind\":\"%s\",\"apiVersion\":\"%s/%s\",\"metadata\":{\"name\":\"foo\"},\"spec\":{\"foo\":true}}", testcrd.Kind, testcrd.ApiGroup, testcrd.Versions[0].Name)
 			if _, err := framework.RunKubectlInput(input, "create", "-f", "-"); err != nil {
 				framework.Failf("failed to create CR for CRD without schema")
