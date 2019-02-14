@@ -393,19 +393,15 @@ func newBuilder(crd *apiextensions.CustomResourceDefinition, version string, sch
 	// Pre-build schema with Kubernetes native properties
 	if schema != nil {
 		b.schema = b.buildKubeNative(schema)
+	} else {
+		b.schema.AddExtension(endpoints.ROUTE_META_GVK, []map[string]string{
+			{
+				"group":   b.group,
+				"version": b.version,
+				"kind":    b.kind,
+			},
+		})
 	}
-	// NOTE: without the extension, "kubectl explain gvk" returns gvk not
-	// found; with the extension, the command crashes because kubectl assumes
-	// properties exist
-	// } else {
-	// 	b.schema.AddExtension(endpoints.ROUTE_META_GVK, []map[string]string{
-	// 		{
-	// 			"group":   b.group,
-	// 			"version": b.version,
-	// 			"kind":    b.kind,
-	// 		},
-	// 	})
-	// }
 	b.listSchema = b.buildListSchema()
 
 	return b
