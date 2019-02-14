@@ -52,18 +52,12 @@ type specAggregator struct {
 
 	// provided for dynamic OpenAPI spec
 	openAPIVersionedService *handler.OpenAPIService
-
-	// initialized blocks local spec installation after startup
-	initialized bool
 }
 
 var _ AggregationManager = &specAggregator{}
 
 // This function is not thread safe as it only being called on startup.
 func (s *specAggregator) addLocalSpec(spec *spec.Swagger, localHandler http.Handler, name, etag string) {
-	if s.initialized {
-		panic(fmt.Sprintf("local spec installation forbidden after startup: %v", name))
-	}
 	localAPIService := apiregistration.APIService{}
 	localAPIService.Name = name
 	s.openAPISpecs[name] = &openAPISpecInfo{
@@ -133,7 +127,6 @@ func BuildAndRegisterAggregator(downloader *Downloader, delegationTarget server.
 		return nil, err
 	}
 
-	s.initialized = true
 	return s, nil
 }
 
