@@ -127,7 +127,7 @@ func (c *AggregationController) processNextWorkItem() bool {
 			klog.V(7).Infof("OpenAPI AggregationController: action for local item %s: Requeue after %s.", key, successfulUpdateDelayLocal)
 			c.queue.AddAfter(key, successfulUpdateDelayLocal)
 		} else {
-			klog.Infof("OpenAPI AggregationController: action for item %s: Requeue.", key)
+			klog.V(7).Infof("OpenAPI AggregationController: action for item %s: Requeue.", key)
 			c.queue.AddAfter(key, successfulUpdateDelay)
 		}
 	case syncRequeueRateLimited:
