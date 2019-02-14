@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	restful "github.com/emicklei/go-restful"
 	"github.com/go-openapi/spec"
@@ -32,8 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/endpoints"
 	"k8s.io/apiserver/pkg/endpoints/openapi"
-	openapiutil "k8s.io/apiserver/pkg/util/openapi"
-	"k8s.io/klog"
 	openapibuilder "k8s.io/kube-openapi/pkg/builder"
 	"k8s.io/kube-openapi/pkg/common"
 	"k8s.io/kube-openapi/pkg/util"
@@ -59,18 +56,17 @@ var definitions map[string]common.OpenAPIDefinition
 var buildDefinitions sync.Once
 var namer *openapi.DefinitionNamer
 
-// BuildSwagger builds swagger and calculates etag for given crd in given version
-func BuildSwagger(crd *apiextensions.CustomResourceDefinition, version string) (*spec.Swagger, string, error) {
-	start := time.Now()
+// BuildSwagger builds swagger for the given crd in the given version
+func BuildSwagger(crd *apiextensions.CustomResourceDefinition, version string) (*spec.Swagger, error) {
 	var schema *spec.Schema
 	s, err := apiextensions.GetSchemaForVersion(crd, version)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if s != nil && s.OpenAPIV3Schema != nil {
 		schema, err = ConvertJSONSchemaPropsToOpenAPIv2Schema(s.OpenAPIV3Schema)
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 	}
 	b := newBuilder(crd, version, schema)
@@ -108,7 +104,7 @@ func BuildSwagger(crd *apiextensions.CustomResourceDefinition, version string) (
 
 	subresources, err := apiextensions.GetSubresourcesForVersion(crd, version)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if subresources != nil && subresources.Status != nil {
 		routes = append(routes, b.buildRoute(root, "/{name}/status", "GET", "read", sample))
@@ -125,23 +121,12 @@ func BuildSwagger(crd *apiextensions.CustomResourceDefinition, version string) (
 		b.ws.Route(route)
 	}
 
-	elapsed := time.Since(start)
-	klog.Errorf(">>>>> prepare crd openapi before build took %s", elapsed)
-
 	openAPISpec, err := openapibuilder.BuildOpenAPISpec([]*restful.WebService{b.ws}, b.getOpenAPIConfig())
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	etag, err := openapiutil.CalcETag(openAPISpec)
-	if err != nil {
-		return nil, "", err
-	}
-
-	elapsed = time.Since(start)
-	klog.Errorf(">>>>> total build crd openapi took %s", elapsed)
-
-	return openAPISpec, etag, nil
+	return openAPISpec, nil
 }
 
 // Implements CanonicalTypeNamer
