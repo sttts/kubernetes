@@ -18,33 +18,23 @@ package openapi
 
 import (
 	"fmt"
+	"reflect"
+	"sync"
 	"time"
 
 	"github.com/go-openapi/spec"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
+	"k8s.io/kube-openapi/pkg/handler"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/internalversion/apiextensions/internalversion"
 	listers "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/internalversion"
-	apiextensionsfeatures "k8s.io/apiextensions-apiserver/pkg/features"
 )
-
-// AggregationManager is the interface between OpenAPI Aggregator service and a controller
-// that manages CRD openapi spec aggregation
-type AggregationManager interface {
-	// AddUpdateLocalAPIService allows adding/updating local API service with nil handler and
-	// nil Spec.Service. This function can be used for local dynamic OpenAPI spec aggregation
-	// management (e.g. CRD)
-	AddUpdateLocalAPIServiceSpec(name string, spec *spec.Swagger, etag string) error
-	RemoveAPIServiceSpec(apiServiceName string) error
-}
 
 // Controller watches CustomResourceDefinitions and publishes validation schema
 type Controller struct {
@@ -52,11 +42,16 @@ type Controller struct {
 	crdsSynced cache.InformerSynced
 
 	// To allow injection for testing.
-	syncFn func(gvk schema.GroupVersionKind) error
+	syncFn func(string) error
 
 	queue workqueue.RateLimitingInterface
 
-	openAPIAggregationManager AggregationManager
+	staticSpec     *spec.Swagger
+	openAPIService *handler.OpenAPIService
+
+	// specs per version and per CRD name
+	lock     sync.Mutex
+	crdSpecs map[string]map[string]*spec.Swagger
 }
 
 // NewController creates a new Controller with input CustomResourceDefinition informer
@@ -64,8 +59,8 @@ func NewController(crdInformer informers.CustomResourceDefinitionInformer) *Cont
 	c := &Controller{
 		crdLister:  crdInformer.Lister(),
 		crdsSynced: crdInformer.Informer().HasSynced,
-
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "crd_openapi_controller"),
+		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "crd_openapi_controller"),
+		crdSpecs:   map[string]map[string]*spec.Swagger{},
 	}
 
 	crdInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -79,14 +74,15 @@ func NewController(crdInformer informers.CustomResourceDefinitionInformer) *Cont
 }
 
 // Run sets openAPIAggregationManager and starts workers
-func (c *Controller) Run(stopCh <-chan struct{}, aggregationManager AggregationManager) {
+func (c *Controller) Run(staticSpec *spec.Swagger, openAPIService *handler.OpenAPIService, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
-	defer klog.Infof("Shutting down CRDOpenAPIController")
+	defer klog.Infof("Shutting down OpenAPI controller")
 
-	klog.Infof("Starting CRDOpenAPIController")
+	klog.Infof("Starting OpenAPI controller")
 
-	c.openAPIAggregationManager = aggregationManager
+	c.staticSpec = staticSpec
+	c.openAPIService = openAPIService
 
 	if !cache.WaitForCacheSync(stopCh, c.crdsSynced) {
 		utilruntime.HandleError(fmt.Errorf("timed out waiting for caches to sync"))
@@ -111,7 +107,16 @@ func (c *Controller) processNextWorkItem() bool {
 	}
 	defer c.queue.Done(key)
 
-	err := c.syncFn(key.(schema.GroupVersionKind))
+	// log slow aggregations
+	start := time.Now()
+	defer func() {
+		elapsed := time.Since(start)
+		if elapsed > time.Second {
+			klog.Warningf("slow openapi aggregation of %q: %s", key.(string), elapsed)
+		}
+	}()
+
+	err := c.syncFn(key.(string))
 	if err == nil {
 		c.queue.Forget(key)
 		return true
@@ -122,48 +127,58 @@ func (c *Controller) processNextWorkItem() bool {
 	return true
 }
 
-func (c *Controller) sync(gvk schema.GroupVersionKind) error {
-	if c.openAPIAggregationManager == nil || !utilfeature.DefaultFeatureGate.Enabled(apiextensionsfeatures.CustomResourceValidation) {
-		return nil
-	}
+func (c *Controller) sync(name string) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	crds, err := c.crdLister.List(labels.Everything())
-	if err != nil {
+	crd, err := c.crdLister.Get(name)
+	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
-	specName := gvk.String()
-	found := false
 
-	for _, crd := range crds {
-		if !apiextensions.IsCRDConditionTrue(crd, apiextensions.Established) {
+	// do we have to remove all specs of this CRD?
+	if errors.IsNotFound(err) || !apiextensions.IsCRDConditionTrue(crd, apiextensions.Established) {
+		if _, found := c.crdSpecs[name]; !found {
+			return nil
+		}
+		delete(c.crdSpecs, name)
+		return c.updateSpec()
+	}
+
+	// compute CRD spec and see whether it changed
+	oldSpecs := c.crdSpecs[crd.Name]
+	newSpecs := map[string]*spec.Swagger{}
+	anyChanged := false
+	for _, v := range crd.Spec.Versions {
+		if !v.Served {
 			continue
 		}
-		if crd.Spec.Group != gvk.Group || crd.Spec.Names.Kind != gvk.Kind {
-			continue
-		}
-		if !apiextensions.HasVersionServed(crd, gvk.Version) {
-			continue
-		}
-
-		found = true
-
-		start := time.Now()
-		spec, etag, err := BuildSwagger(crd, gvk.Version)
+		spec, err := BuildSwagger(crd, v.Name)
 		if err != nil {
 			return err
 		}
-		if err := c.openAPIAggregationManager.AddUpdateLocalAPIServiceSpec(specName, spec, etag); err != nil {
-			return err
+		newSpecs[v.Name] = spec
+		if oldSpecs[v.Name] != nil && !reflect.DeepEqual(oldSpecs[v.Name], spec) {
+			anyChanged = true
 		}
-
-		elapsed := time.Since(start)
-		klog.Errorf(">>>>> in total, build and aggregate openapi took %s", elapsed)
+	}
+	if !anyChanged && len(oldSpecs) == len(newSpecs) {
+		return nil
 	}
 
-	if !found {
-		return c.openAPIAggregationManager.RemoveAPIServiceSpec(specName)
+	// update specs of this CRD
+	c.crdSpecs[crd.Name] = newSpecs
+	return c.updateSpec()
+}
+
+func (c *Controller) updateSpec() error {
+	crdSpecs := []*spec.Swagger{}
+	for _, versionSpecs := range c.crdSpecs {
+		for _, s := range versionSpecs {
+			crdSpecs = append(crdSpecs, s)
+		}
 	}
-	return nil
+	return c.openAPIService.UpdateSpec(mergeSpecs(c.staticSpec, crdSpecs...))
 }
 
 func (c *Controller) addCustomResourceDefinition(obj interface{}) {
@@ -174,10 +189,8 @@ func (c *Controller) addCustomResourceDefinition(obj interface{}) {
 
 func (c *Controller) updateCustomResourceDefinition(oldObj, newObj interface{}) {
 	castNewObj := newObj.(*apiextensions.CustomResourceDefinition)
-	castOldObj := oldObj.(*apiextensions.CustomResourceDefinition)
-	klog.V(4).Infof("Updating customresourcedefinition %s", castOldObj.Name)
+	klog.V(4).Infof("Updating customresourcedefinition %s", castNewObj.Name)
 	c.enqueue(castNewObj)
-	c.enqueue(castOldObj)
 }
 
 func (c *Controller) deleteCustomResourceDefinition(obj interface{}) {
@@ -199,7 +212,5 @@ func (c *Controller) deleteCustomResourceDefinition(obj interface{}) {
 }
 
 func (c *Controller) enqueue(obj *apiextensions.CustomResourceDefinition) {
-	for _, v := range obj.Spec.Versions {
-		c.queue.Add(schema.GroupVersionKind{Group: obj.Spec.Group, Version: v.Name, Kind: obj.Spec.Names.Kind})
-	}
+	c.queue.Add(obj.Name)
 }
