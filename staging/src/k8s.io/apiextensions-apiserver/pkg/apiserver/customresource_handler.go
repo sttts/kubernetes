@@ -516,9 +516,8 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 		}
 
 		storages[v.Name] = customresource.NewStorage(
-			schema.GroupResource{Group: crd.Spec.Group, Resource: crd.Status.AcceptedNames.Plural},
-			schema.GroupVersionKind{Group: crd.Spec.Group, Version: v.Name, Kind: crd.Status.AcceptedNames.Kind},
-			schema.GroupVersionKind{Group: crd.Spec.Group, Version: v.Name, Kind: crd.Status.AcceptedNames.ListKind},
+			crd,
+			v.Name,
 			customresource.NewStrategy(
 				typer,
 				crd.Spec.Scope == apiextensions.NamespaceScoped,
@@ -534,8 +533,8 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensions.CustomResource
 				decoderVersion:    schema.GroupVersion{Group: crd.Spec.Group, Version: v.Name},
 				encoderVersion:    schema.GroupVersion{Group: crd.Spec.Group, Version: storageVersion},
 			},
-			crd.Status.AcceptedNames.Categories,
 			table,
+			nil,
 		)
 
 		selfLinkPrefix := ""

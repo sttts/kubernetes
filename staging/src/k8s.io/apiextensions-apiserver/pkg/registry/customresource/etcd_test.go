@@ -89,10 +89,41 @@ func newStorage(t *testing.T) (customresource.CustomResourceStorage, *etcdtestin
 	}
 	table, _ := tableconvertor.New(headers)
 
+	crd := apiextensions.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "noxus.mygroup.example.com"},
+		Spec: apiextensions.CustomResourceDefinitionSpec{
+			Group: "mygroup.example.com",
+			Scope: apiextensions.NamespaceScoped,
+			Names: apiextensions.CustomResourceDefinitionNames{
+				Plural:   "noxus",
+				Singular: "noxu",
+				Kind:     "Noxu",
+				ListKind: "NoxuItemList",
+			},
+			Versions: []apiextensions.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1beta1",
+					Served:  true,
+					Storage: true,
+				},
+			},
+		},
+		Status: apiextensions.CustomResourceDefinitionStatus{
+			AcceptedNames: apiextensions.CustomResourceDefinitionNames{
+				Plural:   "noxus",
+				Singular: "noxu",
+				Kind:     "Noxu",
+				ListKind: "NoxuItemList",
+			},
+			StoredVersions: []string{"v1beta1"},
+		},
+	}
+
+	[]string{"all"},
+
 	storage := customresource.NewStorage(
-		schema.GroupResource{Group: "mygroup.example.com", Resource: "noxus"},
-		kind,
-		schema.GroupVersionKind{Group: "mygroup.example.com", Version: "v1beta1", Kind: "NoxuItemList"},
+		crd,
+		"v1beta1"
 		customresource.NewStrategy(
 			typer,
 			true,
@@ -103,8 +134,8 @@ func newStorage(t *testing.T) (customresource.CustomResourceStorage, *etcdtestin
 			scale,
 		),
 		restOptions,
-		[]string{"all"},
 		table,
+		nil,
 	)
 
 	return storage, server

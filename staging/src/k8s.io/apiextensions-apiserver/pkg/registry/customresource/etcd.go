@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+	"k8s.io/apiserver/pkg/storage"
 )
 
 // CustomResourceStorage includes dummy storage for CustomResources, and their Status and Scale subresources.
@@ -40,8 +42,14 @@ type CustomResourceStorage struct {
 	Scale          *ScaleREST
 }
 
-func NewStorage(resource schema.GroupResource, kind, listKind schema.GroupVersionKind, strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, categories []string, tableConvertor rest.TableConvertor) CustomResourceStorage {
-	customResourceREST, customResourceStatusREST := newREST(resource, kind, listKind, strategy, optsGetter, categories, tableConvertor)
+func NewStorage(crd *apiextensions.CustomResourceDefinition, version string,
+	strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, tableConvertor rest.TableConvertor, customStorage storage.Interface) CustomResourceStorage {
+	resource := schema.GroupResource{Group: crd.Spec.Group, Resource: crd.Status.AcceptedNames.Plural}
+	kind := schema.GroupVersionKind{Group: crd.Spec.Group, Version: version, Kind: crd.Status.AcceptedNames.Kind}
+	listKind := schema.GroupVersionKind{Group: crd.Spec.Group, Version: version, Kind: crd.Status.AcceptedNames.ListKind}
+	categories := crd.Status.AcceptedNames.Categories
+
+	customResourceREST, customResourceStatusREST := newREST(resource, kind, listKind, strategy, optsGetter, categories, tableConvertor, customStorage)
 
 	s := CustomResourceStorage{
 		CustomResource: customResourceREST,
@@ -75,7 +83,7 @@ type REST struct {
 }
 
 // newREST returns a RESTStorage object that will work against API services.
-func newREST(resource schema.GroupResource, kind, listKind schema.GroupVersionKind, strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, categories []string, tableConvertor rest.TableConvertor) (*REST, *StatusREST) {
+func newREST(resource schema.GroupResource, kind, listKind schema.GroupVersionKind, strategy customResourceStrategy, optsGetter generic.RESTOptionsGetter, categories []string, tableConvertor rest.TableConvertor, customStorage storage.Interface) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
 		NewFunc: func() runtime.Object {
 			// set the expected group/version/kind in the new object as a signal to the versioning decoder
@@ -97,6 +105,11 @@ func newREST(resource schema.GroupResource, kind, listKind schema.GroupVersionKi
 		DeleteStrategy: strategy,
 
 		TableConvertor: tableConvertor,
+
+		// for testing:
+		Storage: genericregistry.DryRunnableStorage{
+			Storage: customStorage,
+		},
 	}
 	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: strategy.GetAttrs}
 	if err := store.CompleteWithOptions(options); err != nil {
