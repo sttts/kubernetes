@@ -323,7 +323,7 @@ func addTypeMetaProperties(s *spec.Schema) {
 
 // buildListSchema builds the list kind schema for the CRD
 func (b *builder) buildListSchema() *spec.Schema {
-	name := definitionPrefix + openapi.FriendlyName(fmt.Sprintf("%s/%s/%s", b.group, b.version, b.kind))
+	name := definitionPrefix + util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", b.group, b.version, b.kind))
 	doc := fmt.Sprintf("List of %s. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md", b.plural)
 	s := new(spec.Schema).WithDescription(fmt.Sprintf("%s is a list of %s", b.listKind, b.kind)).
 		WithRequired("items").
