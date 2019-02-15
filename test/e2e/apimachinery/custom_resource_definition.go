@@ -30,7 +30,7 @@ import (
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/apiserver/pkg/endpoints/openapi"
+	"k8s.io/kube-openapi/pkg/util"
 	"k8s.io/kubernetes/test/e2e/framework"
 
 	"github.com/go-openapi/spec"
@@ -100,8 +100,8 @@ var _ = SIGDescribe("CustomResourceDefinition resources", func() {
 				framework.Failf("unexpected: test CRDs should have different kinds %v, %v", testcrd, testcrd2)
 			}
 
-			crdDefinitionKey := openapi.FriendlyName(fmt.Sprintf("%s/%s/%s", testcrd.ApiGroup, testcrd.Versions[0].Name, testcrd.Kind))
-			crd2DefinitionKey := openapi.FriendlyName(fmt.Sprintf("%s/%s/%s", testcrd2.ApiGroup, testcrd2.Versions[0].Name, testcrd2.Kind))
+			crdDefinitionKey := util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", testcrd.ApiGroup, testcrd.Versions[0].Name, testcrd.Kind))
+			crd2DefinitionKey := util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", testcrd2.ApiGroup, testcrd2.Versions[0].Name, testcrd2.Kind))
 
 			// Test CRD don't have ValidationSchema setup. Here we patch a
 			// simple Schema for kubectl behavior testing.
@@ -321,7 +321,7 @@ var _ = SIGDescribe("CustomResourceDefinition resources", func() {
 				framework.Failf("failed to create test CRD: %v", err)
 			}
 
-			crdDefinitionKey := openapi.FriendlyName(fmt.Sprintf("%s/%s/%s", testcrd.ApiGroup, testcrd.Versions[0].Name, testcrd.Kind))
+			crdDefinitionKey := util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", testcrd.ApiGroup, testcrd.Versions[0].Name, testcrd.Kind))
 
 			// We use a wait.Poll block here because the kube-aggregator openapi
 			// controller takes time to rotate the queue and resync apiextensions-apiserver's spec
