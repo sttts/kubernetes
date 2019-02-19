@@ -140,7 +140,7 @@ type CRDCanonicalTypeNamer struct {
 	kind    string
 }
 
-// CanonicalTypeName returns canonical type name for given CRD
+// OpenAPICanonicalTypeName returns canonical type name for given CRD
 func (c *CRDCanonicalTypeNamer) OpenAPICanonicalTypeName() string {
 	return fmt.Sprintf("%s/%s.%s", c.group, c.version, c.kind)
 }
