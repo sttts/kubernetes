@@ -23,22 +23,81 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apiextensions-apiserver/test/integration/fixtures"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	k8sclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kube-openapi/pkg/util"
 	"k8s.io/kubernetes/test/e2e/framework"
+	"sigs.k8s.io/yaml"
 
 	"github.com/go-openapi/spec"
 	. "github.com/onsi/ginkgo"
 )
 
-var crdVersion = utilversion.MustParseSemantic("v1.7.0")
-var crdPublishOpenAPIVersion = utilversion.MustParseSemantic("v1.13.0")
+var (
+	crdVersion               = utilversion.MustParseSemantic("v1.7.0")
+	crdPublishOpenAPIVersion = utilversion.MustParseSemantic("v1.14.0")
+)
+
+var schemaFoo = []byte(`description: Foo CRD for Testing
+properties:
+  spec:
+    description: Specification of Foo
+    properties:
+      bars:
+        description: List of Bars and their specs.
+        type: array
+        items:
+          properties:
+            name:
+              description: Name of Bar.
+              type: string
+            bazs:
+              description: List of Bazs.
+              items:
+                type: string
+              type: array
+  status:
+    description: Status of Foo
+    properties:
+      bars:
+        description: List of Bars and their statuses.
+        type: array
+        items:
+          properties:
+            name:
+              description: Name of Bar.
+              type: string
+            available:
+              description: Whether the Bar is installed.
+              type: boolean
+            quxType:
+              description: Indicates to external qux type.
+              pattern: in-tree|out-of-tree
+              type: string`)
+
+var schemaWaldo = []byte(`description: Waldo CRD for Testing
+properties:
+  spec:
+    description: Specification of Waldo
+    type: object
+    properties:
+      dummy:
+        description: Dummy property.
+  status:
+    description: Status of Waldo
+    type: object
+    properties:
+      bars:
+        description: List of Bars and their statuses.`)
 
 var _ = SIGDescribe("CustomResourceDefinition resources", func() {
 
@@ -79,401 +138,410 @@ var _ = SIGDescribe("CustomResourceDefinition resources", func() {
 				}
 			}()
 		})
-
-		It("has OpenAPI spec served with CRD Validation schema", func() {
-			framework.SkipUnlessServerVersionGTE(crdPublishOpenAPIVersion, f.ClientSet.Discovery())
-
-			testcrd, err := framework.CreateTestCRD(f)
-			if err != nil {
-				framework.Failf("failed to create test CRD: %v", err)
-			}
-			testcrd2, err := framework.CreateTestCRD(f)
-			if err != nil {
-				framework.Failf("failed to create test CRD: %v", err)
-			}
-
-			// Make sure test CRDs are of same GV but different kinds
-			if testcrd.ApiGroup != testcrd2.ApiGroup || testcrd.Versions[0].Name != testcrd2.Versions[0].Name {
-				framework.Failf("unexpected: test CRDs should share the same GV %v, %v", testcrd, testcrd2)
-			}
-			if testcrd.Kind == testcrd2.Kind {
-				framework.Failf("unexpected: test CRDs should have different kinds %v, %v", testcrd, testcrd2)
-			}
-
-			crdDefinitionKey := util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", testcrd.ApiGroup, testcrd.Versions[0].Name, testcrd.Kind))
-			crd2DefinitionKey := util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", testcrd2.ApiGroup, testcrd2.Versions[0].Name, testcrd2.Kind))
-
-			// Test CRD don't have ValidationSchema setup. Here we patch a
-			// simple Schema for kubectl behavior testing.
-			if err := patchCRDSchema(crdValidationSchema, testcrd); err != nil {
-				framework.Failf("failed to patch CRD schema: %v", err)
-			}
-			if err := patchCRDSchema(crd2ValidationSchema, testcrd2); err != nil {
-				framework.Failf("failed to patch CRD schema: %v", err)
-			}
-
-			// We use a wait.Poll block here because the kube-aggregator openapi
-			// controller takes time to rotate the queue and resync apiextensions-apiserver's spec
-			By("Waiting for test CRD's Schema to show up in OpenAPI spec")
-			lastMsg := ""
-			if err := wait.Poll(500*time.Millisecond, 20*time.Second, func() (bool, error) {
-				bs, err := f.ClientSet.CoreV1().RESTClient().Get().AbsPath("openapi", "v2").DoRaw()
-				if err != nil {
-					return false, err
-				}
-				spec := spec.Swagger{}
-				if err := json.Unmarshal(bs, &spec); err != nil {
-					return false, err
-				}
-				if spec.SwaggerProps.Paths == nil {
-					lastMsg = "spec.SwaggerProps.Paths is nil"
-					return false, nil
-				}
-				d, ok := spec.SwaggerProps.Definitions[crdDefinitionKey]
-				if !ok {
-					lastMsg = fmt.Sprintf("crd1 spec.SwaggerProps.Definitions[\"%s\"] not found", crdDefinitionKey)
-					return false, nil
-				}
-				_, ok = d.Properties["status"]
-				if !ok {
-					lastMsg = fmt.Sprintf("crd1 spec.SwaggerProps.Definitions[\"%s\"].Properties[\"status\"] not found", crdDefinitionKey)
-					return false, nil
-				}
-				d2, ok := spec.SwaggerProps.Definitions[crd2DefinitionKey]
-				if !ok {
-					lastMsg = fmt.Sprintf("crd2 spec.SwaggerProps.Definitions[\"%s\"] not found", crd2DefinitionKey)
-					return false, nil
-				}
-				_, ok = d2.Properties["status"]
-				if !ok {
-					lastMsg = fmt.Sprintf("crd2 spec.SwaggerProps.Definitions[\"%s\"].Properties[\"status\"] not found", crd2DefinitionKey)
-					return false, nil
-				}
-				return true, nil
-			}); err != nil {
-				framework.Failf("failed to wait for apiserver to serve openapi spec for registered CRD: %v; lastMsg: %s", err, lastMsg)
-			}
-
-			By("Having kubectl understand the schema")
-
-			result, err := framework.RunKubectl("explain", testcrd.GetPluralName())
-			if err != nil {
-				framework.Failf("failed to explain CRD: %v", err)
-			}
-			// Example of expected result:
-			//
-			// KIND:     E2e-test-custom-resource-definition-1717-crd
-			// VERSION:  custom-resource-definition-crd-test.k8s.io/v1
-			//
-			// DESCRIPTION: Foo CRD for Testing
-			//
-			// FIELDS:
-			//    apiVersion	<string>
-			//      APIVersion defines the versioned schema of this representation of an
-			//      object. Servers should convert recognized schemas to the latest internal
-			//      value, and may reject unrecognized values. More info:
-			//      https://git.k8s.io/community/contributors/devel/api-conventions.md#resources
-			//
-			//    kind	<string>
-			//      Kind is a string value representing the REST resource this object
-			//      represents. Servers may infer this from the endpoint the client submits
-			//      requests to. Cannot be updated. In CamelCase. More info:
-			//      https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
-			//
-			//    metadata	<Object>
-			//      Standard object's metadata. More info:
-			//      https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-			//
-			//    spec	<Object>
-			//      Specification of Foo
-			//
-			//    status	<Object>
-			//      Status of Foo
-			pattern := regexp.MustCompile(`(?s)DESCRIPTION:.*Foo CRD for Testing.*FIELDS:.*apiVersion.*<string>.*APIVersion defines.*spec.*<Object>.*Specification of Foo`)
-			if !pattern.Match([]byte(result)) {
-				framework.Failf("CRD explain result doesn't contain proper object description and field description: %s", result)
-			}
-
-			result, err = framework.RunKubectl("explain", testcrd.GetPluralName()+".metadata")
-			if err != nil {
-				framework.Failf("failed to explain CRD.metadata: %v", err)
-			}
-			// Omitted the example because the result for explain CRD.metadata is quite long
-			pattern = regexp.MustCompile(`(?s)DESCRIPTION:.*Standard object's metadata.*FIELDS:.*creationTimestamp.*<string>.*CreationTimestamp is a timestamp`)
-			if !pattern.Match([]byte(result)) {
-				framework.Failf("CRD.metadata explain result doesn't contain proper object description and field description: %s", result)
-			}
-
-			result, err = framework.RunKubectl("explain", testcrd.GetPluralName()+".spec")
-			if err != nil {
-				framework.Failf("failed to explain CRD.spec: %v", err)
-			}
-			// Example of expected result:
-			//
-			// KIND:     E2e-test-custom-resource-definition-1717-crd
-			// VERSION:  custom-resource-definition-crd-test.k8s.io/v1
-			//
-			// RESOURCE: spec <Object>
-			//
-			// DESCRIPTION:
-			//      Specification of Foo
-			//
-			// FIELDS:
-			//    bars	<[]Object>
-			//      List of Bars and their specs.
-			pattern = regexp.MustCompile(`(?s)DESCRIPTION:.*Specification of Foo.*FIELDS:.*bars.*<\[\]Object>.*List of Bars and their specs`)
-			if !pattern.Match([]byte(result)) {
-				framework.Failf("CRD.spec explain result doesn't contain proper object description and field description: %s", result)
-			}
-
-			result, err = framework.RunKubectl("explain", testcrd.GetPluralName()+".spec.bars")
-			if err != nil {
-				framework.Failf("failed to explain CRD.spec.bars: %v", err)
-			}
-			// Example of expected result:
-			//
-			// KIND:     E2e-test-custom-resource-definition-1717-crd
-			// VERSION:  custom-resource-definition-crd-test.k8s.io/v1
-			//
-			// RESOURCE: bars <[]Object>
-			//
-			// DESCRIPTION:
-			//      List of Bars and their specs.
-			//
-			// FIELDS:
-			//    bazs	<[]string>
-			//      List of Bazs.
-			//
-			//    name	<string>
-			//      Name of Bar.
-			pattern = regexp.MustCompile(`(?s)RESOURCE:.*bars.*<\[\]Object>.*DESCRIPTION:.*List of Bars and their specs.*FIELDS:.*bazs.*<\[\]string>.*List of Bazs.*name.*<string>.*Name of Bar`)
-			if !pattern.Match([]byte(result)) {
-				framework.Failf("CRD.spec.bars explain result doesn't contain proper object description and field description: %s", result)
-			}
-
-			// kubectl should return error when explaining property that doesn't exist
-			if _, err := framework.RunKubectl("explain", testcrd.GetPluralName()+".spec.bars2"); err == nil || !strings.Contains(err.Error(), `field "bars2" does not exist`) {
-				framework.Failf("unexpected no error when explaining property that doesn't exist")
-			}
-
-			// kubectl should be able to explain testcrd2
-			result, err = framework.RunKubectl("explain", testcrd2.GetPluralName())
-			if err != nil {
-				framework.Failf("failed to explain CRD2: %v", err)
-			}
-			pattern = regexp.MustCompile(`(?s)DESCRIPTION:.*Waldo CRD for Testing.*FIELDS:.*apiVersion.*<string>.*APIVersion defines.*spec.*<Object>.*Specification of Waldo`)
-			if !pattern.Match([]byte(result)) {
-				framework.Failf("CRD2 explain result doesn't contain proper object description and field description: %s", result)
-			}
-
-			By("Having kubectl perform client-side validation")
-			input := fmt.Sprintf("{\"kind\":\"%s\",\"apiVersion\":\"%s/%s\",\"metadata\":{\"name\":\"foo\"},\"spec\":{\"foo\":true}}", testcrd.Kind, testcrd.ApiGroup, testcrd.Versions[0].Name)
-			if _, err := framework.RunKubectlInput(input, "create", "-f", "-"); err == nil || !strings.Contains(err.Error(), `unknown field "foo"`) {
-				framework.Failf("unexpected no error when creating CR with unknown field")
-			}
-			input = fmt.Sprintf("{\"kind\":\"%s\",\"apiVersion\":\"%s/%s\",\"metadata\":{\"name\":\"foo\"},\"spec\":{\"bars\":[{\"name\":\"test\"}]}}", testcrd.Kind, testcrd.ApiGroup, testcrd.Versions[0].Name)
-			if _, err := framework.RunKubectlInput(input, "create", "-f", "-"); err != nil {
-				framework.Failf("failed to create valid CR: %v", err)
-			}
-			if _, err := framework.RunKubectl("delete", testcrd.GetPluralName(), "foo"); err != nil {
-				framework.Failf("failed to delete valid CR: %v", err)
-			}
-
-			// Delete test CRD
-			testcrd.CleanUp()
-			testcrd2.CleanUp()
-
-			// We use a wait.Poll block here because the kube-aggregator openapi
-			// controller takes time to rotate the queue and resync apiextensions-apiserver's spec
-			By("Waiting for test CRD's Schema to be removed from OpenAPI spec")
-			if err := wait.Poll(500*time.Millisecond, 10*time.Second, func() (bool, error) {
-				bs, err := f.ClientSet.CoreV1().RESTClient().Get().AbsPath("openapi", "v2").DoRaw()
-				if err != nil {
-					return false, err
-				}
-				spec := spec.Swagger{}
-				if err := json.Unmarshal(bs, &spec); err != nil {
-					return false, err
-				}
-				if spec.SwaggerProps.Paths == nil {
-					lastMsg = "spec.SwaggerProps.Paths is nil"
-					return false, nil
-				}
-				if _, ok := spec.SwaggerProps.Definitions[crdDefinitionKey]; ok {
-					lastMsg = fmt.Sprintf("crd1 spec.SwaggerProps.Definitions[\"%s\"] still exists", crdDefinitionKey)
-					return false, nil
-				}
-				if _, ok := spec.SwaggerProps.Definitions[crd2DefinitionKey]; ok {
-					lastMsg = fmt.Sprintf("crd2 spec.SwaggerProps.Definitions[\"%s\"] still exists", crd2DefinitionKey)
-					return false, nil
-				}
-				return true, nil
-			}); err != nil {
-				framework.Failf("failed to wait for apiserver to remove openapi spec for deleted CRD: %v; lastMsg: %s", err, lastMsg)
-			}
-		})
-
-		It("has OpenAPI spec served for CRD without validation schema", func() {
-			framework.SkipUnlessServerVersionGTE(crdPublishOpenAPIVersion, f.ClientSet.Discovery())
-
-			testcrd, err := framework.CreateTestCRD(f)
-			if err != nil {
-				framework.Failf("failed to create test CRD: %v", err)
-			}
-
-			crdDefinitionKey := util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", testcrd.ApiGroup, testcrd.Versions[0].Name, testcrd.Kind))
-
-			// We use a wait.Poll block here because the kube-aggregator openapi
-			// controller takes time to rotate the queue and resync apiextensions-apiserver's spec
-			By("Waiting for test CRD's Schema to show up in OpenAPI spec")
-			lastMsg := ""
-			if err := wait.Poll(500*time.Millisecond, 10*time.Second, func() (bool, error) {
-				bs, err := f.ClientSet.CoreV1().RESTClient().Get().AbsPath("openapi", "v2").DoRaw()
-				if err != nil {
-					return false, err
-				}
-				spec := spec.Swagger{}
-				if err := json.Unmarshal(bs, &spec); err != nil {
-					return false, err
-				}
-				if spec.SwaggerProps.Paths == nil {
-					lastMsg = "spec.SwaggerProps.Paths is nil"
-					return false, nil
-				}
-				if _, ok := spec.SwaggerProps.Definitions[crdDefinitionKey]; !ok {
-					lastMsg = fmt.Sprintf("crd spec.SwaggerProps.Definitions[\"%s\"] not found", crdDefinitionKey)
-					return false, nil
-				}
-				return true, nil
-			}); err != nil {
-				framework.Failf("failed to wait for apiserver to serve openapi spec for registered CRD: %v; lastMsg: %s", err, lastMsg)
-			}
-
-			result, err := framework.RunKubectl("explain", testcrd.GetPluralName())
-			if err != nil {
-				framework.Failf("failed to explain CRD.spec.bars: %v", err)
-			}
-			// Example of expected result:
-			//
-			// KIND:     E2e-test-custom-resource-definition-7177-crd
-			// VERSION:  custom-resource-definition-crd-test.k8s.io/v1
-
-			// DESCRIPTION:
-			// 	 <empty>
-			pattern := regexp.MustCompile(`(?s)KIND:.*test-custom-resource-definition.*VERSION:.*crd-test.k8s.io/v1.*DESCRIPTION:.*<empty>`)
-			if !pattern.Match([]byte(result)) {
-				framework.Failf("CRD.spec.bars explain result doesn't contain proper object description and field description: %s", result)
-			}
-
-			By("Having kubectl ignore client-side validation when schema is missing")
-			input := fmt.Sprintf("{\"kind\":\"%s\",\"apiVersion\":\"%s/%s\",\"metadata\":{\"name\":\"foo\"},\"spec\":{\"foo\":true}}", testcrd.Kind, testcrd.ApiGroup, testcrd.Versions[0].Name)
-			if _, err := framework.RunKubectlInput(input, "create", "-f", "-"); err != nil {
-				framework.Failf("failed to create CR for CRD without schema")
-			}
-			if _, err := framework.RunKubectl("delete", testcrd.GetPluralName(), "foo"); err != nil {
-				framework.Failf("failed to delete CR for CRD without schema: %v", err)
-			}
-
-			// Delete test CRD
-			testcrd.CleanUp()
-
-			// We use a wait.Poll block here because the kube-aggregator openapi
-			// controller takes time to rotate the queue and resync apiextensions-apiserver's spec
-			By("Waiting for test CRD's Schema to be removed from OpenAPI spec")
-			if err := wait.Poll(500*time.Millisecond, 10*time.Second, func() (bool, error) {
-				bs, err := f.ClientSet.CoreV1().RESTClient().Get().AbsPath("openapi", "v2").DoRaw()
-				if err != nil {
-					return false, err
-				}
-				spec := spec.Swagger{}
-				if err := json.Unmarshal(bs, &spec); err != nil {
-					return false, err
-				}
-				if spec.SwaggerProps.Paths == nil {
-					lastMsg = "spec.SwaggerProps.Paths is nil"
-					return false, nil
-				}
-				if _, ok := spec.SwaggerProps.Definitions[crdDefinitionKey]; ok {
-					lastMsg = fmt.Sprintf("crd spec.SwaggerProps.Definitions[\"%s\"] still exists", crdDefinitionKey)
-					return false, nil
-				}
-				return true, nil
-			}); err != nil {
-				framework.Failf("failed to wait for apiserver to remove openapi spec for deleted CRD: %v; lastMsg: %s", err, lastMsg)
-			}
-
-		})
 	})
 })
 
-// patchCRDSchema takes CRD validation schema in yaml format, and patches it to given TestCrd object
-func patchCRDSchema(schema []byte, crd *framework.TestCrd) error {
-	patch, err := utilyaml.ToJSON(schema)
+var _ = SIGDescribe("CustomResourcePublishOpenAPI [Feature:CustomResourcePublishOpenAPI]", func() {
+	f := framework.NewDefaultFramework("crd-publish-openapi")
+
+	It("has OpenAPI spec served with CRD Validation schema", func() {
+		framework.SkipUnlessServerVersionGTE(crdPublishOpenAPIVersion, f.ClientSet.Discovery())
+
+		testcrd, err := framework.CreateTestCRD(f)
+		if err != nil {
+			framework.Failf("failed to create test CRD: %v", err)
+		}
+		testcrd2, err := framework.CreateTestCRD(f)
+		if err != nil {
+			framework.Failf("failed to create test CRD: %v", err)
+		}
+
+		// Make sure test CRDs are of same GV but different kinds
+		if testcrd.ApiGroup != testcrd2.ApiGroup || testcrd.Versions[0].Name != testcrd2.Versions[0].Name {
+			framework.Failf("unexpected: test CRDs should share the same GV %v, %v", testcrd, testcrd2)
+		}
+		if testcrd.Kind == testcrd2.Kind {
+			framework.Failf("unexpected: test CRDs should have different kinds %v, %v", testcrd, testcrd2)
+		}
+
+		crdDefinitionKey := util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", testcrd.ApiGroup, testcrd.Versions[0].Name, testcrd.Kind))
+		crd2DefinitionKey := util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", testcrd2.ApiGroup, testcrd2.Versions[0].Name, testcrd2.Kind))
+
+		// Test CRD don't have ValidationSchema setup. Here we patch a
+		// simple Schema for kubectl behavior testing.
+		if err := patchSchema(schemaFoo, testcrd); err != nil {
+			framework.Failf("failed to patch CRD schema: %v", err)
+		}
+		if err := patchSchema(schemaWaldo, testcrd2); err != nil {
+			framework.Failf("failed to patch CRD schema: %v", err)
+		}
+
+		// We use a wait.Poll block here because the kube-aggregator openapi
+		// controller takes time to rotate the queue and resync apiextensions-apiserver's spec
+		By("Waiting for test CRD's Schema to show up in OpenAPI spec")
+		if err := waitForDefinition(f.ClientSet, crdDefinitionKey, schemaFoo); err != nil {
+			framework.Failf("failed to wait for schema %s to show up: %v", crdDefinitionKey, err)
+		}
+		if err := waitForDefinition(f.ClientSet, crd2DefinitionKey, schemaWaldo); err != nil {
+			framework.Failf("failed to wait for schema %s to show up: %v", crd2DefinitionKey, err)
+		}
+		// lastMsg := ""
+		// if err := wait.Poll(500*time.Millisecond, 20*time.Second, func() (bool, error) {
+		// 	bs, err := f.ClientSet.CoreV1().RESTClient().Get().AbsPath("openapi", "v2").DoRaw()
+		// 	if err != nil {
+		// 		return false, err
+		// 	}
+		// 	spec := spec.Swagger{}
+		// 	if err := json.Unmarshal(bs, &spec); err != nil {
+		// 		return false, err
+		// 	}
+		// 	if spec.SwaggerProps.Paths == nil {
+		// 		lastMsg = "spec.SwaggerProps.Paths is nil"
+		// 		return false, nil
+		// 	}
+		// 	d, ok := spec.SwaggerProps.Definitions[crdDefinitionKey]
+		// 	if !ok {
+		// 		lastMsg = fmt.Sprintf("crd1 spec.SwaggerProps.Definitions[\"%s\"] not found", crdDefinitionKey)
+		// 		return false, nil
+		// 	}
+		// 	_, ok = d.Properties["status"]
+		// 	if !ok {
+		// 		lastMsg = fmt.Sprintf("crd1 spec.SwaggerProps.Definitions[\"%s\"].Properties[\"status\"] not found", crdDefinitionKey)
+		// 		return false, nil
+		// 	}
+		// 	d2, ok := spec.SwaggerProps.Definitions[crd2DefinitionKey]
+		// 	if !ok {
+		// 		lastMsg = fmt.Sprintf("crd2 spec.SwaggerProps.Definitions[\"%s\"] not found", crd2DefinitionKey)
+		// 		return false, nil
+		// 	}
+		// 	_, ok = d2.Properties["status"]
+		// 	if !ok {
+		// 		lastMsg = fmt.Sprintf("crd2 spec.SwaggerProps.Definitions[\"%s\"].Properties[\"status\"] not found", crd2DefinitionKey)
+		// 		return false, nil
+		// 	}
+		// 	return true, nil
+		// }); err != nil {
+		// 	framework.Failf("failed to wait for apiserver to serve openapi spec for registered CRD: %v; lastMsg: %s", err, lastMsg)
+		// }
+
+		By("Having kubectl understand the schema")
+
+		result, err := framework.RunKubectl("explain", testcrd.GetPluralName())
+		if err != nil {
+			framework.Failf("failed to explain CRD: %v", err)
+		}
+		// Example of expected result:
+		//
+		// KIND:     E2e-test-custom-resource-definition-1717-crd
+		// VERSION:  custom-resource-definition-crd-test.k8s.io/v1
+		//
+		// DESCRIPTION: Foo CRD for Testing
+		//
+		// FIELDS:
+		//    apiVersion	<string>
+		//      APIVersion defines the versioned schema of this representation of an
+		//      object. Servers should convert recognized schemas to the latest internal
+		//      value, and may reject unrecognized values. More info:
+		//      https://git.k8s.io/community/contributors/devel/api-conventions.md#resources
+		//
+		//    kind	<string>
+		//      Kind is a string value representing the REST resource this object
+		//      represents. Servers may infer this from the endpoint the client submits
+		//      requests to. Cannot be updated. In CamelCase. More info:
+		//      https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
+		//
+		//    metadata	<Object>
+		//      Standard object's metadata. More info:
+		//      https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+		//
+		//    spec	<Object>
+		//      Specification of Foo
+		//
+		//    status	<Object>
+		//      Status of Foo
+		pattern := regexp.MustCompile(`(?s)DESCRIPTION:.*Foo CRD for Testing.*FIELDS:.*apiVersion.*<string>.*APIVersion defines.*spec.*<Object>.*Specification of Foo`)
+		if !pattern.Match([]byte(result)) {
+			framework.Failf("CRD explain result doesn't contain proper object description and field description: %s", result)
+		}
+
+		result, err = framework.RunKubectl("explain", testcrd.GetPluralName()+".metadata")
+		if err != nil {
+			framework.Failf("failed to explain CRD.metadata: %v", err)
+		}
+		// Omitted the example because the result for explain CRD.metadata is quite long
+		pattern = regexp.MustCompile(`(?s)DESCRIPTION:.*Standard object's metadata.*FIELDS:.*creationTimestamp.*<string>.*CreationTimestamp is a timestamp`)
+		if !pattern.Match([]byte(result)) {
+			framework.Failf("CRD.metadata explain result doesn't contain proper object description and field description: %s", result)
+		}
+
+		result, err = framework.RunKubectl("explain", testcrd.GetPluralName()+".spec")
+		if err != nil {
+			framework.Failf("failed to explain CRD.spec: %v", err)
+		}
+		// Example of expected result:
+		//
+		// KIND:     E2e-test-custom-resource-definition-1717-crd
+		// VERSION:  custom-resource-definition-crd-test.k8s.io/v1
+		//
+		// RESOURCE: spec <Object>
+		//
+		// DESCRIPTION:
+		//      Specification of Foo
+		//
+		// FIELDS:
+		//    bars	<[]Object>
+		//      List of Bars and their specs.
+		pattern = regexp.MustCompile(`(?s)DESCRIPTION:.*Specification of Foo.*FIELDS:.*bars.*<\[\]Object>.*List of Bars and their specs`)
+		if !pattern.Match([]byte(result)) {
+			framework.Failf("CRD.spec explain result doesn't contain proper object description and field description: %s", result)
+		}
+
+		result, err = framework.RunKubectl("explain", testcrd.GetPluralName()+".spec.bars")
+		if err != nil {
+			framework.Failf("failed to explain CRD.spec.bars: %v", err)
+		}
+		// Example of expected result:
+		//
+		// KIND:     E2e-test-custom-resource-definition-1717-crd
+		// VERSION:  custom-resource-definition-crd-test.k8s.io/v1
+		//
+		// RESOURCE: bars <[]Object>
+		//
+		// DESCRIPTION:
+		//      List of Bars and their specs.
+		//
+		// FIELDS:
+		//    bazs	<[]string>
+		//      List of Bazs.
+		//
+		//    name	<string>
+		//      Name of Bar.
+		pattern = regexp.MustCompile(`(?s)RESOURCE:.*bars.*<\[\]Object>.*DESCRIPTION:.*List of Bars and their specs.*FIELDS:.*bazs.*<\[\]string>.*List of Bazs.*name.*<string>.*Name of Bar`)
+		if !pattern.Match([]byte(result)) {
+			framework.Failf("CRD.spec.bars explain result doesn't contain proper object description and field description: %s", result)
+		}
+
+		// kubectl should return error when explaining property that doesn't exist
+		if _, err := framework.RunKubectl("explain", testcrd.GetPluralName()+".spec.bars2"); err == nil || !strings.Contains(err.Error(), `field "bars2" does not exist`) {
+			framework.Failf("unexpected no error when explaining property that doesn't exist")
+		}
+
+		// kubectl should be able to explain testcrd2
+		result, err = framework.RunKubectl("explain", testcrd2.GetPluralName())
+		if err != nil {
+			framework.Failf("failed to explain CRD2: %v", err)
+		}
+		pattern = regexp.MustCompile(`(?s)DESCRIPTION:.*Waldo CRD for Testing.*FIELDS:.*apiVersion.*<string>.*APIVersion defines.*spec.*<Object>.*Specification of Waldo`)
+		if !pattern.Match([]byte(result)) {
+			framework.Failf("CRD2 explain result doesn't contain proper object description and field description: %s", result)
+		}
+
+		By("Having kubectl perform client-side validation")
+		input := fmt.Sprintf("{\"kind\":\"%s\",\"apiVersion\":\"%s/%s\",\"metadata\":{\"name\":\"foo\"},\"spec\":{\"foo\":true}}", testcrd.Kind, testcrd.ApiGroup, testcrd.Versions[0].Name)
+		if _, err := framework.RunKubectlInput(input, "create", "-f", "-"); err == nil || !strings.Contains(err.Error(), `unknown field "foo"`) {
+			framework.Failf("unexpected no error when creating CR with unknown field")
+		}
+		input = fmt.Sprintf("{\"kind\":\"%s\",\"apiVersion\":\"%s/%s\",\"metadata\":{\"name\":\"foo\"},\"spec\":{\"bars\":[{\"name\":\"test\"}]}}", testcrd.Kind, testcrd.ApiGroup, testcrd.Versions[0].Name)
+		if _, err := framework.RunKubectlInput(input, "create", "-f", "-"); err != nil {
+			framework.Failf("failed to create valid CR: %v", err)
+		}
+		if _, err := framework.RunKubectl("delete", testcrd.GetPluralName(), "foo"); err != nil {
+			framework.Failf("failed to delete valid CR: %v", err)
+		}
+
+		// Delete test CRD
+		testcrd.CleanUp()
+		testcrd2.CleanUp()
+
+		// We use a wait.Poll block here because the kube-aggregator openapi
+		// controller takes time to rotate the queue and resync apiextensions-apiserver's spec
+		lastMsg := ""
+		By("Waiting for test CRD's Schema to be removed from OpenAPI spec")
+		if err := wait.Poll(500*time.Millisecond, 10*time.Second, func() (bool, error) {
+			bs, err := f.ClientSet.CoreV1().RESTClient().Get().AbsPath("openapi", "v2").DoRaw()
+			if err != nil {
+				return false, err
+			}
+			spec := spec.Swagger{}
+			if err := json.Unmarshal(bs, &spec); err != nil {
+				return false, err
+			}
+			if spec.SwaggerProps.Paths == nil {
+				lastMsg = "spec.SwaggerProps.Paths is nil"
+				return false, nil
+			}
+			if _, ok := spec.SwaggerProps.Definitions[crdDefinitionKey]; ok {
+				lastMsg = fmt.Sprintf("crd1 spec.SwaggerProps.Definitions[\"%s\"] still exists", crdDefinitionKey)
+				return false, nil
+			}
+			if _, ok := spec.SwaggerProps.Definitions[crd2DefinitionKey]; ok {
+				lastMsg = fmt.Sprintf("crd2 spec.SwaggerProps.Definitions[\"%s\"] still exists", crd2DefinitionKey)
+				return false, nil
+			}
+			return true, nil
+		}); err != nil {
+			framework.Failf("failed to wait for apiserver to remove openapi spec for deleted CRD: %v; lastMsg: %s", err, lastMsg)
+		}
+	})
+
+	It("has OpenAPI spec served for CRD without validation schema", func() {
+		framework.SkipUnlessServerVersionGTE(crdPublishOpenAPIVersion, f.ClientSet.Discovery())
+
+		testcrd, err := framework.CreateTestCRD(f)
+		if err != nil {
+			framework.Failf("failed to create test CRD: %v", err)
+		}
+
+		crdDefinitionKey := util.ToRESTFriendlyName(fmt.Sprintf("%s/%s/%s", testcrd.ApiGroup, testcrd.Versions[0].Name, testcrd.Kind))
+
+		// We use a wait.Poll block here because the kube-aggregator openapi
+		// controller takes time to rotate the queue and resync apiextensions-apiserver's spec
+		By("Waiting for test CRD's Schema to show up in OpenAPI spec")
+		lastMsg := ""
+		if err := wait.Poll(500*time.Millisecond, 10*time.Second, func() (bool, error) {
+			bs, err := f.ClientSet.CoreV1().RESTClient().Get().AbsPath("openapi", "v2").DoRaw()
+			if err != nil {
+				return false, err
+			}
+			spec := spec.Swagger{}
+			if err := json.Unmarshal(bs, &spec); err != nil {
+				return false, err
+			}
+			if spec.SwaggerProps.Paths == nil {
+				lastMsg = "spec.SwaggerProps.Paths is nil"
+				return false, nil
+			}
+			if _, ok := spec.SwaggerProps.Definitions[crdDefinitionKey]; !ok {
+				lastMsg = fmt.Sprintf("crd spec.SwaggerProps.Definitions[\"%s\"] not found", crdDefinitionKey)
+				return false, nil
+			}
+			return true, nil
+		}); err != nil {
+			framework.Failf("failed to wait for apiserver to serve openapi spec for registered CRD: %v; lastMsg: %s", err, lastMsg)
+		}
+
+		result, err := framework.RunKubectl("explain", testcrd.GetPluralName())
+		if err != nil {
+			framework.Failf("failed to explain CRD.spec.bars: %v", err)
+		}
+		// Example of expected result:
+		//
+		// KIND:     E2e-test-custom-resource-definition-7177-crd
+		// VERSION:  custom-resource-definition-crd-test.k8s.io/v1
+
+		// DESCRIPTION:
+		// 	 <empty>
+		pattern := regexp.MustCompile(`(?s)KIND:.*test-custom-resource-definition.*VERSION:.*crd-test.k8s.io/v1.*DESCRIPTION:.*<empty>`)
+		if !pattern.Match([]byte(result)) {
+			framework.Failf("CRD.spec.bars explain result doesn't contain proper object description and field description: %s", result)
+		}
+
+		By("Having kubectl ignore client-side validation when schema is missing")
+		input := fmt.Sprintf("{\"kind\":\"%s\",\"apiVersion\":\"%s/%s\",\"metadata\":{\"name\":\"foo\"},\"spec\":{\"foo\":true}}", testcrd.Kind, testcrd.ApiGroup, testcrd.Versions[0].Name)
+		if _, err := framework.RunKubectlInput(input, "create", "-f", "-"); err != nil {
+			framework.Failf("failed to create CR for CRD without schema: %v", err)
+		}
+		if _, err := framework.RunKubectl("delete", testcrd.GetPluralName(), "foo"); err != nil {
+			framework.Failf("failed to delete CR for CRD without schema: %v", err)
+		}
+
+		// Delete test CRD
+		testcrd.CleanUp()
+
+		// We use a wait.Poll block here because the kube-aggregator openapi
+		// controller takes time to rotate the queue and resync apiextensions-apiserver's spec
+		By("Waiting for test CRD's Schema to be removed from OpenAPI spec")
+		if err := wait.Poll(500*time.Millisecond, 10*time.Second, func() (bool, error) {
+			bs, err := f.ClientSet.CoreV1().RESTClient().Get().AbsPath("openapi", "v2").DoRaw()
+			if err != nil {
+				return false, err
+			}
+			spec := spec.Swagger{}
+			if err := json.Unmarshal(bs, &spec); err != nil {
+				return false, err
+			}
+			if spec.SwaggerProps.Paths == nil {
+				lastMsg = "spec.SwaggerProps.Paths is nil"
+				return false, nil
+			}
+			if _, ok := spec.SwaggerProps.Definitions[crdDefinitionKey]; ok {
+				lastMsg = fmt.Sprintf("crd spec.SwaggerProps.Definitions[\"%s\"] still exists", crdDefinitionKey)
+				return false, nil
+			}
+			return true, nil
+		}); err != nil {
+			framework.Failf("failed to wait for apiserver to remove openapi spec for deleted CRD: %v; lastMsg: %s", err, lastMsg)
+		}
+
+	})
+})
+
+// patchSchema takes schema in YAML and patches it to given CRD
+func patchSchema(schema []byte, crd *framework.TestCrd) error {
+	s, err := utilyaml.ToJSON(schema)
 	if err != nil {
 		return fmt.Errorf("failed to create json patch: %v", err)
 	}
-	crd.Crd, err = crd.ApiExtensionClient.ApiextensionsV1beta1().
-		CustomResourceDefinitions().Patch(crd.GetMetaName(), types.MergePatchType, patch)
-	if err != nil {
-		return fmt.Errorf("failed to patch CustomResourceDefinition: %v", err)
+	patch := []byte(fmt.Sprintf(`{"spec":{"validation":{"openAPIV3Schema":%s}}}`, string(s)))
+	crd.Crd, err = crd.ApiExtensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Patch(crd.GetMetaName(), types.MergePatchType, patch)
+	return err
+}
+
+// waitForDefinition waits for given definition showing up in swagger with given schema
+func waitForDefinition(c k8sclientset.Interface, name string, schema []byte) error {
+	expect := spec.Schema{}
+	if err := convertJSONSchemaProps(schema, &expect); err != nil {
+		return err
+	}
+
+	lastMsg := ""
+	if err := wait.Poll(500*time.Millisecond, 10*time.Second, func() (bool, error) {
+		bs, err := c.CoreV1().RESTClient().Get().AbsPath("openapi", "v2").DoRaw()
+		if err != nil {
+			return false, err
+		}
+		spec := spec.Swagger{}
+		if err := json.Unmarshal(bs, &spec); err != nil {
+			return false, err
+		}
+		d, ok := spec.SwaggerProps.Definitions[name]
+		if !ok {
+			lastMsg = fmt.Sprintf("spec.SwaggerProps.Definitions[\"%s\"] not found", name)
+			return false, nil
+		}
+		// drop properties and extension that we added
+		dropDefaults(&d)
+		if !apiequality.Semantic.DeepEqual(expect, d) {
+			lastMsg = fmt.Sprintf("spec.SwaggerProps.Definitions[\"%s\"] not match; expect: %v, actual: %v", name, expect, d)
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
+		return fmt.Errorf("failed to wait for definition %s to be served: %v; lastMsg: %s", name, err, lastMsg)
 	}
 	return nil
 }
 
-var crdValidationSchema = []byte(`spec:
-  validation:
-    openAPIV3Schema:
-      description: Foo CRD for Testing
-      properties:
-        spec:
-          description: Specification of Foo
-          properties:
-            bars:
-              description: List of Bars and their specs.
-              type: array
-              items:
-                properties:
-                  name:
-                    description: Name of Bar.
-                    type: string
-                  bazs:
-                    description: List of Bazs.
-                    items:
-                      type: string
-                    type: array
-        status:
-          description: Status of Foo
-          properties:
-            bars:
-              description: List of Bars and their statuses.
-              type: array
-              items:
-                properties:
-                  name:
-                    description: Name of Bar.
-                    type: string
-                  available:
-                    description: Whether the Bar is installed.
-                    type: boolean
-                  quxType:
-                    description: Indicates to external qux type.
-                    pattern: in-tree|out-of-tree
-                    type: string`)
+// convertJSONSchemaProps converts JSONSchemaProps in YAML to spec.Schema
+func convertJSONSchemaProps(in []byte, out *spec.Schema) error {
+	external := v1beta1.JSONSchemaProps{}
+	if err := yaml.UnmarshalStrict(in, &external); err != nil {
+		return err
+	}
+	internal := apiextensions.JSONSchemaProps{}
+	if err := v1beta1.Convert_v1beta1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(&external, &internal, nil); err != nil {
+		return err
+	}
+	if err := validation.ConvertJSONSchemaProps(&internal, out); err != nil {
+		return err
+	}
+	return nil
+}
 
-var crd2ValidationSchema = []byte(`spec:
-  validation:
-    openAPIV3Schema:
-      description: Waldo CRD for Testing
-      properties:
-        spec:
-          description: Specification of Waldo
-          type: object
-          properties:
-            dummy:
-              description: Dummy property.
-        status:
-          description: Status of Waldo
-          type: object
-          properties:
-            bars:
-              description: List of Bars and their statuses.`)
+// dropDefaults drops properties and extension that we added to a schema
+func dropDefaults(s *spec.Schema) {
+	delete(s.Properties, "metadata")
+	delete(s.Properties, "apiVersion")
+	delete(s.Properties, "kind")
+	delete(s.Extensions, "x-kubernetes-group-version-kind")
+}
