@@ -284,10 +284,15 @@ func (b *builder) buildRoute(root, path, action, verb string, sample interface{}
 // buildKubeNative builds input schema with Kubernetes' native object meta, type meta and
 // extensions
 func (b *builder) buildKubeNative(schema *spec.Schema) *spec.Schema {
-	// schema.SetProperty("metadata", getDefinition(objectMetaType))
-	schema.SetProperty("metadata", *spec.RefSchema(objectMetaSchemaRef).
-		WithDescription(swaggerPartialObjectMetadataDescriptions["metadata"]))
-	addTypeMetaProperties(schema)
+	// only add properties if we have a schema. Otherwise, kubectl would (wrongly) assume additionalProperties=false
+	// and forbid anything outside of apiVersion, kind and metadata. We have to fix kubectl to stop doing this, e.g. by
+	// adding additionalProperties=true support to explicitly allow additional fields.
+	// TODO: fix kubectl to understand additionalProperties=true
+	if schema != nil {
+		schema.SetProperty("metadata", *spec.RefSchema(objectMetaSchemaRef).
+			WithDescription(swaggerPartialObjectMetadataDescriptions["metadata"]))
+		addTypeMetaProperties(schema)
+	}
 	schema.AddExtension(endpoints.ROUTE_META_GVK, []map[string]string{
 		{
 			"group":   b.group,
