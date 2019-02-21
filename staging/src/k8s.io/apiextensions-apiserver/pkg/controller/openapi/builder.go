@@ -284,12 +284,23 @@ func (b *builder) buildRoute(root, path, action, verb string, sample interface{}
 // buildKubeNative builds input schema with Kubernetes' native object meta, type meta and
 // extensions
 func (b *builder) buildKubeNative(schema *spec.Schema) *spec.Schema {
-	// schema.SetProperty("metadata", getDefinition(objectMetaType))
-	schema.SetProperty("metadata", *spec.RefSchema(objectMetaSchemaRef).
-		WithDescription(swaggerPartialObjectMetadataDescriptions["metadata"]))
-	addTypeMetaProperties(schema)
-	schema.AddExtension(endpoints.ROUTE_META_GVK, []map[string]string{
-		{
+	// only add properties if we have a schema. Otherwise, kubectl would (wrongly) assume additionalProperties=false
+	// and forbid anything outside of apiVersion, kind and metadata. We have to fix kubectl to stop doing this, e.g. by
+	// adding additionalProperties=true support to explicitly allow additional fields.
+	// TODO: fix kubectl to understand additionalProperties=true
+	if schema == nil {
+		schema = &spec.Schema{
+			SchemaProps: spec.SchemaProps{Type: []string{"object"}},
+		}
+		// no, we cannot add more properties here, not even TypeMeta/ObjectMeta because kubectl will complain about
+		// unknown fields for anything else.
+	} else {
+		schema.SetProperty("metadata", *spec.RefSchema(objectMetaSchemaRef).
+			WithDescription(swaggerPartialObjectMetadataDescriptions["metadata"]))
+		addTypeMetaProperties(schema)
+	}
+	schema.AddExtension(endpoints.ROUTE_META_GVK, []interface{}{
+		map[string]interface{}{
 			"group":   b.group,
 			"version": b.version,
 			"kind":    b.kind,
@@ -394,18 +405,7 @@ func newBuilder(crd *apiextensions.CustomResourceDefinition, version string, sch
 	}
 
 	// Pre-build schema with Kubernetes native properties
-	if schema != nil {
-		b.schema = b.buildKubeNative(schema)
-	} else {
-		b.schema.AddExtension(endpoints.ROUTE_META_GVK, []map[string]string{
-			{
-				"group":   b.group,
-				"version": b.version,
-				"kind":    b.kind,
-			},
-		})
-	}
-
+	b.schema = b.buildKubeNative(schema)
 	b.listSchema = b.buildListSchema()
 
 	return b
