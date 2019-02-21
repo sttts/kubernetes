@@ -377,7 +377,11 @@ func (b *builder) getOpenAPIConfig() *common.Config {
 
 func newBuilder(crd *apiextensions.CustomResourceDefinition, version string, schema *spec.Schema) *builder {
 	b := &builder{
-		ws: &restful.WebService{},
+		schema: &spec.Schema{
+			SchemaProps: spec.SchemaProps{Type: []string{"object"}},
+		},
+		listSchema: &spec.Schema{},
+		ws:         &restful.WebService{},
 
 		group:    crd.Spec.Group,
 		version:  version,
@@ -389,14 +393,19 @@ func newBuilder(crd *apiextensions.CustomResourceDefinition, version string, sch
 		b.namespaced = true
 	}
 
-	if schema == nil {
-		schema = &spec.Schema{
-			SchemaProps: spec.SchemaProps{Type: []string{"object"}},
-		}
+	// Pre-build schema with Kubernetes native properties
+	if schema != nil {
+		b.schema = b.buildKubeNative(schema)
+	} else {
+		b.schema.AddExtension(endpoints.ROUTE_META_GVK, []map[string]string{
+			{
+				"group":   b.group,
+				"version": b.version,
+				"kind":    b.kind,
+			},
+		})
 	}
 
-	// Pre-build schema with Kubernetes native properties
-	b.schema = b.buildKubeNative(schema)
 	b.listSchema = b.buildListSchema()
 
 	return b
