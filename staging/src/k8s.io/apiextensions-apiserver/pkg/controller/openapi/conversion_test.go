@@ -37,6 +37,77 @@ import (
 )
 
 func Test_ConvertJSONSchemaPropsToOpenAPIv2Schema(t *testing.T) {
+	var spec = []byte(`description: Foo CRD for Testing
+type: object
+properties:
+  spec:
+    description: Specification of Foo
+    type: object
+    properties:
+      bars:
+        description: List of Bars and their specs.
+        type: array
+        items:
+          type: object
+          required:
+          - name
+          properties:
+            name:
+              description: Name of Bar.
+              type: string
+            age:
+              description: Age of Bar.
+              type: string
+            bazs:
+              description: List of Bazs.
+              items:
+                type: string
+              type: array
+  status:
+    description: Status of Foo
+    type: object
+    properties:
+      bars:
+        description: List of Bars and their statuses.
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              description: Name of Bar.
+              type: string
+            available:
+              description: Whether the Bar is installed.
+              type: boolean
+            quxType:
+              description: Indicates to external qux type.
+              pattern: in-tree|out-of-tree
+              type: string`)
+
+	specV1beta1 := apiextensionsv1beta1.JSONSchemaProps{}
+	if err := yaml.Unmarshal(spec, &specV1beta1); err != nil {
+		t.Fatal(err)
+	}
+
+	specInternal := apiextensions.JSONSchemaProps{}
+	if err := apiextensionsv1beta1.Convert_v1beta1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(&specV1beta1, &specInternal, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	schema, err := ConvertJSONSchemaPropsToOpenAPIv2Schema(&specInternal)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, found := schema.Properties["spec"]; !found {
+		t.Errorf("spec not found")
+	}
+	if _, found := schema.Properties["status"]; !found {
+		t.Errorf("status not found")
+	}
+}
+
+func Test_ConvertJSONSchemaPropsToOpenAPIv2SchemaFuzzing(t *testing.T) {
 	testStr := "test"
 	testStr2 := "test2"
 	testFloat64 := float64(6.4)

@@ -411,14 +411,17 @@ func definitionName(crd *framework.TestCrd, version string) string {
 }
 
 var schemaFoo = []byte(`description: Foo CRD for Testing
+type: object
 properties:
   spec:
+    type: object
     description: Specification of Foo
     properties:
       bars:
         description: List of Bars and their specs.
         type: array
         items:
+          type: object
           required:
           - name
           properties:
@@ -435,11 +438,13 @@ properties:
               type: array
   status:
     description: Status of Foo
+    type: object
     properties:
       bars:
         description: List of Bars and their statuses.
         type: array
         items:
+          type: object
           properties:
             name:
               description: Name of Bar.
@@ -453,6 +458,7 @@ properties:
               type: string`)
 
 var schemaWaldo = []byte(`description: Waldo CRD for Testing
+type: object
 properties:
   spec:
     description: Specification of Waldo
