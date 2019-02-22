@@ -32,8 +32,15 @@ func ConvertJSONSchemaPropsToOpenAPIv2Schema(in *apiextensions.JSONSchemaProps) 
 		return nil, nil
 	}
 
-	out := new(spec.Schema)
+	// dirty hack to temporarily set the type at the root. See continuation at the func bottom.
+	// TODO: remove for Kubernetes 1.15
+	oldRootType := in.Type
+	if len(in.Type) == 0 {
+		in.Type = "object"
+	}
+
 	// Remove unsupported fields in OpenAPI v2 recursively
+	out := new(spec.Schema)
 	validation.ConvertJSONSchemaPropsWithPostProcess(in, out, func(p *spec.Schema) error {
 		p.OneOf = nil
 		// TODO(roycaihw): preserve cases where we only have one subtree in AnyOf, same for OneOf
@@ -99,6 +106,13 @@ func ConvertJSONSchemaPropsToOpenAPIv2Schema(in *apiextensions.JSONSchemaProps) 
 
 		return nil
 	})
+
+	// restore root level type in input, and remove it in output if we had added it
+	// TODO: remove with Kubernetes 1.15
+	in.Type = oldRootType
+	if len(oldRootType) == 0 {
+		out.Type = nil
+	}
 
 	return out, nil
 }
