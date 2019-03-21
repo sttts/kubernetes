@@ -8,21 +8,21 @@ rules:
 - destination: code-generator
   branches:
   - source:
-      branch: master
+      branch: go-mod-cleanup
       dir: staging/src/k8s.io/code-generator
     name: master
 - destination: apimachinery
   library: true
   branches:
   - source:
-      branch: master
+      branch: go-mod-cleanup
       dir: staging/src/k8s.io/apimachinery
     name: master
 - destination: api
   library: true
   branches:
   - source:
-      branch: master
+      branch: go-mod-cleanup
       dir: staging/src/k8s.io/api
     name: master
     dependencies:
@@ -32,7 +32,7 @@ rules:
   library: true
   branches:
   - source:
-      branch: master
+      branch: go-mod-cleanup
       dir: staging/src/k8s.io/client-go
     name: master
     dependencies:
