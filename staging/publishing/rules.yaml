@@ -41,6 +41,5 @@ rules:
     - repository: api
       branch: master
   smoke-test: |
-    godep restore
     go build ./...
     go test $(go list ./... | grep -v /vendor/)
