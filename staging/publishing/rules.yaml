@@ -43,3 +43,294 @@ rules:
   smoke-test: |
     go build ./...
     go test $(go list ./... | grep -v /vendor/)
+- destination: component-base
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/component-base
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+- destination: apiserver
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/apiserver
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: api
+      branch: master
+    - repository: client-go
+      branch: master
+    - repository: component-base
+      branch: master
+- destination: kube-aggregator
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/kube-aggregator
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: api
+      branch: master
+    - repository: client-go
+      branch: master
+    - repository: apiserver
+      branch: master
+    - repository: component-base
+      branch: master
+- destination: sample-apiserver
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/sample-apiserver
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: api
+      branch: master
+    - repository: client-go
+      branch: master
+    - repository: apiserver
+      branch: master
+    - repository: code-generator
+      branch: master
+    - repository: component-base
+      branch: master
+    required-packages:
+    - k8s.io/code-generator
+  smoke-test: |
+    go build .
+    go mod vendor
+    go build .
+- destination: sample-controller
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/sample-controller
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: api
+      branch: master
+    - repository: client-go
+      branch: master
+    - repository: code-generator
+      branch: master
+    - repository: component-base
+      branch: master
+    required-packages:
+    - k8s.io/code-generator
+  smoke-test: |
+    go build .
+    go mod vendor
+    go build .
+- destination: apiextensions-apiserver
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/apiextensions-apiserver
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: api
+      branch: master
+    - repository: client-go
+      branch: master
+    - repository: apiserver
+      branch: master
+    - repository: code-generator
+      branch: master
+    - repository: component-base
+      branch: master
+    required-packages:
+    - k8s.io/code-generator
+- destination: metrics
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/metrics
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: api
+      branch: master
+    - repository: client-go
+      branch: master
+- destination: csi-api
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/csi-api
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: api
+      branch: master
+    - repository: client-go
+      branch: master
+    - repository: apiextensions-apiserver
+      branch: master
+- destination: cli-runtime
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/cli-runtime
+    name: master
+    dependencies:
+    - repository: api
+      branch: master
+    - repository: apimachinery
+      branch: master
+    - repository: client-go
+      branch: master
+- destination: sample-cli-plugin
+  library: false
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/sample-cli-plugin
+    name: master
+    dependencies:
+    - repository: api
+      branch: master
+    - repository: apimachinery
+      branch: master
+    - repository: cli-runtime
+      branch: master
+    - repository: client-go
+      branch: master
+    - repository: component-base
+      branch: master
+- destination: kube-proxy
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/kube-proxy
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: component-base
+      branch: master
+- destination: kubelet
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/kubelet
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: api
+      branch: master
+    - repository: component-base
+      branch: master
+- destination: kube-scheduler
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/kube-scheduler
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: apiserver
+      branch: master
+    - repository: component-base
+      branch: master
+- destination: kube-controller-manager
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/kube-controller-manager
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: apiserver
+      branch: master
+    - repository: component-base
+      branch: master
+- destination: cluster-bootstrap
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/cluster-bootstrap
+    name: master
+    dependencies:
+    - repository: apimachinery
+      branch: master
+    - repository: api
+      branch: master
+- destination: cloud-provider
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/cloud-provider
+    name: master
+    dependencies:
+    - repository: api
+      branch: master
+    - repository: apimachinery
+      branch: master
+    - repository: apiserver
+      branch: master
+    - repository: client-go
+      branch: master
+- destination: node-api
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/node-api
+    name: master
+    dependencies:
+    - repository: api
+      branch: master
+    - repository: apimachinery
+      branch: master
+    - repository: client-go
+      branch: master
+- destination: csi-translation-lib
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/csi-translation-lib
+    name: master
+    dependencies:
+    - repository: api
+      branch: master
+    - repository: apimachinery
+      branch: master
+    - repository: cloud-provider
+      branch: master
+- destination: cri-api
+  library: true
+  branches:
+  - source:
+      branch: go-mod-cleanup
+      dir: staging/src/k8s.io/cri-api
+    name: master
