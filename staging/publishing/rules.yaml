@@ -41,8 +41,9 @@ rules:
     - repository: api
       branch: master
   smoke-test: |
+    # assumes GO111MODULE=on
     go build ./...
-    go test $(go list ./... | grep -v /vendor/)
+    go test ./...
 - destination: component-base
   library: true
   branches:
@@ -110,8 +111,7 @@ rules:
     required-packages:
     - k8s.io/code-generator
   smoke-test: |
-    go build .
-    go mod vendor
+    # assumes GO111MODULE=on
     go build .
 - destination: sample-controller
   branches:
@@ -133,8 +133,7 @@ rules:
     required-packages:
     - k8s.io/code-generator
   smoke-test: |
-    go build .
-    go mod vendor
+    # assumes GO111MODULE=on
     go build .
 - destination: apiextensions-apiserver
   branches:
@@ -161,7 +160,7 @@ rules:
   library: true
   branches:
   - source:
-      branch: go-mod-cleanup
+      branch: master
       dir: staging/src/k8s.io/metrics
     name: master
     dependencies:
@@ -170,24 +169,6 @@ rules:
     - repository: api
       branch: master
     - repository: client-go
-      branch: master
-    - repository: code-generator
-      branch: master
-- destination: csi-api
-  library: true
-  branches:
-  - source:
-      branch: go-mod-cleanup
-      dir: staging/src/k8s.io/csi-api
-    name: master
-    dependencies:
-    - repository: apimachinery
-      branch: master
-    - repository: api
-      branch: master
-    - repository: client-go
-      branch: master
-    - repository: apiextensions-apiserver
       branch: master
     - repository: code-generator
       branch: master
