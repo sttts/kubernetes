@@ -391,6 +391,7 @@ func autoConvert_v1beta1_Webhook_To_admissionregistration_Webhook(in *v1beta1.We
 	out.SideEffects = (*admissionregistration.SideEffectClass)(unsafe.Pointer(in.SideEffects))
 	out.TimeoutSeconds = (*int32)(unsafe.Pointer(in.TimeoutSeconds))
 	out.AdmissionReviewVersions = *(*[]string)(unsafe.Pointer(&in.AdmissionReviewVersions))
+	out.ReinvocationPolicy = (*admissionregistration.ReinvocationPolicyType)(unsafe.Pointer(in.ReinvocationPolicy))
 	return nil
 }
 
@@ -410,6 +411,7 @@ func autoConvert_admissionregistration_Webhook_To_v1beta1_Webhook(in *admissionr
 	out.SideEffects = (*v1beta1.SideEffectClass)(unsafe.Pointer(in.SideEffects))
 	out.TimeoutSeconds = (*int32)(unsafe.Pointer(in.TimeoutSeconds))
 	out.AdmissionReviewVersions = *(*[]string)(unsafe.Pointer(&in.AdmissionReviewVersions))
+	out.ReinvocationPolicy = (*v1beta1.ReinvocationPolicyType)(unsafe.Pointer(in.ReinvocationPolicy))
 	return nil
 }
 

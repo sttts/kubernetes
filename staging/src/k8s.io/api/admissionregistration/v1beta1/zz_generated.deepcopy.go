@@ -277,6 +277,11 @@ func (in *Webhook) DeepCopyInto(out *Webhook) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.ReinvocationPolicy != nil {
+		in, out := &in.ReinvocationPolicy, &out.ReinvocationPolicy
+		*out = new(ReinvocationPolicyType)
+		**out = **in
+	}
 	return
 }
 
