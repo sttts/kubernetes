@@ -49,6 +49,9 @@ var sideEffectsNone = registrationv1beta1.SideEffectClassNone
 var sideEffectsSome = registrationv1beta1.SideEffectClassSome
 var sideEffectsNoneOnDryRun = registrationv1beta1.SideEffectClassNoneOnDryRun
 
+var reinvokeNever = registrationv1beta1.NeverReinvocationPolicy
+var reinvokeIfNeeded = registrationv1beta1.IfNeededReinvocationPolicy
+
 // NewFakeDataSource returns a mock client and informer returning the given webhooks.
 func NewFakeDataSource(name string, webhooks []registrationv1beta1.Webhook, mutating bool, stopCh <-chan struct{}) (clientset kubernetes.Interface, factory informers.SharedInformerFactory) {
 	var objs = []runtime.Object{
@@ -183,17 +186,19 @@ func (c urlConfigGenerator) ccfgURL(urlPath string) registrationv1beta1.WebhookC
 
 // Test is a webhook test case.
 type Test struct {
-	Name              string
-	Webhooks          []registrationv1beta1.Webhook
-	Path              string
-	IsCRD             bool
-	IsDryRun          bool
-	AdditionalLabels  map[string]string
-	ExpectLabels      map[string]string
-	ExpectAllow       bool
-	ErrorContains     string
-	ExpectAnnotations map[string]string
-	ExpectStatusCode  int32
+	Name                   string
+	Webhooks               []registrationv1beta1.Webhook
+	Path                   string
+	IsCRD                  bool
+	IsDryRun               bool
+	AdditionalLabels       map[string]string
+	ExpectLabels           map[string]string
+	ExpectAllow            bool
+	ErrorContains          string
+	ExpectAnnotations      map[string]string
+	ExpectStatusCode       int32
+	ExpectReinvoke         bool
+	ExpectReinvokeWebhooks map[string]bool
 }
 
 // NewNonMutatingTestCases returns test cases with a given base url.
@@ -521,6 +526,7 @@ func NewMutatingTestCases(url *url.URL) []Test {
 			AdditionalLabels:  map[string]string{"remove": "me"},
 			ExpectLabels:      map[string]string{"pod.name": "my-pod"},
 			ExpectAnnotations: map[string]string{"removelabel.example.com/key1": "value1"},
+			ExpectReinvoke:    true,
 		},
 		{
 			Name: "match & add label",
@@ -531,8 +537,9 @@ func NewMutatingTestCases(url *url.URL) []Test {
 				NamespaceSelector:       &metav1.LabelSelector{},
 				AdmissionReviewVersions: []string{"v1beta1"},
 			}},
-			ExpectAllow:  true,
-			ExpectLabels: map[string]string{"pod.name": "my-pod", "added": "test"},
+			ExpectAllow:    true,
+			ExpectLabels:   map[string]string{"pod.name": "my-pod", "added": "test"},
+			ExpectReinvoke: true,
 		},
 		{
 			Name: "match CRD & add label",
@@ -543,9 +550,10 @@ func NewMutatingTestCases(url *url.URL) []Test {
 				NamespaceSelector:       &metav1.LabelSelector{},
 				AdmissionReviewVersions: []string{"v1beta1"},
 			}},
-			IsCRD:        true,
-			ExpectAllow:  true,
-			ExpectLabels: map[string]string{"crd.name": "my-test-crd", "added": "test"},
+			IsCRD:          true,
+			ExpectAllow:    true,
+			ExpectLabels:   map[string]string{"crd.name": "my-test-crd", "added": "test"},
+			ExpectReinvoke: true,
 		},
 		{
 			Name: "match CRD & remove label",
@@ -561,6 +569,7 @@ func NewMutatingTestCases(url *url.URL) []Test {
 			AdditionalLabels:  map[string]string{"remove": "me"},
 			ExpectLabels:      map[string]string{"crd.name": "my-test-crd"},
 			ExpectAnnotations: map[string]string{"removelabel.example.com/key1": "value1"},
+			ExpectReinvoke:    true,
 		},
 		{
 			Name: "match & invalid mutation",
@@ -573,6 +582,7 @@ func NewMutatingTestCases(url *url.URL) []Test {
 			}},
 			ExpectStatusCode: http.StatusInternalServerError,
 			ErrorContains:    "invalid character",
+			ExpectReinvoke:   false,
 		},
 		{
 			Name: "match & remove label dry run unsupported",
@@ -587,9 +597,71 @@ func NewMutatingTestCases(url *url.URL) []Test {
 			IsDryRun:         true,
 			ExpectStatusCode: http.StatusBadRequest,
 			ErrorContains:    "does not support dry run",
+			ExpectReinvoke:   false,
 		},
 		// No need to test everything with the url case, since only the
 		// connection is different.
+		{
+			Name: "match & reinvoke if needed policy",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:                    "addLabel",
+				ClientConfig:            ccfgSVC("addLabel"),
+				Rules:                   matchEverythingRules,
+				NamespaceSelector:       &metav1.LabelSelector{},
+				AdmissionReviewVersions: []string{"v1beta1"},
+				ReinvocationPolicy:      &reinvokeIfNeeded,
+			}, {
+				Name:                    "removeLabel",
+				ClientConfig:            ccfgSVC("removeLabel"),
+				Rules:                   matchEverythingRules,
+				NamespaceSelector:       &metav1.LabelSelector{},
+				AdmissionReviewVersions: []string{"v1beta1"},
+				ReinvocationPolicy:      &reinvokeIfNeeded,
+			}},
+			AdditionalLabels:       map[string]string{"remove": "me"},
+			ExpectAllow:            true,
+			ExpectReinvoke:         true,
+			ExpectReinvokeWebhooks: map[string]bool{"addLabel": true},
+		},
+		{
+			Name: "match & never reinvoke policy",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:                    "addLabel",
+				ClientConfig:            ccfgSVC("addLabel"),
+				Rules:                   matchEverythingRules,
+				NamespaceSelector:       &metav1.LabelSelector{},
+				AdmissionReviewVersions: []string{"v1beta1"},
+				ReinvocationPolicy:      &reinvokeNever,
+			}},
+			ExpectAllow:            true,
+			ExpectReinvoke:         true, // in-tree is reinvoked
+			ExpectReinvokeWebhooks: map[string]bool{"addLabel": false},
+		},
+		{
+			Name: "match & never reinvoke policy (by default)",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:                    "addLabel",
+				ClientConfig:            ccfgSVC("addLabel"),
+				Rules:                   matchEverythingRules,
+				NamespaceSelector:       &metav1.LabelSelector{},
+				AdmissionReviewVersions: []string{"v1beta1"},
+			}},
+			ExpectAllow:            true,
+			ExpectReinvoke:         true, // in-tree is reinvoked
+			ExpectReinvokeWebhooks: map[string]bool{"addLabel": false},
+		},
+		{
+			Name: "match & no reinvoke",
+			Webhooks: []registrationv1beta1.Webhook{{
+				Name:                    "noop",
+				ClientConfig:            ccfgSVC("noop"),
+				Rules:                   matchEverythingRules,
+				NamespaceSelector:       &metav1.LabelSelector{},
+				AdmissionReviewVersions: []string{"v1beta1"},
+			}},
+			ExpectAllow:    true,
+			ExpectReinvoke: false,
+		},
 	}
 }
 
