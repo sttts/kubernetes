@@ -300,7 +300,7 @@ func (i *invocationRecorder) GetCount(path string) int {
 func (i *invocationRecorder) IncrementCount(path string) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	i.counts[path] += 1
+	i.counts[path]++
 }
 
 func newReinvokeWebhookHandler(recorder *invocationRecorder) http.Handler {

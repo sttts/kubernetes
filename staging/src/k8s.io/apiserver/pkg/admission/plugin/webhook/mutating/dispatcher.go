@@ -24,6 +24,7 @@ import (
 	"time"
 
 	jsonpatch "github.com/evanphx/json-patch"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/klog"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -56,10 +57,26 @@ func newMutatingDispatcher(p *Plugin) func(cm *webhook.ClientManager) generic.Di
 var _ generic.Dispatcher = &mutatingDispatcher{}
 
 func (a *mutatingDispatcher) Dispatch(ctx context.Context, attr *generic.VersionedAttributes, o admission.ObjectInterfaces, relevantHooks []*v1beta1.Webhook) error {
+	reinvokeCtx := attr.GetReinvocationContext()
+	if reinvokeCtx.IsReinvoke() && reinvokeCtx.IsOutputChangedSinceLastWebhookInvocation(attr.Attributes.GetObject()) {
+		// If the object has changed, we know the in-tree plugin re-invocations have mutated the object,
+		// and we need to reinvoke all eligible webhooks.
+		reinvokeCtx.RequireReinvokingPreviouslyInvokedPlugins()
+	}
+	defer func() {
+		reinvokeCtx.SetLastWebhookInvocationOutput(attr.Attributes.GetObject())
+	}()
+
 	for _, hook := range relevantHooks {
+		if !reinvokeCtx.ShouldInvokeWebhook(hook.Name) {
+			continue
+		}
 		t := time.Now()
 		err := a.callAttrMutatingHook(ctx, hook, attr, o)
 		admissionmetrics.Metrics.ObserveWebhook(time.Since(t), err != nil, attr.Attributes, "admit", hook.Name)
+		if hook.ReinvocationPolicy != nil && *hook.ReinvocationPolicy == v1beta1.IfNeededReinvocationPolicy {
+			reinvokeCtx.AddReinvocableWebhookToPreviouslyInvoked(hook.Name)
+		}
 		if err == nil {
 			continue
 		}
@@ -169,6 +186,12 @@ func (a *mutatingDispatcher) callAttrMutatingHook(ctx context.Context, h *v1beta
 			return apierrors.NewInternalError(err)
 		}
 	}
+
+	if !apiequality.Semantic.DeepEqual(attr.VersionedObject, newVersionedObject) {
+		// Patch had changed the object. Prepare to reinvoke all previous webhooks that are eligible for reinvocation.
+		attr.GetReinvocationContext().RequireReinvokingPreviouslyInvokedPlugins()
+	}
+
 	// TODO: if we have multiple mutating webhooks, we can remember the json
 	// instead of encoding and decoding for each one.
 	if _, _, err := jsonSerializer.Decode(patchedJS, nil, newVersionedObject); err != nil {

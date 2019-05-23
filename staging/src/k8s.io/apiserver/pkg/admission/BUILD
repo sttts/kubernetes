@@ -42,11 +42,13 @@ go_library(
         "handler.go",
         "interfaces.go",
         "plugins.go",
+        "reinvocation.go",
         "util.go",
     ],
     importmap = "k8s.io/kubernetes/vendor/k8s.io/apiserver/pkg/admission",
     importpath = "k8s.io/apiserver/pkg/admission",
     deps = [
+        "//staging/src/k8s.io/apimachinery/pkg/api/equality:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/api/errors:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/api/meta:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/runtime:go_default_library",

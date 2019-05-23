@@ -21,8 +21,10 @@ import (
 	"strings"
 	"sync"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
@@ -44,21 +46,24 @@ type attributesRecord struct {
 	// But ValidatingAdmissionWebhook add annotations concurrently.
 	annotations     map[string]string
 	annotationsLock sync.RWMutex
+
+	reinvocationContext ReinvocationContext
 }
 
 func NewAttributesRecord(object runtime.Object, oldObject runtime.Object, kind schema.GroupVersionKind, namespace, name string, resource schema.GroupVersionResource, subresource string, operation Operation, operationOptions runtime.Object, dryRun bool, userInfo user.Info) Attributes {
 	return &attributesRecord{
-		kind:        kind,
-		namespace:   namespace,
-		name:        name,
-		resource:    resource,
-		subresource: subresource,
-		operation:   operation,
-		options:     operationOptions,
-		dryRun:      dryRun,
-		object:      object,
-		oldObject:   oldObject,
-		userInfo:    userInfo,
+		kind:                kind,
+		namespace:           namespace,
+		name:                name,
+		resource:            resource,
+		subresource:         subresource,
+		operation:           operation,
+		options:             operationOptions,
+		dryRun:              dryRun,
+		object:              object,
+		oldObject:           oldObject,
+		userInfo:            userInfo,
+		reinvocationContext: newReinvocationContext(),
 	}
 }
 
@@ -138,6 +143,70 @@ func (record *attributesRecord) AddAnnotation(key, value string) error {
 	}
 	record.annotations[key] = value
 	return nil
+}
+
+func (record *attributesRecord) GetReinvocationContext() ReinvocationContext {
+	return record.reinvocationContext
+}
+
+func newReinvocationContext() *reinvocationContext {
+	return &reinvocationContext{previouslyInvokedReinvocableWebhooks: sets.NewString(), reinvokeWebhooks: sets.NewString()}
+}
+
+type reinvocationContext struct {
+	// isReinvoke is true when admission plugins are being reinvoked
+	isReinvoke bool
+	// lastWebhookOutput holds the result of the last webhook admission plugin call
+	lastWebhookOutput runtime.Object
+	// previouslyInvokedReinvocableWebhooks holds the set of webhooks that have been invoked and
+	// should be reinvoked if a later mutation occurs
+	previouslyInvokedReinvocableWebhooks sets.String
+	// reinvokeWebhooks holds the set of webhooks that should be reinvoked
+	reinvokeWebhooks sets.String
+	// reinvokeInTree indicates in-tree plugins should be reinvoked
+	reinvokeInTree bool
+}
+
+func (rc *reinvocationContext) IsReinvoke() bool {
+	return rc.isReinvoke
+}
+
+func (rc *reinvocationContext) SetIsReinvoke() {
+	rc.isReinvoke = true
+}
+
+func (rc *reinvocationContext) ShouldReinvoke() bool {
+	return rc.reinvokeInTree || len(rc.reinvokeWebhooks) > 0
+}
+
+func (rc *reinvocationContext) IsOutputChangedSinceLastWebhookInvocation(object runtime.Object) bool {
+	return !apiequality.Semantic.DeepEqual(rc.lastWebhookOutput, object)
+}
+
+func (rc *reinvocationContext) SetLastWebhookInvocationOutput(object runtime.Object) {
+	if object == nil {
+		rc.lastWebhookOutput = nil
+		return
+	}
+	rc.lastWebhookOutput = object.DeepCopyObject()
+}
+
+func (rc *reinvocationContext) ShouldInvokeWebhook(webhook string) bool {
+	return !rc.isReinvoke || rc.reinvokeWebhooks.Has(webhook)
+}
+
+func (rc *reinvocationContext) AddReinvocableWebhookToPreviouslyInvoked(webhook string) {
+	rc.previouslyInvokedReinvocableWebhooks.Insert(webhook)
+}
+
+func (rc *reinvocationContext) RequireReinvokingPreviouslyInvokedPlugins() {
+	if len(rc.previouslyInvokedReinvocableWebhooks) > 0 {
+		for s := range rc.previouslyInvokedReinvocableWebhooks {
+			rc.reinvokeWebhooks.Insert(s)
+		}
+		rc.previouslyInvokedReinvocableWebhooks = sets.NewString()
+	}
+	rc.reinvokeInTree = true
 }
 
 func checkKeyFormat(key string) error {
