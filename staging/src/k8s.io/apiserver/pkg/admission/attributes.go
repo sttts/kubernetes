@@ -21,10 +21,8 @@ import (
 	"strings"
 	"sync"
 
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
@@ -63,7 +61,7 @@ func NewAttributesRecord(object runtime.Object, oldObject runtime.Object, kind s
 		object:              object,
 		oldObject:           oldObject,
 		userInfo:            userInfo,
-		reinvocationContext: newReinvocationContext(),
+		reinvocationContext: &reinvocationContext{},
 	}
 }
 
@@ -149,22 +147,13 @@ func (record *attributesRecord) GetReinvocationContext() ReinvocationContext {
 	return record.reinvocationContext
 }
 
-func newReinvocationContext() *reinvocationContext {
-	return &reinvocationContext{previouslyInvokedReinvocableWebhooks: sets.NewString(), reinvokeWebhooks: sets.NewString()}
-}
-
 type reinvocationContext struct {
 	// isReinvoke is true when admission plugins are being reinvoked
 	isReinvoke bool
-	// lastWebhookOutput holds the result of the last webhook admission plugin call
-	lastWebhookOutput runtime.Object
-	// previouslyInvokedReinvocableWebhooks holds the set of webhooks that have been invoked and
-	// should be reinvoked if a later mutation occurs
-	previouslyInvokedReinvocableWebhooks sets.String
-	// reinvokeWebhooks holds the set of webhooks that should be reinvoked
-	reinvokeWebhooks sets.String
-	// reinvokeInTree indicates in-tree plugins should be reinvoked
-	reinvokeInTree bool
+	// reinvokeRequested is true when an admission plugin requested a re-invocation of the chain
+	reinvokeRequested bool
+	// values stores reinvoke context values per plugin.
+	values map[string]interface{}
 }
 
 func (rc *reinvocationContext) IsReinvoke() bool {
@@ -176,37 +165,22 @@ func (rc *reinvocationContext) SetIsReinvoke() {
 }
 
 func (rc *reinvocationContext) ShouldReinvoke() bool {
-	return rc.reinvokeInTree || len(rc.reinvokeWebhooks) > 0
+	return rc.reinvokeRequested
 }
 
-func (rc *reinvocationContext) IsOutputChangedSinceLastWebhookInvocation(object runtime.Object) bool {
-	return !apiequality.Semantic.DeepEqual(rc.lastWebhookOutput, object)
+func (rc *reinvocationContext) SetShouldReinvoke() {
+	rc.reinvokeRequested = true
 }
 
-func (rc *reinvocationContext) SetLastWebhookInvocationOutput(object runtime.Object) {
-	if object == nil {
-		rc.lastWebhookOutput = nil
-		return
+func (rc *reinvocationContext) SetValue(plugin string, v interface{}) {
+	if rc.values == nil {
+		rc.values = map[string]interface{}{}
 	}
-	rc.lastWebhookOutput = object.DeepCopyObject()
+	rc.values[plugin] = v
 }
 
-func (rc *reinvocationContext) ShouldInvokeWebhook(webhook string) bool {
-	return !rc.isReinvoke || rc.reinvokeWebhooks.Has(webhook)
-}
-
-func (rc *reinvocationContext) AddReinvocableWebhookToPreviouslyInvoked(webhook string) {
-	rc.previouslyInvokedReinvocableWebhooks.Insert(webhook)
-}
-
-func (rc *reinvocationContext) RequireReinvokingPreviouslyInvokedPlugins() {
-	if len(rc.previouslyInvokedReinvocableWebhooks) > 0 {
-		for s := range rc.previouslyInvokedReinvocableWebhooks {
-			rc.reinvokeWebhooks.Insert(s)
-		}
-		rc.previouslyInvokedReinvocableWebhooks = sets.NewString()
-	}
-	rc.reinvokeInTree = true
+func (rc *reinvocationContext) Value(plugin string) interface{} {
+	return rc.values[plugin]
 }
 
 func checkKeyFormat(key string) error {

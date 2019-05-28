@@ -98,22 +98,14 @@ type ReinvocationContext interface {
 	IsReinvoke() bool
 	// SetIsReinvoke sets the current admission check as a re-invocation.
 	SetIsReinvoke()
-	// ShouldReinvoke returns true if any in-tree or webhook plugins should be re-invoked.
+	// ShouldReinvoke returns true if any plugin has requested a re-invocation.
 	ShouldReinvoke() bool
-	// IsOutputChangedSinceLastWebhookInvocation checks if the admssion object has changed from what the last webhook output.
-	IsOutputChangedSinceLastWebhookInvocation(object runtime.Object) bool
-	// SetLastWebhookInvocationOutput records the state of the admission object after the last
-	// admission webhook is run in each invocation pass.
-	SetLastWebhookInvocationOutput(object runtime.Object)
-	// ShouldInvokeWebhook checks if a webhook should be invoked. If IsReinvoke is true, this
-	// only returns true if the webhook should be reinvoked.
-	ShouldInvokeWebhook(webhook string) bool
-	// AddReinvocableWebhookToPreviouslyInvoked records that a webhook has been invoked and should be re-invoked if re-invocation is needed.
-	AddReinvocableWebhookToPreviouslyInvoked(webhook string)
-	// RequireReinvokingPreviouslyInvokedPlugins should be called when a mutating webhook
-	// results in a mutation to require that all previouly invoked plugins (incl. in-tree and
-	// webhook) that are eligible for re-invocation are re-invoked.
-	RequireReinvokingPreviouslyInvokedPlugins()
+	// SetShouldReinvoke signals that a re-invocation is desired.
+	SetShouldReinvoke()
+	// AddValue set a value for a plugin name, possibly overriding a previous value.
+	SetValue(plugin string, v interface{})
+	// Value reads a value for a webhook.
+	Value(plugin string) interface{}
 }
 
 // Interface is an abstract, pluggable interface for Admission Control decisions.

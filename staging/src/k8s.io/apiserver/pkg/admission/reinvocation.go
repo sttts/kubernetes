@@ -17,7 +17,7 @@ limitations under the License.
 package admission
 
 // NewReinvocationHandler creates a handler that wraps the provided admission chain and reinvokes it
-// if needed according to reinvocation policy of the webhooks.
+// if needed according to re-invocation policy of the webhooks.
 func NewReinvocationHandler(admissionChain Interface) Interface {
 	return &reinvoker{admissionChain}
 }
