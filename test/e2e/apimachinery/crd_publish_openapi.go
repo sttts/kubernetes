@@ -88,23 +88,23 @@ var _ = SIGDescribe("CustomResourcePublishOpenAPI [Privileged:ClusterAdmin]", fu
 
 		// TODO(workload): re-enable client-side validation tests
 		/*
-		ginkgo.By("client-side validation (kubectl create and apply) rejects request with unknown properties when disallowed by the schema")
-		unknownCR := fmt.Sprintf(`{%s,"spec":{"foo":true}}`, meta)
-		if _, err := framework.RunKubectlInput(f.Namespace.Name, unknownCR, ns, "create", "-f", "-"); err == nil || !strings.Contains(err.Error(), `unknown field "foo"`) {
-			framework.Failf("unexpected no error when creating CR with unknown field: %v", err)
-		}
-		if _, err := framework.RunKubectlInput(f.Namespace.Name, unknownCR, ns, "apply", "-f", "-"); err == nil || !strings.Contains(err.Error(), `unknown field "foo"`) {
-			framework.Failf("unexpected no error when applying CR with unknown field: %v", err)
-		}
+			ginkgo.By("client-side validation (kubectl create and apply) rejects request with unknown properties when disallowed by the schema")
+			unknownCR := fmt.Sprintf(`{%s,"spec":{"foo":true}}`, meta)
+			if _, err := framework.RunKubectlInput(f.Namespace.Name, unknownCR, ns, "create", "-f", "-"); err == nil || !strings.Contains(err.Error(), `unknown field "foo"`) {
+				framework.Failf("unexpected no error when creating CR with unknown field: %v", err)
+			}
+			if _, err := framework.RunKubectlInput(f.Namespace.Name, unknownCR, ns, "apply", "-f", "-"); err == nil || !strings.Contains(err.Error(), `unknown field "foo"`) {
+				framework.Failf("unexpected no error when applying CR with unknown field: %v", err)
+			}
 
-		ginkgo.By("client-side validation (kubectl create and apply) rejects request without required properties")
-		noRequireCR := fmt.Sprintf(`{%s,"spec":{"bars":[{"age":"10"}]}}`, meta)
-		if _, err := framework.RunKubectlInput(f.Namespace.Name, noRequireCR, ns, "create", "-f", "-"); err == nil || !strings.Contains(err.Error(), `missing required field "name"`) {
-			framework.Failf("unexpected no error when creating CR without required field: %v", err)
-		}
-		if _, err := framework.RunKubectlInput(f.Namespace.Name, noRequireCR, ns, "apply", "-f", "-"); err == nil || !strings.Contains(err.Error(), `missing required field "name"`) {
-			framework.Failf("unexpected no error when applying CR without required field: %v", err)
-		}
+			ginkgo.By("client-side validation (kubectl create and apply) rejects request without required properties")
+			noRequireCR := fmt.Sprintf(`{%s,"spec":{"bars":[{"age":"10"}]}}`, meta)
+			if _, err := framework.RunKubectlInput(f.Namespace.Name, noRequireCR, ns, "create", "-f", "-"); err == nil || !strings.Contains(err.Error(), `missing required field "name"`) {
+				framework.Failf("unexpected no error when creating CR without required field: %v", err)
+			}
+			if _, err := framework.RunKubectlInput(f.Namespace.Name, noRequireCR, ns, "apply", "-f", "-"); err == nil || !strings.Contains(err.Error(), `missing required field "name"`) {
+				framework.Failf("unexpected no error when applying CR without required field: %v", err)
+			}
 		*/
 
 		ginkgo.By("kubectl explain works to explain CR properties")
