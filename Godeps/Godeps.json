@@ -1488,7 +1488,7 @@
 		},
 		{
 			"ImportPath": "k8s.io/utils",
-			"Rev": "0a110f9eb7ab"
+			"Rev": "a9aa75ae1b89"
 		},
 		{
 			"ImportPath": "modernc.org/cc",

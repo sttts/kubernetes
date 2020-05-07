@@ -8,8 +8,8 @@ require (
 	github.com/gogo/protobuf v1.3.1
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	google.golang.org/grpc v1.26.0
-	k8s.io/api v0.18.0-beta.2
-	k8s.io/apimachinery v0.18.0-beta.2
+	k8s.io/api v0.18.0
+	k8s.io/apimachinery v0.18.0
 )
 
 replace (

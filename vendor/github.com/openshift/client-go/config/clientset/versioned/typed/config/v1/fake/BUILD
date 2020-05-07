@@ -18,6 +18,7 @@ go_library(
         "fake_ingress.go",
         "fake_network.go",
         "fake_oauth.go",
+        "fake_operatorhub.go",
         "fake_project.go",
         "fake_proxy.go",
         "fake_scheduler.go",

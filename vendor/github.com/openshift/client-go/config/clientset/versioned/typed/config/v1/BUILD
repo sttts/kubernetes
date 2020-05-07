@@ -19,6 +19,7 @@ go_library(
         "ingress.go",
         "network.go",
         "oauth.go",
+        "operatorhub.go",
         "project.go",
         "proxy.go",
         "scheduler.go",
