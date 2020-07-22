@@ -22,8 +22,6 @@ import (
 	"os"
 	"time"
 
-	"k8s.io/kubernetes/pkg/apis/core"
-
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -37,6 +35,7 @@ import (
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	"k8s.io/kubernetes/pkg/apis/certificates"
 	"k8s.io/kubernetes/pkg/apis/certificates/validation"
+	"k8s.io/kubernetes/pkg/apis/core"
 )
 
 // csrStrategy implements behavior for CSRs
@@ -96,8 +95,8 @@ func (csrStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 					Status:             core.ConditionTrue,
 					Reason:             "AutoApproveDuringBootstrapping",
 					Message:            "CSR was auto-approved during bootstrapping through the API server",
-					LastUpdateTime:     metav1.Time{time.Now()},
-					LastTransitionTime: metav1.Time{time.Now()},
+					LastUpdateTime:     metav1.Time{Time: time.Now()},
+					LastTransitionTime: metav1.Time{Time: time.Now()},
 				},
 			}
 		}
