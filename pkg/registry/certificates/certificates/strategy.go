@@ -96,8 +96,8 @@ func (csrStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 					Status:             core.ConditionTrue,
 					Reason:             "AutoApproveDuringBootstrapping",
 					Message:            "CSR was auto-approved during bootstrapping through the API server",
-					LastUpdateTime:     metav1.Time{time.Now()},
-					LastTransitionTime: metav1.Time{time.Now()},
+					LastUpdateTime:     metav1.Time{Time: time.Now()},
+					LastTransitionTime: metav1.Time{Time: time.Now()},
 				},
 			}
 		}
