@@ -45,6 +45,8 @@ var kubeletLabels = sets.NewString(
 
 	LabelOS,
 	LabelArch,
+
+	"node-role.kubernetes.io/master",
 )
 
 var kubeletLabelNamespaces = sets.NewString(
