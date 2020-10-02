@@ -200,7 +200,10 @@ func Run(completeOptions completedServerRunOptions, stopCh <-chan struct{}) erro
 	// To help debugging, immediately log version
 	klog.Infof("Version: %+v", version.Get())
 
-	server, err := CreateServerChain(completeOptions, stopCh)
+	stoppedCh := make(chan struct{})
+	defer close(stoppedCh)
+
+	server, err := CreateServerChain(completeOptions, stoppedCh)
 	if err != nil {
 		return err
 	}

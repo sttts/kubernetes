@@ -369,7 +369,14 @@ func (s preparedGenericAPIServer) Run(stopCh <-chan struct{}) error {
 		s.Eventf(corev1.EventTypeNormal, "TerminationStoppedServing", "Server has stopped listening")
 	}()
 
-	<-stopCh
+	// wait for the delayed stopCh before closing the handler chain (it rejects everything after Wait has been called).
+	<-delayedStopCh
+	// wait for stoppedCh that is closed when the graceful termination (server.Shutdown) is finished.
+	<-stoppedCh
+
+	// Wait for all requests to finish, which are bounded by the RequestTimeout variable.
+	s.HandlerChainWaitGroup.Wait()
+	s.Eventf(corev1.EventTypeNormal, "TerminationHandlerChainWaitFinished", "All pending requests processed")
 
 	// run shutdown hooks directly. This includes deregistering from the kubernetes endpoint in case of kube-apiserver.
 	err = s.RunPreShutdownHooks()
@@ -378,15 +385,7 @@ func (s preparedGenericAPIServer) Run(stopCh <-chan struct{}) error {
 	}
 	s.Eventf(corev1.EventTypeNormal, "TerminationPreShutdownHooksFinished", "All pre-shutdown hooks have been finished")
 
-	// wait for the delayed stopCh before closing the handler chain (it rejects everything after Wait has been called).
-	<-delayedStopCh
-	// wait for stoppedCh that is closed when the graceful termination (server.Shutdown) is finished.
-	<-stoppedCh
-
-	// Wait for all requests to finish, which are bounded by the RequestTimeout variable.
-	s.HandlerChainWaitGroup.Wait()
-	s.Eventf(corev1.EventTypeNormal, "TerminationGracefulTerminationFinished", "All pending requests processed")
-
+	s.Eventf(corev1.EventTypeNormal, "TerminationGracefulTerminationFinished", "Process is shutting down")
 	return nil
 }
 
