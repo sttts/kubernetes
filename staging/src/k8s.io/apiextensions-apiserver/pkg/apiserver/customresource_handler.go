@@ -45,6 +45,7 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/crdserverscheme"
 	"k8s.io/apiextensions-apiserver/pkg/registry/customresource"
 	"k8s.io/apiextensions-apiserver/pkg/registry/customresource/tableconvertor"
+	"k8s.io/kubernetes/pkg/api/legacyscheme"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -267,6 +268,10 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	crdName := requestInfo.Resource + "." + requestInfo.APIGroup
+	// HACK: support the case when we add core resources through CRDs (KCP scenario)
+	if requestInfo.APIGroup == "" {
+		crdName = crdName + "core"
+	}
 	crd, err := r.crdLister.Get(crdName)
 	if apierrors.IsNotFound(err) {
 		if !r.hasSynced() {
@@ -345,6 +350,9 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	supportedTypes := []string{
 		string(types.JSONPatchType),
 		string(types.MergePatchType),
+	}
+	if legacyscheme.Scheme.IsGroupRegistered(requestInfo.APIGroup) {
+		supportedTypes = append(supportedTypes, string(types.StrategicMergePatchType))
 	}
 	if utilfeature.DefaultFeatureGate.Enabled(features.ServerSideApply) {
 		supportedTypes = append(supportedTypes, string(types.ApplyPatchType))
@@ -828,12 +836,16 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
 			replicasPathInCustomResource,
 		)
 
+		selfLinkPrefixPrefix := path.Join("apis", crd.Spec.Group, v.Name)
+		if crd.Spec.Group == "" {
+			selfLinkPrefixPrefix = path.Join("api", v.Name)
+		}
 		selfLinkPrefix := ""
 		switch crd.Spec.Scope {
 		case apiextensionsv1.ClusterScoped:
-			selfLinkPrefix = "/" + path.Join("apis", crd.Spec.Group, v.Name) + "/" + crd.Status.AcceptedNames.Plural + "/"
+			selfLinkPrefix = "/" + selfLinkPrefixPrefix + "/" + crd.Status.AcceptedNames.Plural + "/"
 		case apiextensionsv1.NamespaceScoped:
-			selfLinkPrefix = "/" + path.Join("apis", crd.Spec.Group, v.Name, "namespaces") + "/"
+			selfLinkPrefix = "/" + selfLinkPrefixPrefix + "/namespaces/"
 		}
 
 		clusterScoped := crd.Spec.Scope == apiextensionsv1.ClusterScoped
