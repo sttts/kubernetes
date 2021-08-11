@@ -52,7 +52,6 @@ import (
 	"k8s.io/klog/v2"
 	openapibuilder "k8s.io/kube-openapi/pkg/builder"
 	openapicommon "k8s.io/kube-openapi/pkg/common"
-	"k8s.io/kube-openapi/pkg/handler"
 	openapiutil "k8s.io/kube-openapi/pkg/util"
 	openapiproto "k8s.io/kube-openapi/pkg/util/proto"
 	"k8s.io/kube-openapi/pkg/validation/spec"
@@ -142,7 +141,7 @@ type GenericAPIServer struct {
 
 	// OpenAPIVersionedService controls the /openapi/v2 endpoint, and can be used to update the served spec.
 	// It is set during PrepareRun if `openAPIConfig` is non-nil unless `skipOpenAPIInstallation` is true.
-	OpenAPIVersionedService *handler.OpenAPIService
+	OpenAPIVersionedService routes.OpenAPIServiceProvider
 
 	// StaticOpenAPISpec is the spec derived from the restful container endpoints.
 	// It is set during PrepareRun.
@@ -231,7 +230,7 @@ type DelegationTarget interface {
 	HealthzChecks() []healthz.HealthChecker
 
 	// ListedPaths returns the paths for supporting an index
-	ListedPaths() []string
+	ListedPaths(clusterName string) []string
 
 	// NextDelegate returns the next delegationTarget in the chain of delegations
 	NextDelegate() DelegationTarget
@@ -253,8 +252,8 @@ func (s *GenericAPIServer) PreShutdownHooks() map[string]preShutdownHookEntry {
 func (s *GenericAPIServer) HealthzChecks() []healthz.HealthChecker {
 	return s.healthzChecks
 }
-func (s *GenericAPIServer) ListedPaths() []string {
-	return s.listedPathProvider.ListedPaths()
+func (s *GenericAPIServer) ListedPaths(clusterName string) []string {
+	return s.listedPathProvider.ListedPaths(clusterName)
 }
 
 func (s *GenericAPIServer) NextDelegate() DelegationTarget {
@@ -280,7 +279,7 @@ func (s emptyDelegate) PreShutdownHooks() map[string]preShutdownHookEntry {
 func (s emptyDelegate) HealthzChecks() []healthz.HealthChecker {
 	return []healthz.HealthChecker{}
 }
-func (s emptyDelegate) ListedPaths() []string {
+func (s emptyDelegate) ListedPaths(clusterName string) []string {
 	return []string{}
 }
 func (s emptyDelegate) NextDelegate() DelegationTarget {
