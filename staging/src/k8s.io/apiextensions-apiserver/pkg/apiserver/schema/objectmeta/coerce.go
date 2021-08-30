@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	klogv2 "k8s.io/klog/v2"
 )
 
 var encodingjson = json.CaseSensitiveJSONIterator()
@@ -50,6 +51,8 @@ func GetObjectMeta(obj map[string]interface{}, dropMalformedFields bool) (*metav
 		// if we're not trying to drop malformed fields, return the error
 		return nil, true, err
 	}
+
+	klogv2.Infof("GetObjectMeta pruning: %s", string(metadataBytes))
 
 	metadataMap, ok := metadata.(map[string]interface{})
 	if !ok {
