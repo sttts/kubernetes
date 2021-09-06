@@ -97,6 +97,10 @@ func TestPostInvalidObjectMeta(t *testing.T) {
 }
 
 func TestInvalidObjectMetaInStorage(t *testing.T) {
+	// OpenShift 4.1 used Kubernetes 1.14. 1.14 is from March 2019. ObjectMeta pruning was added in 2018.
+	// Hence, all CRs read from a 4.x cluster have pruned ObjectMeta.
+	t.Skip("invalid metadata in CRD storage is not supported by OpenShift")
+
 	tearDown, config, options, err := fixtures.StartDefaultServer(t)
 	if err != nil {
 		t.Fatal(err)

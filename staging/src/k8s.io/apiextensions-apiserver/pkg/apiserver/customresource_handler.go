@@ -1192,8 +1192,12 @@ func (t crdConversionRESTOptionsGetter) GetRESTOptions(resource schema.GroupReso
 	ret, err := t.RESTOptionsGetter.GetRESTOptions(resource)
 	if err == nil {
 		d := schemaCoercingDecoder{delegate: ret.StorageConfig.Codec, validator: unstructuredSchemaCoercer{
-			// drop invalid fields while decoding old CRs (before we haven't had any ObjectMeta validation)
-			metadataMode: metadataCoercePruneAndDropInvalid,
+			// Avoid expensive unmarshal+marshal of schemaobjectmeta.GetObjectMeta.
+			// OpenShift 4.1 used Kubernetes 1.14. 1.14 is from March 2019. ObjectMeta pruning was added in 2018.
+			// Hence, all CRs read from a 4.x cluster have pruned ObjectMeta.
+			//
+			// Note: this cannot be done in upstream because upstream has to assume that there is etcd data from before May 2018.
+			metadataMode: metadataCoerceNone,
 
 			repairGeneration:      true,
 			structuralSchemas:     t.structuralSchemas,
