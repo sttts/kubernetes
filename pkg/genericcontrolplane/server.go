@@ -297,6 +297,9 @@ func BuildGenericConfig(
 	lastErr error,
 ) {
 	genericConfig = genericapiserver.NewConfig(genericcontrolplanescheme.Codecs)
+	if s.BuildHandlerChainFunc != nil {
+		genericConfig.BuildHandlerChainFunc = s.BuildHandlerChainFunc
+	}
 
 	if lastErr = s.GenericServerRunOptions.ApplyTo(genericConfig); lastErr != nil {
 		return

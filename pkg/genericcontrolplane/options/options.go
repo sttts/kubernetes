@@ -17,10 +17,12 @@ limitations under the License.
 package options
 
 import (
+	"net/http"
 	"time"
 
 	"k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
 	"k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
+	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/storage/storagebackend"
 	"k8s.io/component-base/logs"
@@ -66,6 +68,9 @@ type ServerRunOptions struct {
 	ServiceAccountTokenMaxExpiration time.Duration
 
 	ShowHiddenMetricsForVersion string
+
+	// BuildHandlerChainFunc allows you to build custom handler chains by decorating the apiHandler.
+	BuildHandlerChainFunc func(apiHandler http.Handler, c *genericapiserver.Config) (secure http.Handler)
 }
 
 // NewServerRunOptions creates a new ServerRunOptions object with default parameters
