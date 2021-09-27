@@ -157,5 +157,6 @@ func (mcrt *multiClusterClientConfigRoundTripper) RoundTrip(req *http.Request) (
 			req.Header.Add("X-Kubernetes-Cluster", contextCluster.Name)
 		}
 	}
+	req.Header.Add("X-Kubernetes-Sharded-Request", "false")
 	return mcrt.rt.RoundTrip(req)
 }
