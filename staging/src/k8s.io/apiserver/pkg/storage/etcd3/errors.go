@@ -57,10 +57,10 @@ func interpretListError(err error, paging bool, continueKey, keyPrefix string) e
 }
 
 func handleCompactedErrorForPaging(continueKey, keyPrefix string) error {
-	// continueToken.ResoureVersion=-1 means that the apiserver can
+	// ContinueToken.ResoureVersion=-1 means that the apiserver can
 	// continue the list at the latest resource version. We don't use rv=0
 	// for this purpose to distinguish from a bad token that has empty rv.
-	newToken, err := encodeContinue(continueKey, keyPrefix, -1)
+	newToken, err := EncodeContinue(continueKey, keyPrefix, -1)
 	if err != nil {
 		utilruntime.HandleError(err)
 		return errors.NewResourceExpired(continueExpired)

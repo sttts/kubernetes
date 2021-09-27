@@ -1137,7 +1137,7 @@ func TestList(t *testing.T) {
 	list := &example.PodList{}
 	store.List(ctx, "/two-level", storage.ListOptions{ResourceVersion: "0", Predicate: storage.Everything}, list)
 	continueRV, _ := strconv.Atoi(list.ResourceVersion)
-	secondContinuation, err := encodeContinue("/two-level/2", "/two-level/", int64(continueRV))
+	secondContinuation, err := EncodeContinue("/two-level/2", "/two-level/", int64(continueRV))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1659,7 +1659,7 @@ func TestListContinuation(t *testing.T) {
 		t.Fatalf("Unexpected continuation token set")
 	}
 	if !reflect.DeepEqual(out.Items, []example.Pod{*preset[1].storedObj, *preset[2].storedObj}) {
-		key, rv, err := decodeContinue(continueFromSecondItem, "/")
+		key, rv, err := DecodeContinue(continueFromSecondItem, "/")
 		t.Logf("continue token was %d %s %v", rv, key, err)
 		t.Fatalf("Unexpected second page: %#v", out.Items)
 	}
@@ -2036,7 +2036,7 @@ func TestPrefix(t *testing.T) {
 }
 
 func encodeContinueOrDie(apiVersion string, resourceVersion int64, nextKey string) string {
-	out, err := json.Marshal(&continueToken{APIVersion: apiVersion, ResourceVersion: resourceVersion, StartKey: nextKey})
+	out, err := json.Marshal(&ContinueToken{APIVersion: apiVersion, ResourceVersion: resourceVersion, StartKey: nextKey})
 	if err != nil {
 		panic(err)
 	}
@@ -2068,7 +2068,7 @@ func Test_decodeContinue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotFromKey, gotRv, err := decodeContinue(tt.args.continueValue, tt.args.keyPrefix)
+			gotFromKey, gotRv, err := DecodeContinue(tt.args.continueValue, tt.args.keyPrefix)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("decodeContinue() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -576,24 +576,24 @@ func (s *store) Count(key string) (int64, error) {
 	return getResp.Count, nil
 }
 
-// continueToken is a simple structured object for encoding the state of a continue token.
+// ContinueToken is a simple structured object for encoding the state of a continue token.
 // TODO: if we change the version of the encoded from, we can't start encoding the new version
 // until all other servers are upgraded (i.e. we need to support rolling schema)
 // This is a public API struct and cannot change.
-type continueToken struct {
+type ContinueToken struct {
 	APIVersion      string `json:"v"`
 	ResourceVersion int64  `json:"rv"`
 	StartKey        string `json:"start"`
 }
 
-// parseFrom transforms an encoded predicate from into a versioned struct.
+// DecodeContinue transforms an encoded predicate from into a versioned struct.
 // TODO: return a typed error that instructs clients that they must relist
-func decodeContinue(continueValue, keyPrefix string) (fromKey string, rv int64, err error) {
+func DecodeContinue(continueValue, keyPrefix string) (fromKey string, rv int64, err error) {
 	data, err := base64.RawURLEncoding.DecodeString(continueValue)
 	if err != nil {
 		return "", 0, fmt.Errorf("continue key is not valid: %v", err)
 	}
-	var c continueToken
+	var c ContinueToken
 	if err := json.Unmarshal(data, &c); err != nil {
 		return "", 0, fmt.Errorf("continue key is not valid: %v", err)
 	}
@@ -623,13 +623,13 @@ func decodeContinue(continueValue, keyPrefix string) (fromKey string, rv int64, 
 	}
 }
 
-// encodeContinue returns a string representing the encoded continuation of the current query.
-func encodeContinue(key, keyPrefix string, resourceVersion int64) (string, error) {
+// EncodeContinue returns a string representing the encoded continuation of the current query.
+func EncodeContinue(key, keyPrefix string, resourceVersion int64) (string, error) {
 	nextKey := strings.TrimPrefix(key, keyPrefix)
 	if nextKey == key {
 		return "", fmt.Errorf("unable to encode next field: the key and key prefix do not match")
 	}
-	out, err := json.Marshal(&continueToken{APIVersion: "meta.k8s.io/v1", ResourceVersion: resourceVersion, StartKey: nextKey})
+	out, err := json.Marshal(&ContinueToken{APIVersion: "meta.k8s.io/v1", ResourceVersion: resourceVersion, StartKey: nextKey})
 	if err != nil {
 		return "", err
 	}
@@ -691,7 +691,7 @@ func (s *store) List(ctx context.Context, key string, opts storage.ListOptions, 
 	var continueKey string
 	switch {
 	case s.pagingEnabled && len(pred.Continue) > 0:
-		continueKey, continueRV, err = decodeContinue(pred.Continue, keyPrefix)
+		continueKey, continueRV, err = DecodeContinue(pred.Continue, keyPrefix)
 		if err != nil {
 			return apierrors.NewBadRequest(fmt.Sprintf("invalid continue token: %v", err))
 		}
@@ -850,7 +850,7 @@ func (s *store) List(ctx context.Context, key string, opts storage.ListOptions, 
 	// we never return a key that the client wouldn't be allowed to see
 	if hasMore {
 		// we want to start immediately after the last key
-		next, err := encodeContinue(string(lastKey)+"\x00", keyPrefix, returnedRV)
+		next, err := EncodeContinue(string(lastKey)+"\x00", keyPrefix, returnedRV)
 		if err != nil {
 			return err
 		}
