@@ -347,6 +347,18 @@ func (r *Request) Param(paramName, s string) *Request {
 	return r.setParam(paramName, s)
 }
 
+// OverwriteParam creates a query parameter with the given string value.
+func (r *Request) OverwriteParam(paramName, s string) *Request {
+	if r.err != nil {
+		return r
+	}
+	if r.params == nil {
+		r.params = make(url.Values)
+	}
+	r.params[paramName] = []string{s}
+	return r
+}
+
 // VersionedParams will take the provided object, serialize it to a map[string][]string using the
 // implicit RESTClient API version and the default parameter codec, and then add those as parameters
 // to the request. Use this to provide versioned query parameters from client libraries.

@@ -864,8 +864,8 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name, clusterName 
 		kind := schema.GroupVersionKind{Group: crd.Spec.Group, Version: v.Name, Kind: crd.Status.AcceptedNames.Kind}
 		equivalentResourceRegistry.RegisterKindFor(resource, "", kind)
 
-		typer := newUnstructuredObjectTyper(parameterScheme)
-		creator := unstructuredCreator{}
+		typer := NewUnstructuredObjectTyper(parameterScheme)
+		creator := UnstructuredCreator{}
 
 		validationSchema, err := apiextensionshelpers.GetSchemaForVersion(crd, v.Name)
 		if err != nil {
@@ -1251,7 +1251,7 @@ type UnstructuredObjectTyper struct {
 	UnstructuredTyper runtime.ObjectTyper
 }
 
-func newUnstructuredObjectTyper(Delegate runtime.ObjectTyper) UnstructuredObjectTyper {
+func NewUnstructuredObjectTyper(Delegate runtime.ObjectTyper) UnstructuredObjectTyper {
 	return UnstructuredObjectTyper{
 		Delegate:          Delegate,
 		UnstructuredTyper: crdserverscheme.NewUnstructuredObjectTyper(),
@@ -1270,9 +1270,9 @@ func (t UnstructuredObjectTyper) Recognizes(gvk schema.GroupVersionKind) bool {
 	return t.Delegate.Recognizes(gvk) || t.UnstructuredTyper.Recognizes(gvk)
 }
 
-type unstructuredCreator struct{}
+type UnstructuredCreator struct{}
 
-func (c unstructuredCreator) New(kind schema.GroupVersionKind) (runtime.Object, error) {
+func (c UnstructuredCreator) New(kind schema.GroupVersionKind) (runtime.Object, error) {
 	ret := &unstructured.Unstructured{}
 	ret.SetGroupVersionKind(kind)
 	return ret, nil
@@ -1367,7 +1367,7 @@ func (t crdConversionRESTOptionsGetter) GetRESTOptions(resource schema.GroupReso
 			ret.StorageConfig.Codec,
 			d,
 			c,
-			&unstructuredCreator{},
+			&UnstructuredCreator{},
 			crdserverscheme.NewUnstructuredObjectTyper(),
 			&unstructuredDefaulter{
 				delegate:           Scheme,
