@@ -52,6 +52,7 @@ type handlerEntry struct {
 // PrintObj().
 type HumanReadableGenerator struct {
 	handlerMap map[reflect.Type]*handlerEntry
+	defaultHandler *handlerEntry
 }
 
 var _ TableGenerator = &HumanReadableGenerator{}
@@ -79,7 +80,10 @@ func (h *HumanReadableGenerator) GenerateTable(obj runtime.Object, options Gener
 	t := reflect.TypeOf(obj)
 	handler, ok := h.handlerMap[t]
 	if !ok {
-		return nil, fmt.Errorf("no table handler registered for this type %v", t)
+		if h.defaultHandler == nil {
+			return nil, fmt.Errorf("no table handler registered for this type %v", t)
+		}
+		handler = h.defaultHandler
 	}
 
 	args := []reflect.Value{reflect.ValueOf(obj), reflect.ValueOf(options)}
@@ -122,13 +126,33 @@ func (h *HumanReadableGenerator) GenerateTable(obj runtime.Object, options Gener
 	return table, nil
 }
 
+// DefaultHandler adds a print handler with a given set of columns to HumanReadableGenerator instance.
+// See ValidateRowPrintHandlerFunc for required method signature.
+func (h *HumanReadableGenerator) DefaultHandler(columnDefinitions []metav1.TableColumnDefinition, printFunc interface{}) error {
+	_, entry, err := h.handlerHelper(columnDefinitions, printFunc)
+	if err != nil {
+		return err
+	}
+	h.defaultHandler = entry
+	return nil
+}
+
 // TableHandler adds a print handler with a given set of columns to HumanReadableGenerator instance.
 // See ValidateRowPrintHandlerFunc for required method signature.
 func (h *HumanReadableGenerator) TableHandler(columnDefinitions []metav1.TableColumnDefinition, printFunc interface{}) error {
+	objType, entry, err := h.handlerHelper(columnDefinitions, printFunc)
+	if err != nil {
+		return err
+	}
+	h.handlerMap[objType] = entry
+	return nil
+}
+
+func (h *HumanReadableGenerator) handlerHelper(columnDefinitions []metav1.TableColumnDefinition, printFunc interface{}) (reflect.Type, *handlerEntry, error) {
 	printFuncValue := reflect.ValueOf(printFunc)
 	if err := ValidateRowPrintHandlerFunc(printFuncValue); err != nil {
 		utilruntime.HandleError(fmt.Errorf("unable to register print function: %v", err))
-		return err
+		return nil, nil, err
 	}
 	entry := &handlerEntry{
 		columnDefinitions: columnDefinitions,
@@ -139,10 +163,9 @@ func (h *HumanReadableGenerator) TableHandler(columnDefinitions []metav1.TableCo
 	if _, ok := h.handlerMap[objType]; ok {
 		err := fmt.Errorf("registered duplicate printer for %v", objType)
 		utilruntime.HandleError(err)
-		return err
+		return nil, nil, err
 	}
-	h.handlerMap[objType] = entry
-	return nil
+	return objType, entry, nil
 }
 
 // ValidateRowPrintHandlerFunc validates print handler signature.
