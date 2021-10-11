@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"path"
 	"reflect"
@@ -112,6 +113,8 @@ type Request struct {
 	err   error
 	body  io.Reader
 	retry WithRetry
+
+	debug bool
 }
 
 // NewRequest creates a new request helper object for accessing runtime.Objects on a server.
@@ -402,6 +405,11 @@ func (r *Request) SetHeader(key string, values ...string) *Request {
 	for _, value := range values {
 		r.headers.Add(key, value)
 	}
+	return r
+}
+
+func (r *Request) Debug() *Request {
+	r.debug = true
 	return r
 }
 
@@ -930,6 +938,13 @@ func (r *Request) newHTTPRequest(ctx context.Context) (*http.Request, error) {
 	}
 	req = req.WithContext(ctx)
 	req.Header = r.headers
+	if r.debug {
+		v, e := httputil.DumpRequestOut(req, true)
+		klog.V(10).Info(string(v))
+		if e != nil {
+			klog.Error(e)
+		}
+	}
 	return req, nil
 }
 
@@ -990,6 +1005,13 @@ func (r *Request) request(ctx context.Context, fn func(*http.Request, *http.Resp
 			retryAfter = nil
 		}
 		resp, err := client.Do(req)
+		if r.debug {
+			v, e := httputil.DumpResponse(resp, true)
+			klog.V(10).Info(string(v))
+			if e != nil {
+				klog.Error(e)
+			}
+		}
 		updateURLMetrics(ctx, r, resp, err)
 		if err != nil {
 			r.backoff.UpdateBackoff(r.URL(), err, 0)
