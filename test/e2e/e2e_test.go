@@ -49,6 +49,7 @@ import (
 	_ "k8s.io/kubernetes/test/e2e/cloud"
 	_ "k8s.io/kubernetes/test/e2e/common"
 	_ "k8s.io/kubernetes/test/e2e/instrumentation"
+	_ "k8s.io/kubernetes/test/e2e/kcpapimachinery"
 	_ "k8s.io/kubernetes/test/e2e/kubectl"
 	_ "k8s.io/kubernetes/test/e2e/lifecycle"
 	_ "k8s.io/kubernetes/test/e2e/lifecycle/bootstrap"

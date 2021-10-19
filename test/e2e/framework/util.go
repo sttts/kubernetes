@@ -324,19 +324,22 @@ func WaitForDefaultServiceAccountInNamespace(c clientset.Interface, namespace st
 // CreateTestingNS should be used by every test, note that we append a common prefix to the provided test name.
 // Please see NewFramework instead of using this directly.
 func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]string) (*v1.Namespace, error) {
+	return CreateSpecificTestingNS(func() string {
+		return fmt.Sprintf("%v-%v", baseName, RandomSuffix())
+	}, c, labels)
+}
+
+// CreateSpecificTestingNS should be used by every test, note that we append a common prefix to the provided test name.
+// Please see NewFramework instead of using this directly.
+func CreateSpecificTestingNS(nameGenerator func() string, c clientset.Interface, labels map[string]string) (*v1.Namespace, error) {
 	if labels == nil {
 		labels = map[string]string{}
 	}
 	labels["e2e-run"] = string(RunID)
 
-	// We don't use ObjectMeta.GenerateName feature, as in case of API call
-	// failure we don't know whether the namespace was created and what is its
-	// name.
-	name := fmt.Sprintf("%v-%v", baseName, RandomSuffix())
-
 	namespaceObj := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      nameGenerator(),
 			Namespace: "",
 			Labels:    labels,
 		},
@@ -351,7 +354,7 @@ func CreateTestingNS(baseName string, c clientset.Interface, labels map[string]s
 			if apierrors.IsAlreadyExists(err) {
 				// regenerate on conflict
 				Logf("Namespace name %q was already taken, generate a new name and retry", namespaceObj.Name)
-				namespaceObj.Name = fmt.Sprintf("%v-%v", baseName, RandomSuffix())
+				namespaceObj.Name = nameGenerator()
 			} else {
 				Logf("Unexpected error while creating namespace: %v", err)
 			}
@@ -902,6 +905,7 @@ func dumpEventsInNamespace(eventsLister EventsLister, namespace string) {
 
 // DumpAllNamespaceInfo dumps events, pods and nodes information in the given namespace.
 func DumpAllNamespaceInfo(c clientset.Interface, namespace string) {
+	return
 	dumpEventsInNamespace(func(opts metav1.ListOptions, ns string) (*v1.EventList, error) {
 		return c.CoreV1().Events(ns).List(context.TODO(), opts)
 	}, namespace)
