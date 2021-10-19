@@ -1273,9 +1273,14 @@ func (t UnstructuredObjectTyper) Recognizes(gvk schema.GroupVersionKind) bool {
 type UnstructuredCreator struct{}
 
 func (c UnstructuredCreator) New(kind schema.GroupVersionKind) (runtime.Object, error) {
-	ret := &unstructured.Unstructured{}
+	var ret schema.ObjectKind
+	if strings.HasSuffix(kind.Kind, "List") {
+		ret = &unstructured.UnstructuredList{}
+	} else {
+		ret = &unstructured.Unstructured{}
+	}
 	ret.SetGroupVersionKind(kind)
-	return ret, nil
+	return ret.(runtime.Object), nil
 }
 
 type unstructuredDefaulter struct {
