@@ -42,7 +42,8 @@ import (
 type multiClusterClientConfigRoundTripper struct {
 	rt                  http.RoundTripper
 	requestInfoResolver func() genericapirequest.RequestInfoResolver
-	enabledOn           sets.String
+	enabledOn       sets.String
+	disableSharding bool
 }
 
 // EnableMultiCluster allows uses a rountripper to hack the rest.Config used by
@@ -53,7 +54,7 @@ type multiClusterClientConfigRoundTripper struct {
 //
 // This is a temporary hack and should be replaced by thoughtful and real support of logical clusters
 // in the client-go layer
-func EnableMultiCluster(config *rest.Config, apiServerConfig *genericapiserver.Config, enabledOnResources ...string) {
+func EnableMultiCluster(config *rest.Config, apiServerConfig *genericapiserver.Config, disableSharding bool, enabledOnResources ...string) {
 	config.ContentConfig.ContentType = "application/json"
 
 	config.Wrap(func(rt http.RoundTripper) http.RoundTripper {
@@ -67,7 +68,8 @@ func EnableMultiCluster(config *rest.Config, apiServerConfig *genericapiserver.C
 					return defaultResolver
 				}
 			},
-			enabledOn: sets.NewString(enabledOnResources...),
+			enabledOn:       sets.NewString(enabledOnResources...),
+			disableSharding: disableSharding,
 		}
 	})
 }
@@ -157,6 +159,9 @@ func (mcrt *multiClusterClientConfigRoundTripper) RoundTrip(req *http.Request) (
 			req.Header.Add("X-Kubernetes-Cluster", contextCluster.Name)
 		}
 	}
-	req.Header.Add("X-Kubernetes-Sharded-Request", "false")
+	if mcrt.disableSharding {
+		// let internal clients opt out of sharding for now
+		req.Header.Add("X-Kubernetes-Sharded-Request", "true")
+	}
 	return mcrt.rt.RoundTrip(req)
 }

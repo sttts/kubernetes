@@ -970,11 +970,13 @@ func (r *Request) newHTTPRequest(ctx context.Context) (*http.Request, error) {
 	req = req.WithContext(ctx)
 	req.Header = r.headers
 	if r.debug {
+		klog.Info("v=== DELEGATED REQUEST ===v")
 		v, e := httputil.DumpRequestOut(req, true)
-		klog.V(10).Info(string(v))
+		klog.Info(string(v))
 		if e != nil {
 			klog.Error(e)
 		}
+		klog.Info("^=== DELEGATED REQUEST ===^")
 	}
 	return req, nil
 }
@@ -1037,11 +1039,13 @@ func (r *Request) request(ctx context.Context, fn func(*http.Request, *http.Resp
 		}
 		resp, err := client.Do(req)
 		if r.debug {
+			klog.Info("^v=== DELEGATED RESPONSE ===v")
 			v, e := httputil.DumpResponse(resp, true)
-			klog.V(10).Info(string(v))
+			klog.Info(string(v))
 			if e != nil {
 				klog.Error(e)
 			}
+			klog.Info("^=== DELEGATED RESPONSE ===^")
 		}
 		updateURLMetrics(ctx, r, resp, err)
 		if err != nil {

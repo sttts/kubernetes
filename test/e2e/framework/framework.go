@@ -72,6 +72,10 @@ type Framework struct {
 
 	clientConfig                     *rest.Config
 	ClientSet                        clientset.Interface
+	MultiClusterClientSet            clientset.Interface
+	SecondaryClientSet               clientset.Interface
+	TertiaryClientSet                clientset.Interface
+	ClusterlessClientSet                 clientset.ClusterInterface
 	KubemarkExternalClusterClientSet clientset.Interface
 
 	DynamicClient dynamic.Interface
@@ -388,17 +392,21 @@ func (f *Framework) AfterEach() {
 		// if delete-namespace is true and delete-namespace-on-failure is false, namespace will be preserved if test failed.
 		if TestContext.DeleteNamespace && (TestContext.DeleteNamespaceOnFailure || !ginkgo.CurrentGinkgoTestDescription().Failed) {
 			for _, ns := range f.namespacesToDelete {
-				ginkgo.By(fmt.Sprintf("Destroying namespace %q for this suite.", ns.Name))
-				if err := f.ClientSet.CoreV1().Namespaces().Delete(context.TODO(), ns.Name, metav1.DeleteOptions{}); err != nil {
-					if !apierrors.IsNotFound(err) {
-						nsDeletionErrors[ns.Name] = err
+				for i, client := range []clientset.Interface{f.ClientSet, f.SecondaryClientSet, f.TertiaryClientSet} {
+					if client != nil {
+						ginkgo.By(fmt.Sprintf("Destroying namespace %q for this suite.", ns.Name))
+						if err := client.CoreV1().Namespaces().Delete(context.TODO(), ns.Name, metav1.DeleteOptions{}); err != nil {
+							if !apierrors.IsNotFound(err) {
+								nsDeletionErrors[fmt.Sprintf("%d-%s", i, ns.Name)] = err
 
-						// Dump namespace if we are unable to delete the namespace and the dump was not already performed.
-						if !ginkgo.CurrentGinkgoTestDescription().Failed && TestContext.DumpLogsOnFailure {
-							DumpAllNamespaceInfo(f.ClientSet, ns.Name)
+								// Dump namespace if we are unable to delete the namespace and the dump was not already performed.
+								if !ginkgo.CurrentGinkgoTestDescription().Failed && TestContext.DumpLogsOnFailure {
+									DumpAllNamespaceInfo(client, ns.Name)
+								}
+							} else {
+								Logf("Namespace %v was already deleted", ns.Name)
+							}
 						}
-					} else {
-						Logf("Namespace %v was already deleted", ns.Name)
 					}
 				}
 			}
@@ -519,6 +527,7 @@ func (f *Framework) CreateNamespace(baseName string, labels map[string]string) (
 		createTestingNS = CreateTestingNS
 	}
 	ns, err := createTestingNS(baseName, f.ClientSet, labels)
+
 	// check ns instead of err to see if it's nil as we may
 	// fail to create serviceAccount in it.
 	f.AddNamespacesToDelete(ns)
@@ -526,8 +535,22 @@ func (f *Framework) CreateNamespace(baseName string, labels map[string]string) (
 	if err == nil && !f.SkipPrivilegedPSPBinding {
 		CreatePrivilegedPSPBinding(f.ClientSet, ns.Name)
 	}
+	for _, clientSet := range []clientset.Interface{f.SecondaryClientSet, f.TertiaryClientSet} {
+		if clientSet != nil {
+			ns, err = CreateSpecificTestingNS(func() string {
+				return ns.Name
+			}, clientSet, labels)
 
-	return ns, err
+			if err == nil && !f.SkipPrivilegedPSPBinding {
+				CreatePrivilegedPSPBinding(clientSet, ns.Name)
+			}
+			if err != nil {
+				return ns, err
+			}
+		}
+	}
+
+	return ns, err // TODO: what do callers even need here if we create multiple?
 }
 
 // RecordFlakeIfError records flakeness info if error happens.
