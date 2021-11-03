@@ -84,8 +84,13 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 		"NewDiscoveryClient":                   c.Universe.Function(types.Name{Package: "k8s.io/client-go/discovery", Name: "NewDiscoveryClient"}),
 		"flowcontrolNewTokenBucketRateLimiter": c.Universe.Function(types.Name{Package: "k8s.io/client-go/util/flowcontrol", Name: "NewTokenBucketRateLimiter"}),
 	}
+	sw.Do(clusterInterface, m)
+	sw.Do(clusterTemplate, m)
+	sw.Do(setClusterTemplate, m)
+	sw.Do(newClusterForConfigTemplate, m)
 	sw.Do(clientsetInterface, m)
 	sw.Do(clientsetTemplate, m)
+	sw.Do(scopedClientsetTemplate, m)
 	for _, g := range allGroups {
 		sw.Do(clientsetInterfaceImplTemplate, g)
 	}
@@ -96,6 +101,41 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 
 	return sw.Error()
 }
+
+var clusterInterface = `
+type ClusterInterface interface {
+	Cluster(name string) Interface
+}
+`
+
+var clusterTemplate = `
+type Cluster struct {
+	*scopedClientset
+}
+`
+
+var setClusterTemplate = `
+// Cluster sets the cluster for a Clientset.
+func (c *Cluster) Cluster(name string) Interface {
+	return &Clientset{
+		scopedClientset: c.scopedClientset,
+		cluster:         name,
+	}
+}
+`
+
+var newClusterForConfigTemplate = `
+// NewClusterForConfig creates a new Cluster for the given config.
+// If config's RateLimiter is not set and QPS and Burst are acceptable, 
+// NewClusterForConfig will generate a rate-limiter in configShallowCopy.
+func NewClusterForConfig(c *$.Config|raw$) (*Cluster, error) {
+	cs, err := NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
+	return &Cluster{scopedClientset: cs.scopedClientset}, nil
+}
+`
 
 var clientsetInterface = `
 type Interface interface {
@@ -109,6 +149,15 @@ var clientsetTemplate = `
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
+	*scopedClientset
+	cluster string
+}
+`
+
+var scopedClientsetTemplate = `
+// scopedClientset contains the clients for groups. Each group has exactly one
+// version included in a Clientset.
+type scopedClientset struct {
 	*$.DiscoveryClient|raw$
     $range .allGroups$$.LowerCaseGroupGoName$$.Version$ *$.PackageAlias$.$.GroupGoName$$.Version$Client
     $end$
@@ -118,7 +167,7 @@ type Clientset struct {
 var clientsetInterfaceImplTemplate = `
 // $.GroupGoName$$.Version$ retrieves the $.GroupGoName$$.Version$Client
 func (c *Clientset) $.GroupGoName$$.Version$() $.PackageAlias$.$.GroupGoName$$.Version$Interface {
-	return c.$.LowerCaseGroupGoName$$.Version$
+	return $.PackageAlias$.NewWithCluster(c.$.LowerCaseGroupGoName$$.Version$.RESTClient(), c.cluster)
 }
 `
 
@@ -144,7 +193,7 @@ func NewForConfig(c *$.Config|raw$) (*Clientset, error) {
 		}
 		configShallowCopy.RateLimiter = $.flowcontrolNewTokenBucketRateLimiter|raw$(configShallowCopy.QPS, configShallowCopy.Burst)
 	}
-	var cs Clientset
+	var cs scopedClientset
 	var err error
 $range .allGroups$    cs.$.LowerCaseGroupGoName$$.Version$, err =$.PackageAlias$.NewForConfig(&configShallowCopy)
 	if err!=nil {
@@ -155,7 +204,7 @@ $end$
 	if err!=nil {
 		return nil, err
 	}
-	return &cs, nil
+	return &Clientset{scopedClientset: &cs}, nil
 }
 `
 
@@ -174,10 +223,10 @@ $end$
 var newClientsetForRESTClientTemplate = `
 // New creates a new Clientset for the given RESTClient.
 func New(c $.RESTClientInterface|raw$) *Clientset {
-	var cs Clientset
+	var cs scopedClientset
 $range .allGroups$    cs.$.LowerCaseGroupGoName$$.Version$ =$.PackageAlias$.New(c)
 $end$
 	cs.DiscoveryClient = $.NewDiscoveryClient|raw$(c)
-	return &cs
+	return &Clientset{scopedClientset: &cs}
 }
 `
