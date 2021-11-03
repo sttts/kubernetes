@@ -36,6 +36,7 @@ type AppsV1beta2Interface interface {
 // AppsV1beta2Client is used to interact with features provided by the apps group.
 type AppsV1beta2Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *AppsV1beta2Client) ControllerRevisions(namespace string) ControllerRevisionInterface {
@@ -68,7 +69,7 @@ func NewForConfig(c *rest.Config) (*AppsV1beta2Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &AppsV1beta2Client{client}, nil
+	return &AppsV1beta2Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new AppsV1beta2Client for the given config and
@@ -83,7 +84,12 @@ func NewForConfigOrDie(c *rest.Config) *AppsV1beta2Client {
 
 // New creates a new AppsV1beta2Client for the given RESTClient.
 func New(c rest.Interface) *AppsV1beta2Client {
-	return &AppsV1beta2Client{c}
+	return &AppsV1beta2Client{restClient: c}
+}
+
+// NewWithCluster creates a new AppsV1beta2Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *AppsV1beta2Client {
+	return &AppsV1beta2Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

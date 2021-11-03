@@ -33,6 +33,7 @@ type ExampleGroupV1Interface interface {
 // ExampleGroupV1Client is used to interact with features provided by the example-group.hyphens.code-generator.k8s.io group.
 type ExampleGroupV1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *ExampleGroupV1Client) ClusterTestTypes() ClusterTestTypeInterface {
@@ -53,7 +54,7 @@ func NewForConfig(c *rest.Config) (*ExampleGroupV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ExampleGroupV1Client{client}, nil
+	return &ExampleGroupV1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new ExampleGroupV1Client for the given config and
@@ -68,7 +69,12 @@ func NewForConfigOrDie(c *rest.Config) *ExampleGroupV1Client {
 
 // New creates a new ExampleGroupV1Client for the given RESTClient.
 func New(c rest.Interface) *ExampleGroupV1Client {
-	return &ExampleGroupV1Client{c}
+	return &ExampleGroupV1Client{restClient: c}
+}
+
+// NewWithCluster creates a new ExampleGroupV1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *ExampleGroupV1Client {
+	return &ExampleGroupV1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

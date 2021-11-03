@@ -28,6 +28,33 @@ import (
 	metricsv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
 )
 
+type ClusterInterface interface {
+	Cluster(name string) Interface
+}
+
+type Cluster struct {
+	*scopedClientset
+}
+
+// Cluster sets the cluster for a Clientset.
+func (c *Cluster) Cluster(name string) Interface {
+	return &Clientset{
+		scopedClientset: c.scopedClientset,
+		cluster:         name,
+	}
+}
+
+// NewClusterForConfig creates a new Cluster for the given config.
+// If config's RateLimiter is not set and QPS and Burst are acceptable,
+// NewClusterForConfig will generate a rate-limiter in configShallowCopy.
+func NewClusterForConfig(c *rest.Config) (*Cluster, error) {
+	cs, err := NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
+	return &Cluster{scopedClientset: cs.scopedClientset}, nil
+}
+
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	MetricsV1alpha1() metricsv1alpha1.MetricsV1alpha1Interface
@@ -37,6 +64,13 @@ type Interface interface {
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
+	*scopedClientset
+	cluster string
+}
+
+// scopedClientset contains the clients for groups. Each group has exactly one
+// version included in a Clientset.
+type scopedClientset struct {
 	*discovery.DiscoveryClient
 	metricsV1alpha1 *metricsv1alpha1.MetricsV1alpha1Client
 	metricsV1beta1  *metricsv1beta1.MetricsV1beta1Client
@@ -44,12 +78,12 @@ type Clientset struct {
 
 // MetricsV1alpha1 retrieves the MetricsV1alpha1Client
 func (c *Clientset) MetricsV1alpha1() metricsv1alpha1.MetricsV1alpha1Interface {
-	return c.metricsV1alpha1
+	return metricsv1alpha1.NewWithCluster(c.metricsV1alpha1.RESTClient(), c.cluster)
 }
 
 // MetricsV1beta1 retrieves the MetricsV1beta1Client
 func (c *Clientset) MetricsV1beta1() metricsv1beta1.MetricsV1beta1Interface {
-	return c.metricsV1beta1
+	return metricsv1beta1.NewWithCluster(c.metricsV1beta1.RESTClient(), c.cluster)
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -71,7 +105,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 		}
 		configShallowCopy.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(configShallowCopy.QPS, configShallowCopy.Burst)
 	}
-	var cs Clientset
+	var cs scopedClientset
 	var err error
 	cs.metricsV1alpha1, err = metricsv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
@@ -86,7 +120,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &cs, nil
+	return &Clientset{scopedClientset: &cs}, nil
 }
 
 // NewForConfigOrDie creates a new Clientset for the given config and
@@ -102,10 +136,10 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
-	var cs Clientset
+	var cs scopedClientset
 	cs.metricsV1alpha1 = metricsv1alpha1.New(c)
 	cs.metricsV1beta1 = metricsv1beta1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
-	return &cs
+	return &Clientset{scopedClientset: &cs}
 }

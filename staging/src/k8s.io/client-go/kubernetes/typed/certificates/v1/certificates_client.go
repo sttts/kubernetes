@@ -32,6 +32,7 @@ type CertificatesV1Interface interface {
 // CertificatesV1Client is used to interact with features provided by the certificates.k8s.io group.
 type CertificatesV1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *CertificatesV1Client) CertificateSigningRequests() CertificateSigningRequestInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*CertificatesV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CertificatesV1Client{client}, nil
+	return &CertificatesV1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new CertificatesV1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *CertificatesV1Client {
 
 // New creates a new CertificatesV1Client for the given RESTClient.
 func New(c rest.Interface) *CertificatesV1Client {
-	return &CertificatesV1Client{c}
+	return &CertificatesV1Client{restClient: c}
+}
+
+// NewWithCluster creates a new CertificatesV1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *CertificatesV1Client {
+	return &CertificatesV1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

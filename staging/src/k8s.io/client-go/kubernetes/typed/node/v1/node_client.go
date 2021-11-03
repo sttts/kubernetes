@@ -32,6 +32,7 @@ type NodeV1Interface interface {
 // NodeV1Client is used to interact with features provided by the node.k8s.io group.
 type NodeV1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *NodeV1Client) RuntimeClasses() RuntimeClassInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*NodeV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &NodeV1Client{client}, nil
+	return &NodeV1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new NodeV1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *NodeV1Client {
 
 // New creates a new NodeV1Client for the given RESTClient.
 func New(c rest.Interface) *NodeV1Client {
-	return &NodeV1Client{c}
+	return &NodeV1Client{restClient: c}
+}
+
+// NewWithCluster creates a new NodeV1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *NodeV1Client {
+	return &NodeV1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

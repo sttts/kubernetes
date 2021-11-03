@@ -33,6 +33,7 @@ type MetricsV1alpha1Interface interface {
 // MetricsV1alpha1Client is used to interact with features provided by the metrics.k8s.io group.
 type MetricsV1alpha1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *MetricsV1alpha1Client) NodeMetricses() NodeMetricsInterface {
@@ -53,7 +54,7 @@ func NewForConfig(c *rest.Config) (*MetricsV1alpha1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &MetricsV1alpha1Client{client}, nil
+	return &MetricsV1alpha1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new MetricsV1alpha1Client for the given config and
@@ -68,7 +69,12 @@ func NewForConfigOrDie(c *rest.Config) *MetricsV1alpha1Client {
 
 // New creates a new MetricsV1alpha1Client for the given RESTClient.
 func New(c rest.Interface) *MetricsV1alpha1Client {
-	return &MetricsV1alpha1Client{c}
+	return &MetricsV1alpha1Client{restClient: c}
+}
+
+// NewWithCluster creates a new MetricsV1alpha1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *MetricsV1alpha1Client {
+	return &MetricsV1alpha1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

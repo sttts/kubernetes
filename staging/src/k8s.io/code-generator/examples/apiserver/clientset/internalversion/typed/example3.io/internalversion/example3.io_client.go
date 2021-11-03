@@ -31,6 +31,7 @@ type ThirdExampleInterface interface {
 // ThirdExampleClient is used to interact with features provided by the example.dots.apiserver.code-generator.k8s.io group.
 type ThirdExampleClient struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *ThirdExampleClient) TestTypes(namespace string) TestTypeInterface {
@@ -47,7 +48,7 @@ func NewForConfig(c *rest.Config) (*ThirdExampleClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ThirdExampleClient{client}, nil
+	return &ThirdExampleClient{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new ThirdExampleClient for the given config and
@@ -62,7 +63,12 @@ func NewForConfigOrDie(c *rest.Config) *ThirdExampleClient {
 
 // New creates a new ThirdExampleClient for the given RESTClient.
 func New(c rest.Interface) *ThirdExampleClient {
-	return &ThirdExampleClient{c}
+	return &ThirdExampleClient{restClient: c}
+}
+
+// NewWithCluster creates a new ThirdExampleClient for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *ThirdExampleClient {
+	return &ThirdExampleClient{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

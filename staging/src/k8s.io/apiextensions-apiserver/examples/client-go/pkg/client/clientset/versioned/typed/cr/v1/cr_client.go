@@ -32,6 +32,7 @@ type CrV1Interface interface {
 // CrV1Client is used to interact with features provided by the cr.example.apiextensions.k8s.io group.
 type CrV1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *CrV1Client) Examples(namespace string) ExampleInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*CrV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CrV1Client{client}, nil
+	return &CrV1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new CrV1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *CrV1Client {
 
 // New creates a new CrV1Client for the given RESTClient.
 func New(c rest.Interface) *CrV1Client {
-	return &CrV1Client{c}
+	return &CrV1Client{restClient: c}
+}
+
+// NewWithCluster creates a new CrV1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *CrV1Client {
+	return &CrV1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

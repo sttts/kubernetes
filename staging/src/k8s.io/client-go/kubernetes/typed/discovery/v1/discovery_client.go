@@ -32,6 +32,7 @@ type DiscoveryV1Interface interface {
 // DiscoveryV1Client is used to interact with features provided by the discovery.k8s.io group.
 type DiscoveryV1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *DiscoveryV1Client) EndpointSlices(namespace string) EndpointSliceInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*DiscoveryV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DiscoveryV1Client{client}, nil
+	return &DiscoveryV1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new DiscoveryV1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *DiscoveryV1Client {
 
 // New creates a new DiscoveryV1Client for the given RESTClient.
 func New(c rest.Interface) *DiscoveryV1Client {
-	return &DiscoveryV1Client{c}
+	return &DiscoveryV1Client{restClient: c}
+}
+
+// NewWithCluster creates a new DiscoveryV1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *DiscoveryV1Client {
+	return &DiscoveryV1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {
