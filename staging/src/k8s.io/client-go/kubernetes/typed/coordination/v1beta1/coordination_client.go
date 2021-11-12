@@ -32,6 +32,7 @@ type CoordinationV1beta1Interface interface {
 // CoordinationV1beta1Client is used to interact with features provided by the coordination.k8s.io group.
 type CoordinationV1beta1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *CoordinationV1beta1Client) Leases(namespace string) LeaseInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*CoordinationV1beta1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CoordinationV1beta1Client{client}, nil
+	return &CoordinationV1beta1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new CoordinationV1beta1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *CoordinationV1beta1Client {
 
 // New creates a new CoordinationV1beta1Client for the given RESTClient.
 func New(c rest.Interface) *CoordinationV1beta1Client {
-	return &CoordinationV1beta1Client{c}
+	return &CoordinationV1beta1Client{restClient: c}
+}
+
+// NewWithCluster creates a new CoordinationV1beta1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *CoordinationV1beta1Client {
+	return &CoordinationV1beta1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

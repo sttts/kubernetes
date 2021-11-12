@@ -32,6 +32,7 @@ type AutoscalingV1Interface interface {
 // AutoscalingV1Client is used to interact with features provided by the autoscaling group.
 type AutoscalingV1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *AutoscalingV1Client) HorizontalPodAutoscalers(namespace string) HorizontalPodAutoscalerInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*AutoscalingV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &AutoscalingV1Client{client}, nil
+	return &AutoscalingV1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new AutoscalingV1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *AutoscalingV1Client {
 
 // New creates a new AutoscalingV1Client for the given RESTClient.
 func New(c rest.Interface) *AutoscalingV1Client {
-	return &AutoscalingV1Client{c}
+	return &AutoscalingV1Client{restClient: c}
+}
+
+// NewWithCluster creates a new AutoscalingV1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *AutoscalingV1Client {
+	return &AutoscalingV1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

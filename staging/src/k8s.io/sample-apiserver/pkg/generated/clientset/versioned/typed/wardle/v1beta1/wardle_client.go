@@ -32,6 +32,7 @@ type WardleV1beta1Interface interface {
 // WardleV1beta1Client is used to interact with features provided by the wardle.example.com group.
 type WardleV1beta1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *WardleV1beta1Client) Flunders(namespace string) FlunderInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*WardleV1beta1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &WardleV1beta1Client{client}, nil
+	return &WardleV1beta1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new WardleV1beta1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *WardleV1beta1Client {
 
 // New creates a new WardleV1beta1Client for the given RESTClient.
 func New(c rest.Interface) *WardleV1beta1Client {
-	return &WardleV1beta1Client{c}
+	return &WardleV1beta1Client{restClient: c}
+}
+
+// NewWithCluster creates a new WardleV1beta1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *WardleV1beta1Client {
+	return &WardleV1beta1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

@@ -32,6 +32,7 @@ type EventsV1Interface interface {
 // EventsV1Client is used to interact with features provided by the events.k8s.io group.
 type EventsV1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *EventsV1Client) Events(namespace string) EventInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*EventsV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &EventsV1Client{client}, nil
+	return &EventsV1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new EventsV1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *EventsV1Client {
 
 // New creates a new EventsV1Client for the given RESTClient.
 func New(c rest.Interface) *EventsV1Client {
-	return &EventsV1Client{c}
+	return &EventsV1Client{restClient: c}
+}
+
+// NewWithCluster creates a new EventsV1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *EventsV1Client {
+	return &EventsV1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

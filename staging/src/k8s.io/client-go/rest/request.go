@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"path"
 	"reflect"
@@ -96,12 +97,15 @@ type Request struct {
 
 	// generic components accessible via method setters
 	verb       string
+	basePath   string
 	pathPrefix string
 	subpath    string
 	params     url.Values
 	headers    http.Header
 
 	// structural elements of the request that are part of the Kubernetes API conventions
+	cluster      string
+	clusterSet   bool
 	namespace    string
 	namespaceSet bool
 	resource     string
@@ -112,6 +116,8 @@ type Request struct {
 	err   error
 	body  io.Reader
 	retry WithRetry
+
+	debug bool
 }
 
 // NewRequest creates a new request helper object for accessing runtime.Objects on a server.
@@ -124,11 +130,11 @@ func NewRequest(c *RESTClient) *Request {
 		backoff = noBackoff
 	}
 
-	var pathPrefix string
+	var basePath string
 	if c.base != nil {
-		pathPrefix = path.Join("/", c.base.Path, c.versionedAPIPath)
+		basePath = path.Join("/", c.base.Path)
 	} else {
-		pathPrefix = path.Join("/", c.versionedAPIPath)
+		basePath = "/"
 	}
 
 	var timeout time.Duration
@@ -141,7 +147,8 @@ func NewRequest(c *RESTClient) *Request {
 		rateLimiter:    c.rateLimiter,
 		backoff:        backoff,
 		timeout:        timeout,
-		pathPrefix:     pathPrefix,
+		basePath:       basePath,
+		pathPrefix:     c.versionedAPIPath,
 		retry:          &withRetry{maxRetries: 10},
 		warningHandler: c.warningHandler,
 	}
@@ -294,6 +301,24 @@ func (r *Request) Namespace(namespace string) *Request {
 	return r
 }
 
+// Cluster applies the cluster scope to a request ([clusters/<cluster>]/...)
+func (r *Request) Cluster(cluster string) *Request {
+	if r.err != nil {
+		return r
+	}
+	if r.clusterSet {
+		r.err = fmt.Errorf("cluster already set to %q, cannot change to %q", r.namespace, cluster)
+		return r
+	}
+	if msgs := IsValidPathSegmentName(cluster); len(msgs) != 0 {
+		r.err = fmt.Errorf("invalid cluster %q: %v", cluster, msgs)
+		return r
+	}
+	r.clusterSet = true
+	r.cluster = cluster
+	return r
+}
+
 // NamespaceIfScoped is a convenience function to set a namespace if scoped is true
 func (r *Request) NamespaceIfScoped(namespace string, scoped bool) *Request {
 	if scoped {
@@ -308,8 +333,8 @@ func (r *Request) AbsPath(segments ...string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.pathPrefix = path.Join(r.c.base.Path, path.Join(segments...))
-	if len(segments) == 1 && (len(r.c.base.Path) > 1 || len(segments[0]) > 1) && strings.HasSuffix(segments[0], "/") {
+	r.pathPrefix = path.Join(segments...)
+	if len(segments) == 1 && len(segments[0]) > 1 && strings.HasSuffix(segments[0], "/") {
 		// preserve any trailing slashes for legacy behavior
 		r.pathPrefix += "/"
 	}
@@ -345,6 +370,18 @@ func (r *Request) Param(paramName, s string) *Request {
 		return r
 	}
 	return r.setParam(paramName, s)
+}
+
+// OverwriteParam creates a query parameter with the given string value.
+func (r *Request) OverwriteParam(paramName, s string) *Request {
+	if r.err != nil {
+		return r
+	}
+	if r.params == nil {
+		r.params = make(url.Values)
+	}
+	r.params[paramName] = []string{s}
+	return r
 }
 
 // VersionedParams will take the provided object, serialize it to a map[string][]string using the
@@ -390,6 +427,11 @@ func (r *Request) SetHeader(key string, values ...string) *Request {
 	for _, value := range values {
 		r.headers.Add(key, value)
 	}
+	return r
+}
+
+func (r *Request) Debug() *Request {
+	r.debug = true
 	return r
 }
 
@@ -463,7 +505,11 @@ func (r *Request) Body(obj interface{}) *Request {
 
 // URL returns the current working URL.
 func (r *Request) URL() *url.URL {
-	p := r.pathPrefix
+	p := r.basePath
+	if r.clusterSet && len(r.cluster) > 0 {
+		p = path.Join(p, "clusters", r.cluster)
+	}
+	p = path.Join(p, r.pathPrefix)
 	if r.namespaceSet && len(r.namespace) > 0 {
 		p = path.Join(p, "namespaces", r.namespace)
 	}
@@ -526,6 +572,11 @@ func (r Request) finalURLTemplate() url.URL {
 	}
 	if len(segments) <= 2 {
 		return *url
+	}
+
+	if segments[groupIndex] == "clusters" {
+		segments[groupIndex+1] = "{cluster}"
+		groupIndex += 2
 	}
 
 	const CoreGroupPrefix = "api"
@@ -918,6 +969,15 @@ func (r *Request) newHTTPRequest(ctx context.Context) (*http.Request, error) {
 	}
 	req = req.WithContext(ctx)
 	req.Header = r.headers
+	if r.debug {
+		klog.Info("v=== DELEGATED REQUEST ===v")
+		v, e := httputil.DumpRequestOut(req, true)
+		klog.Info(string(v))
+		if e != nil {
+			klog.Error(e)
+		}
+		klog.Info("^=== DELEGATED REQUEST ===^")
+	}
 	return req, nil
 }
 
@@ -978,6 +1038,15 @@ func (r *Request) request(ctx context.Context, fn func(*http.Request, *http.Resp
 			retryAfter = nil
 		}
 		resp, err := client.Do(req)
+		if r.debug {
+			klog.Info("^v=== DELEGATED RESPONSE ===v")
+			v, e := httputil.DumpResponse(resp, true)
+			klog.Info(string(v))
+			if e != nil {
+				klog.Error(e)
+			}
+			klog.Info("^=== DELEGATED RESPONSE ===^")
+		}
 		updateURLMetrics(ctx, r, resp, err)
 		if err != nil {
 			r.backoff.UpdateBackoff(r.URL(), err, 0)

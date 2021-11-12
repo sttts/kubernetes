@@ -70,6 +70,28 @@ const (
 	RootClusterName   = "admin"
 )
 
+func SanitizeClusterId(id string) string {
+	r := regexp.MustCompile(`[^a-zA-Z0-9]`)
+	return r.ReplaceAllString(id, "-")
+}
+
+func SanitizedClusterName(id, name string) string {
+	return fmt.Sprintf("%s---%s", SanitizeClusterId(id), name)
+}
+
+func ParseClusterName(name string) (string, string, error) {
+	parts := strings.Split(name, "---")
+	switch len(parts) {
+	case 1:
+		// nothing provided, no error though
+		return "", "", nil
+	case 2:
+		return parts[0], parts[1], nil
+	default:
+		return "", "", fmt.Errorf("invalid cluster: %v", name)
+	}
+}
+
 // Run runs the specified APIServer.  This should never exit.
 func Run(completeOptions completedServerRunOptions, stopCh <-chan struct{}) error {
 	// To help debugging, immediately log version
@@ -112,7 +134,7 @@ func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan
 	if err != nil {
 		return nil, err
 	}
-	aggregatorServer, err := createAggregatorServer(aggregatorConfig, kubeAPIServer.GenericAPIServer, apiExtensionsServer.Informers)
+	aggregatorServer, err := createAggregatorServer(aggregatorConfig, kubeAPIServer.GenericAPIServer, apiExtensionsServer.Informers, kubeAPIServer.GenericAPIServer.ExternalAddress)
 	if err != nil {
 		// we don't need special handling for innerStopCh because the aggregator server doesn't create any go routines
 		return nil, err
@@ -297,6 +319,9 @@ func BuildGenericConfig(
 	lastErr error,
 ) {
 	genericConfig = genericapiserver.NewConfig(genericcontrolplanescheme.Codecs)
+	if s.BuildHandlerChainFunc != nil {
+		genericConfig.BuildHandlerChainFunc = s.BuildHandlerChainFunc
+	}
 
 	if lastErr = s.GenericServerRunOptions.ApplyTo(genericConfig); lastErr != nil {
 		return
@@ -362,7 +387,7 @@ func BuildGenericConfig(
 
 	kubeClientConfig := genericConfig.LoopbackClientConfig
 
-	clientutils.EnableMultiCluster(genericConfig.LoopbackClientConfig, genericConfig, "namespaces", "apiservices", "customresourcedefinitions")
+	clientutils.EnableMultiCluster(genericConfig.LoopbackClientConfig, genericConfig, true, "namespaces", "apiservices", "customresourcedefinitions")
 
 	clientgoExternalClient, err := clientgoclientset.NewForConfig(kubeClientConfig)
 	if err != nil {
@@ -381,93 +406,6 @@ func BuildGenericConfig(
 		lastErr = fmt.Errorf("invalid authorization config: %v", err)
 		return
 	}
-
-	// if !sets.NewString(s.Authorization.Modes...).Has(modes.ModeRBAC) {
-	//     genericConfig.DisabledPostStartHooks.Insert(rbacrest.PostStartHookName)
-	// }
-
-	var originalHandler = genericConfig.BuildHandlerChainFunc
-	var reClusterName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,78}[a-z0-9]$`)
-	genericConfig.BuildHandlerChainFunc = func(handler http.Handler, c *genericapiserver.Config) http.Handler {
-		h := originalHandler(handler, c)
-		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			var clusterName string
-			if path := req.URL.Path; strings.HasPrefix(path, "/clusters/") {
-				path = strings.TrimPrefix(path, "/clusters/")
-				i := strings.Index(path, "/")
-				if i == -1 {
-					http.Error(w, "Unknown cluster", http.StatusNotFound)
-					return
-				}
-				clusterName, path = path[:i], path[i:]
-				req.URL.Path = path
-				for i := 0; i < 2 && len(req.URL.RawPath) > 1; i++ {
-					slash := strings.Index(req.URL.RawPath[1:], "/")
-					if slash == -1 {
-						http.Error(w, "Unknown cluster", http.StatusNotFound)
-						return
-					}
-					klog.Infof("DEBUG: %s -> %s", req.URL.RawPath, req.URL.RawPath[slash:])
-					req.URL.RawPath = req.URL.RawPath[slash:]
-				}
-			} else {
-				clusterName = req.Header.Get("X-Kubernetes-Cluster")
-			}
-			var cluster genericapirequest.Cluster
-			switch clusterName {
-			case "*":
-				// HACK: just a workaround for testing
-				cluster.Wildcard = true
-				fallthrough
-			case "":
-				cluster.Name = RootClusterName
-			default:
-				if !reClusterName.MatchString(clusterName) {
-					http.Error(w, "Unknown cluster", http.StatusNotFound)
-					return
-				}
-				cluster.Name = clusterName
-			}
-			//klog.V(0).Infof("DEBUG: running with cluster %s", cluster)
-			ctx := genericapirequest.WithCluster(req.Context(), cluster)
-			h.ServeHTTP(w, req.WithContext(ctx))
-		})
-	}
-
-	// admissionConfig := &controlplaneadmission.Config{
-	// 	ExternalInformers:    versionedInformers,
-	// 	LoopbackClientConfig: genericConfig.LoopbackClientConfig,
-	// }
-
-	// lastErr = s.Audit.ApplyTo(genericConfig)
-	// if lastErr != nil {
-	// 	return
-	// }
-
-	// admissionConfig := &controlplaneadmission.Config{
-	// 	ExternalInformers:    versionedInformers,
-	// 	LoopbackClientConfig: genericConfig.LoopbackClientConfig,
-	// }
-	// pluginInitializers, admissionPostStartHook, err = admissionConfig.New()
-	// if err != nil {
-	// 	lastErr = fmt.Errorf("failed to create admission plugin initializer: %v", err)
-	// 	return
-	// }
-
-	// err = s.Admission.ApplyTo(
-	// 	genericConfig,
-	// 	versionedInformers,
-	// 	kubeClientConfig,
-	// 	utilfeature.DefaultFeatureGate,
-	// 	pluginInitializers...)
-	// if err != nil {
-	// 	lastErr = fmt.Errorf("failed to initialize admission: %v", err)
-	// 	return
-	// }
-
-	// if utilfeature.DefaultFeatureGate.Enabled(genericfeatures.APIPriorityAndFairness) && s.GenericServerRunOptions.EnablePriorityAndFairness {
-	// 	genericConfig.FlowControl, lastErr = BuildPriorityAndFairness(s, clientgoExternalClient, versionedInformers)
-	// }
 
 	return
 }

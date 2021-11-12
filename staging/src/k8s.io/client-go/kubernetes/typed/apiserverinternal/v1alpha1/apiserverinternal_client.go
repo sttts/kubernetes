@@ -32,6 +32,7 @@ type InternalV1alpha1Interface interface {
 // InternalV1alpha1Client is used to interact with features provided by the internal.apiserver.k8s.io group.
 type InternalV1alpha1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *InternalV1alpha1Client) StorageVersions() StorageVersionInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*InternalV1alpha1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &InternalV1alpha1Client{client}, nil
+	return &InternalV1alpha1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new InternalV1alpha1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *InternalV1alpha1Client {
 
 // New creates a new InternalV1alpha1Client for the given RESTClient.
 func New(c rest.Interface) *InternalV1alpha1Client {
-	return &InternalV1alpha1Client{c}
+	return &InternalV1alpha1Client{restClient: c}
+}
+
+// NewWithCluster creates a new InternalV1alpha1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *InternalV1alpha1Client {
+	return &InternalV1alpha1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

@@ -31,6 +31,7 @@ type ExampleInterface interface {
 // ExampleClient is used to interact with features provided by the example.apiserver.code-generator.k8s.io group.
 type ExampleClient struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *ExampleClient) TestTypes(namespace string) TestTypeInterface {
@@ -47,7 +48,7 @@ func NewForConfig(c *rest.Config) (*ExampleClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ExampleClient{client}, nil
+	return &ExampleClient{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new ExampleClient for the given config and
@@ -62,7 +63,12 @@ func NewForConfigOrDie(c *rest.Config) *ExampleClient {
 
 // New creates a new ExampleClient for the given RESTClient.
 func New(c rest.Interface) *ExampleClient {
-	return &ExampleClient{c}
+	return &ExampleClient{restClient: c}
+}
+
+// NewWithCluster creates a new ExampleClient for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *ExampleClient {
+	return &ExampleClient{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

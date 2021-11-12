@@ -35,6 +35,7 @@ type AuthorizationV1Interface interface {
 // AuthorizationV1Client is used to interact with features provided by the authorization.k8s.io group.
 type AuthorizationV1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *AuthorizationV1Client) LocalSubjectAccessReviews(namespace string) LocalSubjectAccessReviewInterface {
@@ -63,7 +64,7 @@ func NewForConfig(c *rest.Config) (*AuthorizationV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &AuthorizationV1Client{client}, nil
+	return &AuthorizationV1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new AuthorizationV1Client for the given config and
@@ -78,7 +79,12 @@ func NewForConfigOrDie(c *rest.Config) *AuthorizationV1Client {
 
 // New creates a new AuthorizationV1Client for the given RESTClient.
 func New(c rest.Interface) *AuthorizationV1Client {
-	return &AuthorizationV1Client{c}
+	return &AuthorizationV1Client{restClient: c}
+}
+
+// NewWithCluster creates a new AuthorizationV1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *AuthorizationV1Client {
+	return &AuthorizationV1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

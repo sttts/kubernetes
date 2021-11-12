@@ -36,6 +36,7 @@ type StorageV1beta1Interface interface {
 // StorageV1beta1Client is used to interact with features provided by the storage.k8s.io group.
 type StorageV1beta1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *StorageV1beta1Client) CSIDrivers() CSIDriverInterface {
@@ -68,7 +69,7 @@ func NewForConfig(c *rest.Config) (*StorageV1beta1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &StorageV1beta1Client{client}, nil
+	return &StorageV1beta1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new StorageV1beta1Client for the given config and
@@ -83,7 +84,12 @@ func NewForConfigOrDie(c *rest.Config) *StorageV1beta1Client {
 
 // New creates a new StorageV1beta1Client for the given RESTClient.
 func New(c rest.Interface) *StorageV1beta1Client {
-	return &StorageV1beta1Client{c}
+	return &StorageV1beta1Client{restClient: c}
+}
+
+// NewWithCluster creates a new StorageV1beta1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *StorageV1beta1Client {
+	return &StorageV1beta1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

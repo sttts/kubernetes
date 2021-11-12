@@ -33,6 +33,7 @@ type BatchV1Interface interface {
 // BatchV1Client is used to interact with features provided by the batch group.
 type BatchV1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *BatchV1Client) CronJobs(namespace string) CronJobInterface {
@@ -53,7 +54,7 @@ func NewForConfig(c *rest.Config) (*BatchV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BatchV1Client{client}, nil
+	return &BatchV1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new BatchV1Client for the given config and
@@ -68,7 +69,12 @@ func NewForConfigOrDie(c *rest.Config) *BatchV1Client {
 
 // New creates a new BatchV1Client for the given RESTClient.
 func New(c rest.Interface) *BatchV1Client {
-	return &BatchV1Client{c}
+	return &BatchV1Client{restClient: c}
+}
+
+// NewWithCluster creates a new BatchV1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *BatchV1Client {
+	return &BatchV1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

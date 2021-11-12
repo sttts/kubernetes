@@ -32,6 +32,7 @@ type SamplecontrollerV1alpha1Interface interface {
 // SamplecontrollerV1alpha1Client is used to interact with features provided by the samplecontroller.k8s.io group.
 type SamplecontrollerV1alpha1Client struct {
 	restClient rest.Interface
+	cluster    string
 }
 
 func (c *SamplecontrollerV1alpha1Client) Foos(namespace string) FooInterface {
@@ -48,7 +49,7 @@ func NewForConfig(c *rest.Config) (*SamplecontrollerV1alpha1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &SamplecontrollerV1alpha1Client{client}, nil
+	return &SamplecontrollerV1alpha1Client{restClient: client}, nil
 }
 
 // NewForConfigOrDie creates a new SamplecontrollerV1alpha1Client for the given config and
@@ -63,7 +64,12 @@ func NewForConfigOrDie(c *rest.Config) *SamplecontrollerV1alpha1Client {
 
 // New creates a new SamplecontrollerV1alpha1Client for the given RESTClient.
 func New(c rest.Interface) *SamplecontrollerV1alpha1Client {
-	return &SamplecontrollerV1alpha1Client{c}
+	return &SamplecontrollerV1alpha1Client{restClient: c}
+}
+
+// NewWithCluster creates a new SamplecontrollerV1alpha1Client for the given RESTClient and cluster.
+func NewWithCluster(c rest.Interface, cluster string) *SamplecontrollerV1alpha1Client {
+	return &SamplecontrollerV1alpha1Client{restClient: c, cluster: cluster}
 }
 
 func setConfigDefaults(config *rest.Config) error {

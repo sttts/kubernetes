@@ -28,6 +28,33 @@ import (
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1beta1"
 )
 
+type ClusterInterface interface {
+	Cluster(name string) Interface
+}
+
+type Cluster struct {
+	*scopedClientset
+}
+
+// Cluster sets the cluster for a Clientset.
+func (c *Cluster) Cluster(name string) Interface {
+	return &Clientset{
+		scopedClientset: c.scopedClientset,
+		cluster:         name,
+	}
+}
+
+// NewClusterForConfig creates a new Cluster for the given config.
+// If config's RateLimiter is not set and QPS and Burst are acceptable,
+// NewClusterForConfig will generate a rate-limiter in configShallowCopy.
+func NewClusterForConfig(c *rest.Config) (*Cluster, error) {
+	cs, err := NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
+	return &Cluster{scopedClientset: cs.scopedClientset}, nil
+}
+
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	ApiregistrationV1beta1() apiregistrationv1beta1.ApiregistrationV1beta1Interface
@@ -37,6 +64,13 @@ type Interface interface {
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
+	*scopedClientset
+	cluster string
+}
+
+// scopedClientset contains the clients for groups. Each group has exactly one
+// version included in a Clientset.
+type scopedClientset struct {
 	*discovery.DiscoveryClient
 	apiregistrationV1beta1 *apiregistrationv1beta1.ApiregistrationV1beta1Client
 	apiregistrationV1      *apiregistrationv1.ApiregistrationV1Client
@@ -44,12 +78,12 @@ type Clientset struct {
 
 // ApiregistrationV1beta1 retrieves the ApiregistrationV1beta1Client
 func (c *Clientset) ApiregistrationV1beta1() apiregistrationv1beta1.ApiregistrationV1beta1Interface {
-	return c.apiregistrationV1beta1
+	return apiregistrationv1beta1.NewWithCluster(c.apiregistrationV1beta1.RESTClient(), c.cluster)
 }
 
 // ApiregistrationV1 retrieves the ApiregistrationV1Client
 func (c *Clientset) ApiregistrationV1() apiregistrationv1.ApiregistrationV1Interface {
-	return c.apiregistrationV1
+	return apiregistrationv1.NewWithCluster(c.apiregistrationV1.RESTClient(), c.cluster)
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -71,7 +105,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 		}
 		configShallowCopy.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(configShallowCopy.QPS, configShallowCopy.Burst)
 	}
-	var cs Clientset
+	var cs scopedClientset
 	var err error
 	cs.apiregistrationV1beta1, err = apiregistrationv1beta1.NewForConfig(&configShallowCopy)
 	if err != nil {
@@ -86,7 +120,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &cs, nil
+	return &Clientset{scopedClientset: &cs}, nil
 }
 
 // NewForConfigOrDie creates a new Clientset for the given config and
@@ -102,10 +136,10 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
-	var cs Clientset
+	var cs scopedClientset
 	cs.apiregistrationV1beta1 = apiregistrationv1beta1.New(c)
 	cs.apiregistrationV1 = apiregistrationv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
-	return &cs
+	return &Clientset{scopedClientset: &cs}
 }
