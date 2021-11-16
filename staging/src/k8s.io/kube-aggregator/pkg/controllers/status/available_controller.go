@@ -145,8 +145,8 @@ func tlsConfigKey(c *rest.Config) tlsCacheKey {
 // NewAvailableConditionController returns a new AvailableConditionController.
 func NewAvailableConditionController(
 	apiServiceInformer informers.APIServiceInformer,
-	serviceInformer v1informers.ServiceInformer,
-	endpointsInformer v1informers.EndpointsInformer,
+	_ v1informers.ServiceInformer,
+	_ v1informers.EndpointsInformer,
 	apiServiceClient apiregistrationclient.APIServicesGetter,
 	proxyTransport *http.Transport,
 	proxyCurrentCertKeyContent certKeyFunc,
@@ -157,10 +157,6 @@ func NewAvailableConditionController(
 		apiServiceClient: apiServiceClient,
 		apiServiceLister: apiServiceInformer.Lister(),
 		apiServiceSynced: apiServiceInformer.Informer().HasSynced,
-		serviceLister:    serviceInformer.Lister(),
-		servicesSynced:   serviceInformer.Informer().HasSynced,
-		endpointsLister:  endpointsInformer.Lister(),
-		endpointsSynced:  endpointsInformer.Informer().HasSynced,
 		serviceResolver:  serviceResolver,
 		queue: workqueue.NewNamedRateLimitingQueue(
 			// We want a fairly tight requeue time.  The controller listens to the API, but because it relies on the routability of the
@@ -196,18 +192,6 @@ func NewAvailableConditionController(
 			DeleteFunc: c.deleteAPIService,
 		},
 		30*time.Second)
-
-	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    c.addService,
-		UpdateFunc: c.updateService,
-		DeleteFunc: c.deleteService,
-	})
-
-	endpointsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    c.addEndpoints,
-		UpdateFunc: c.updateEndpoints,
-		DeleteFunc: c.deleteEndpoints,
-	})
 
 	c.syncFn = c.sync
 
@@ -491,7 +475,7 @@ func (c *AvailableConditionController) Run(workers int, stopCh <-chan struct{}) 
 	klog.Info("Starting AvailableConditionController")
 	defer klog.Info("Shutting down AvailableConditionController")
 
-	if !controllers.WaitForCacheSync("AvailableConditionController", stopCh, c.apiServiceSynced, c.servicesSynced, c.endpointsSynced) {
+	if !controllers.WaitForCacheSync("AvailableConditionController", stopCh, c.apiServiceSynced) {
 		return
 	}
 
