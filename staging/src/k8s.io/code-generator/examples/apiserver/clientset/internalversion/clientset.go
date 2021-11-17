@@ -138,13 +138,13 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // NewForConfigOrDie creates a new Clientset for the given config and
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
-	var cs Clientset
+	var cs scopedClientset
 	cs.example = exampleinternalversion.NewForConfigOrDie(c)
 	cs.secondExample = secondexampleinternalversion.NewForConfigOrDie(c)
 	cs.thirdExample = thirdexampleinternalversion.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
-	return &cs
+	return &Clientset{scopedClientset: &cs}
 }
 
 // New creates a new Clientset for the given RESTClient.
