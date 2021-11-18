@@ -215,7 +215,7 @@ func (s *store) conditionalDelete(
 	if err != nil {
 		klog.Errorf("No cluster defined in conditionalDelete action for key %s : %s", key, err.Error())
 	}
-	
+
 	getCurrentState := func() (*objState, error) {
 		startTime := time.Now()
 		getResp, err := s.client.KV.Get(ctx, key)
@@ -875,13 +875,11 @@ func (s *store) watch(ctx context.Context, key string, opts storage.ListOptions,
 	if err != nil {
 		return nil, storage.NewInternalError(fmt.Sprintf("Invalid cluster for key %s : %v", key, err))
 	}
-	extractClusterSegmentFromKey := false
 	clusterName := cluster.Name
 	if cluster.Wildcard {
 		clusterName = "*"
-		extractClusterSegmentFromKey = true
 	}
-	
+
 	return s.watcher.Watch(ctx, key, int64(rev), recursive, clusterName, opts.ProgressNotify, opts.Predicate)
 }
 
