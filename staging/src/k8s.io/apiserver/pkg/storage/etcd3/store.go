@@ -1065,13 +1065,10 @@ func decode(codec runtime.Codec, versioner storage.Versioner, value []byte, objP
 	// The etcd key is ultimately the only thing that links us to a cluster
 	if clusterName != "" {
 		if s, ok := objPtr.(metav1.ObjectMetaAccessor); ok {
-			//klog.Infof("Setting ClusterName %s in appendListItem", clusterName)
 			s.GetObjectMeta().SetClusterName(clusterName)
 		} else if s, ok := objPtr.(metav1.Object); ok {
-			//klog.Infof("Setting ClusterName %s in appendListItem", clusterName)
 			s.SetClusterName(clusterName)
 		} else if s, ok := objPtr.(*unstructured.Unstructured); ok {
-			//klog.Infof("SUB: %s", clusterName)
 			s.SetClusterName(clusterName)
 		} else {
 			klog.Warningf("Could not set ClusterName %s in appendListItem on object: %T", clusterName, objPtr)
@@ -1101,16 +1098,13 @@ func appendListItem(v reflect.Value, data []byte, rev uint64, pred storage.Selec
 	// The etcd key is ultimately the only thing that links us to a cluster
 	if clusterName != "" {
 		if s, ok := obj.(metav1.ObjectMetaAccessor); ok {
-			//klog.Infof("Setting ClusterName %s in appendListItem", clusterName)
 			s.GetObjectMeta().SetClusterName(clusterName)
 		} else if s, ok := obj.(metav1.Object); ok {
-			//klog.Infof("Setting ClusterName %s in appendListItem", clusterName)
 			s.SetClusterName(clusterName)
 		} else if s, ok := obj.(*unstructured.Unstructured); ok {
-			//klog.Infof("SUB: %s", clusterName)
 			s.SetClusterName(clusterName)
 		} else {
-			//klog.Infof("Could not set ClusterName %s in appendListItem on object: %T", clusterName, obj)
+			klog.Warningf("Could not set ClusterName %s in appendListItem on object: %T", clusterName, obj)
 		}
 	} else {
 		klog.Errorf("Cluster should not be unknown")

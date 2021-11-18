@@ -35,9 +35,9 @@ import (
 	utilflowcontrol "k8s.io/apiserver/pkg/util/flowcontrol"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"k8s.io/klog/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -457,16 +457,13 @@ func (wc *watchChan) prepareObjs(e *event) (curObj runtime.Object, oldObj runtim
 		// The etcd key is ultimately the only thing that links us to a cluster
 		if clusterName != "" {
 			if s, ok := curObj.(metav1.ObjectMetaAccessor); ok {
-				klog.Infof("SUB: %s", clusterName)
 				s.GetObjectMeta().SetClusterName(clusterName)
 			} else if s, ok := curObj.(metav1.Object); ok {
-				klog.Infof("SUB: %s", clusterName)
 				s.SetClusterName(clusterName)
 			} else if s, ok := curObj.(*unstructured.Unstructured); ok {
-				klog.Infof("SUB: %s", clusterName)
 				s.SetClusterName(clusterName)
 			} else {
-				klog.Infof("NO SUB: %T %s", curObj, clusterName)
+				klog.Warningf("Could not set ClusterName %s in prepareObjs on object: %T", clusterName, curObj)
 			}
 		} else {
 			klog.Errorf("Cluster should not be unknown")
@@ -503,16 +500,13 @@ func (wc *watchChan) prepareObjs(e *event) (curObj runtime.Object, oldObj runtim
 		// The etcd key is ultimately the only thing that links us to a cluster
 		if clusterName != "" {
 			if s, ok := oldObj.(metav1.ObjectMetaAccessor); ok {
-				klog.Infof("SUB: %s", clusterName)
 				s.GetObjectMeta().SetClusterName(clusterName)
 			} else if s, ok := oldObj.(metav1.Object); ok {
-				klog.Infof("SUB: %s", clusterName)
 				s.SetClusterName(clusterName)
 			} else if s, ok := oldObj.(*unstructured.Unstructured); ok {
-				klog.Infof("SUB: %s", clusterName)
 				s.SetClusterName(clusterName)
 			} else {
-				klog.Infof("NO SUB: %T %s", oldObj, clusterName)
+				klog.Warningf("Could not set ClusterName %s in prepareObjs on object: %T", clusterName, curObj)
 			}
 		} else {
 			klog.Errorf("Cluster should not be unknown")
