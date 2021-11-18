@@ -174,11 +174,9 @@ func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan
 		}
 
 		// DAVID TODO: try to understand why adding the cluster returns nil here. The default openAPIService should work
-		controlPlaneSpec, etag, httpStatus, err := downloader.Download(kubeAPIServer.GenericAPIServer.Handler.Director, "")
-		klog.Infof(etag, httpStatus)
+		controlPlaneSpec, _, _, err := downloader.Download(kubeAPIServer.GenericAPIServer.Handler.Director, "")
 
-		crdSpecs, etag, httpStatus, err := downloader.Download(withCluster(apiExtensionsServer.GenericAPIServer.Handler.Director), "")
-		klog.Infof(etag, httpStatus)
+		crdSpecs, _, _, err := downloader.Download(withCluster(apiExtensionsServer.GenericAPIServer.Handler.Director), "")
 
 		mergedSpecs, err := builder.MergeSpecs(controlPlaneSpec, crdSpecs)
 

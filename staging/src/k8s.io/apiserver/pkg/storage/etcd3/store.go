@@ -930,8 +930,7 @@ func (s *store) watch(ctx context.Context, key string, opts storage.ListOptions,
 		clusterName = "*"
 		extractClusterSegmentFromKey = true
 	}
-
-	klog.Infof("DEBUG: key=%s willExtractCluster=%t", key, extractClusterSegmentFromKey)
+	
 	return s.watcher.Watch(ctx, key, int64(rev), recursive, clusterName, opts.ProgressNotify, opts.Predicate)
 }
 
