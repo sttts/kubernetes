@@ -86,9 +86,9 @@ func NegotiateInputSerializerForMediaType(mediaType string, streaming bool, ns r
 
 	supported, streamingSupported := MediaTypesForSerializer(ns)
 	if streaming {
-		return runtime.SerializerInfo{}, NewUnsupportedMediaTypeError(streamingSupported)
+		return runtime.SerializerInfo{}, NewUnsupportedMediaTypeError(mediaType, streamingSupported)
 	}
-	return runtime.SerializerInfo{}, NewUnsupportedMediaTypeError(supported)
+	return runtime.SerializerInfo{}, NewUnsupportedMediaTypeError(mediaType, supported)
 }
 
 // isPrettyPrint returns true if the "pretty" query parameter is true or if the User-Agent
