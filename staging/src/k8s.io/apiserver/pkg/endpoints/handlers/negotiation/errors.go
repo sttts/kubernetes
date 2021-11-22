@@ -77,16 +77,17 @@ func (e errNotAcceptableConversion) Status() metav1.Status {
 
 // errUnsupportedMediaType indicates Content-Type is not recognized
 type errUnsupportedMediaType struct {
+	requested string
 	accepted []string
 }
 
 // NewUnsupportedMediaTypeError returns an error of UnsupportedMediaType which contains specified string
-func NewUnsupportedMediaTypeError(accepted []string) error {
-	return errUnsupportedMediaType{accepted}
+func NewUnsupportedMediaTypeError(requested string, accepted []string) error {
+	return errUnsupportedMediaType{requested: requested, accepted: accepted}
 }
 
 func (e errUnsupportedMediaType) Error() string {
-	return fmt.Sprintf("the body of the request was in an unknown format - accepted media types include: %v", strings.Join(e.accepted, ", "))
+	return fmt.Sprintf("the body of the request was in an unknown format (%s) - accepted media types include: %v", e.requested, strings.Join(e.accepted, ", "))
 }
 
 func (e errUnsupportedMediaType) Status() metav1.Status {
