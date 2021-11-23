@@ -130,6 +130,18 @@ type OpenAPISchemaInterface interface {
 // DiscoveryClient implements the functions that discover server-supported API groups,
 // versions and resources.
 type DiscoveryClient struct {
+	*scopedClient
+	cluster string
+}
+
+func (d *DiscoveryClient) WithCluster(cluster string) DiscoveryInterface {
+	return &DiscoveryClient{
+		scopedClient: d.scopedClient,
+		cluster: cluster,
+	}
+}
+
+type scopedClient struct {
 	restClient restclient.Interface
 
 	LegacyPrefix string
@@ -488,7 +500,7 @@ func NewDiscoveryClientForConfig(c *restclient.Config) (*DiscoveryClient, error)
 		return nil, err
 	}
 	client, err := restclient.UnversionedRESTClientFor(&config)
-	return &DiscoveryClient{restClient: client, LegacyPrefix: "/api"}, err
+	return &DiscoveryClient{scopedClient: &scopedClient{restClient: client, LegacyPrefix: "/api"}}, err
 }
 
 // NewDiscoveryClientForConfigOrDie creates a new DiscoveryClient for the given config. If
@@ -504,7 +516,7 @@ func NewDiscoveryClientForConfigOrDie(c *restclient.Config) *DiscoveryClient {
 
 // NewDiscoveryClient returns a new DiscoveryClient for the given RESTClient.
 func NewDiscoveryClient(c restclient.Interface) *DiscoveryClient {
-	return &DiscoveryClient{restClient: c, LegacyPrefix: "/api"}
+	return &DiscoveryClient{scopedClient: &scopedClient{restClient: c, LegacyPrefix: "/api"}}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

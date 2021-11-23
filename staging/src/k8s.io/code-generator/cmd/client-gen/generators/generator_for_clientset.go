@@ -177,7 +177,7 @@ func (c *Clientset) Discovery() $.DiscoveryInterface|raw$ {
 	if c == nil {
 		return nil
 	}
-	return c.DiscoveryClient
+	return c.DiscoveryClient.WithCluster(c.cluster)
 }
 `
 

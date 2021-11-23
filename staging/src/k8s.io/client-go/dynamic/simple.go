@@ -30,11 +30,43 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type dynamicClient struct {
+// NewClusterForConfig creates a new Cluster for the given config.
+// If config's RateLimiter is not set and QPS and Burst are acceptable,
+// NewClusterForConfig will generate a rate-limiter in configShallowCopy.
+func NewClusterForConfig(c *rest.Config) (*Cluster, error) {
+	cs, err := NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
+	return &Cluster{scopedClient: cs.scopedClient}, nil
+}
+
+type ClusterInterface interface {
+	Cluster(name string) Interface
+}
+
+type Cluster struct {
+	*scopedClient
+}
+
+// Cluster sets the cluster for a Clientset.
+func (c *Cluster) Cluster(name string) Interface {
+	return &DynamicClient{
+		scopedClient: c.scopedClient,
+		cluster:         name,
+	}
+}
+
+type DynamicClient struct {
+	*scopedClient
+	cluster string
+}
+
+type scopedClient struct {
 	client *rest.RESTClient
 }
 
-var _ Interface = &dynamicClient{}
+var _ Interface = &DynamicClient{}
 
 // ConfigFor returns a copy of the provided config with the
 // appropriate dynamic client defaults set.
@@ -51,7 +83,7 @@ func ConfigFor(inConfig *rest.Config) *rest.Config {
 
 // NewForConfigOrDie creates a new Interface for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) Interface {
+func NewForConfigOrDie(c *rest.Config) *DynamicClient {
 	ret, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -60,7 +92,7 @@ func NewForConfigOrDie(c *rest.Config) Interface {
 }
 
 // NewForConfig creates a new dynamic client or returns an error.
-func NewForConfig(inConfig *rest.Config) (Interface, error) {
+func NewForConfig(inConfig *rest.Config) (*DynamicClient, error) {
 	config := ConfigFor(inConfig)
 	// for serializing the options
 	config.GroupVersion = &schema.GroupVersion{}
@@ -71,16 +103,16 @@ func NewForConfig(inConfig *rest.Config) (Interface, error) {
 		return nil, err
 	}
 
-	return &dynamicClient{client: restClient}, nil
+	return &DynamicClient{scopedClient: &scopedClient{client: restClient}}, nil
 }
 
 type dynamicResourceClient struct {
-	client    *dynamicClient
+	client    *DynamicClient
 	namespace string
 	resource  schema.GroupVersionResource
 }
 
-func (c *dynamicClient) Resource(resource schema.GroupVersionResource) NamespaceableResourceInterface {
+func (c *DynamicClient) Resource(resource schema.GroupVersionResource) NamespaceableResourceInterface {
 	return &dynamicResourceClient{client: c, resource: resource}
 }
 
@@ -109,6 +141,7 @@ func (c *dynamicResourceClient) Create(ctx context.Context, obj *unstructured.Un
 
 	result := c.client.client.
 		Post().
+		Cluster(c.client.cluster).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		Body(outBytes).
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).
@@ -144,6 +177,7 @@ func (c *dynamicResourceClient) Update(ctx context.Context, obj *unstructured.Un
 
 	result := c.client.client.
 		Put().
+		Cluster(c.client.cluster).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		Body(outBytes).
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).
@@ -180,6 +214,7 @@ func (c *dynamicResourceClient) UpdateStatus(ctx context.Context, obj *unstructu
 
 	result := c.client.client.
 		Put().
+		Cluster(c.client.cluster).
 		AbsPath(append(c.makeURLSegments(name), "status")...).
 		Body(outBytes).
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).
@@ -210,6 +245,7 @@ func (c *dynamicResourceClient) Delete(ctx context.Context, name string, opts me
 
 	result := c.client.client.
 		Delete().
+		Cluster(c.client.cluster).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		Body(deleteOptionsByte).
 		Do(ctx)
@@ -224,6 +260,7 @@ func (c *dynamicResourceClient) DeleteCollection(ctx context.Context, opts metav
 
 	result := c.client.client.
 		Delete().
+		Cluster(c.client.cluster).
 		AbsPath(c.makeURLSegments("")...).
 		Body(deleteOptionsByte).
 		SpecificallyVersionedParams(&listOptions, dynamicParameterCodec, versionV1).
@@ -235,7 +272,7 @@ func (c *dynamicResourceClient) Get(ctx context.Context, name string, opts metav
 	if len(name) == 0 {
 		return nil, fmt.Errorf("name is required")
 	}
-	result := c.client.client.Get().AbsPath(append(c.makeURLSegments(name), subresources...)...).SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).Do(ctx)
+	result := c.client.client.Get().Cluster(c.client.cluster).AbsPath(append(c.makeURLSegments(name), subresources...)...).SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).Do(ctx)
 	if err := result.Error(); err != nil {
 		return nil, err
 	}
@@ -251,7 +288,7 @@ func (c *dynamicResourceClient) Get(ctx context.Context, name string, opts metav
 }
 
 func (c *dynamicResourceClient) List(ctx context.Context, opts metav1.ListOptions) (*unstructured.UnstructuredList, error) {
-	result := c.client.client.Get().AbsPath(c.makeURLSegments("")...).SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).Do(ctx)
+	result := c.client.client.Get().Cluster(c.client.cluster).AbsPath(c.makeURLSegments("")...).SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).Do(ctx)
 	if err := result.Error(); err != nil {
 		return nil, err
 	}
@@ -276,7 +313,7 @@ func (c *dynamicResourceClient) List(ctx context.Context, opts metav1.ListOption
 
 func (c *dynamicResourceClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
-	return c.client.client.Get().AbsPath(c.makeURLSegments("")...).
+	return c.client.client.Get().Cluster(c.client.cluster).AbsPath(c.makeURLSegments("")...).
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).
 		Watch(ctx)
 }
@@ -287,6 +324,7 @@ func (c *dynamicResourceClient) Patch(ctx context.Context, name string, pt types
 	}
 	result := c.client.client.
 		Patch(pt).
+		Cluster(c.client.cluster).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		Body(data).
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).
