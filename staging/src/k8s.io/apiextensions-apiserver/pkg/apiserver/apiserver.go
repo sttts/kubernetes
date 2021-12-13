@@ -46,6 +46,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	"k8s.io/apiserver/pkg/util/webhook"
+	restclient "k8s.io/client-go/rest"
 )
 
 var (
@@ -84,6 +85,9 @@ type ExtraConfig struct {
 	ServiceResolver webhook.ServiceResolver
 	// AuthResolverWrapper is used in CR webhook converters
 	AuthResolverWrapper webhook.AuthenticationInfoResolverWrapper
+
+	NewClientFunc          func(config *restclient.Config) (clientset.Interface, error)
+	NewInformerFactoryFunc func(client clientset.Interface, resyncPeriod time.Duration) externalinformers.SharedInformerFactory
 }
 
 type Config struct {
@@ -106,6 +110,13 @@ type CustomResourceDefinitions struct {
 
 	// provided for easier embedding
 	Informers externalinformers.SharedInformerFactory
+
+	DiscoveryGroupLister discovery.GroupLister
+
+	crdHandler              *crdHandler
+	versionDiscoveryHandler *versionDiscoveryHandler
+	groupDiscoveryHandler   *groupDiscoveryHandler
+	rootDiscoveryHandler    *rootDiscoveryHandler
 }
 
 // Complete fills in any fields not set that are required to have valid data. It's mutating the receiver.
@@ -120,6 +131,18 @@ func (cfg *Config) Complete() CompletedConfig {
 		c.GenericConfig.Version = &version.Info{
 			Major: "0",
 			Minor: "1",
+		}
+	}
+
+	if c.ExtraConfig.NewClientFunc == nil {
+		c.ExtraConfig.NewClientFunc = func(config *restclient.Config) (clientset.Interface, error) {
+			return clientset.NewForConfig(config)
+		}
+	}
+
+	if c.ExtraConfig.NewInformerFactoryFunc == nil {
+		c.ExtraConfig.NewInformerFactoryFunc = func(client clientset.Interface, resyncPeriod time.Duration) externalinformers.SharedInformerFactory {
+			return externalinformers.NewSharedInformerFactory(client, resyncPeriod)
 		}
 	}
 
@@ -174,31 +197,40 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		return nil, err
 	}
 
-	crdClient, err := clientset.NewForConfig(s.GenericAPIServer.LoopbackClientConfig)
+	crdClient, err := c.ExtraConfig.NewClientFunc(s.GenericAPIServer.LoopbackClientConfig)
 	if err != nil {
 		// it's really bad that this is leaking here, but until we can fix the test (which I'm pretty sure isn't even testing what it wants to test),
 		// we need to be able to move forward
 		return nil, fmt.Errorf("failed to create clientset: %v", err)
 	}
-	s.Informers = externalinformers.NewSharedInformerFactory(crdClient, 5*time.Minute)
+	s.Informers = c.ExtraConfig.NewInformerFactoryFunc(crdClient, 5*time.Minute)
 
 	delegateHandler := delegationTarget.UnprotectedHandler()
 	if delegateHandler == nil {
 		delegateHandler = http.NotFoundHandler()
 	}
 
-	versionDiscoveryHandler := &versionDiscoveryHandler{
-		discovery: map[string]map[schema.GroupVersion]*discovery.APIVersionHandler{},
+	s.versionDiscoveryHandler = &versionDiscoveryHandler{
+		crdLister: s.Informers.Apiextensions().V1().CustomResourceDefinitions().Lister(),
 		delegate:  delegateHandler,
 	}
-	groupDiscoveryHandler := &groupDiscoveryHandler{
-		discovery: map[string]map[string]*discovery.APIGroupHandler{},
+
+	s.groupDiscoveryHandler = &groupDiscoveryHandler{
+		crdLister: s.Informers.Apiextensions().V1().CustomResourceDefinitions().Lister(),
 		delegate:  delegateHandler,
 	}
+
+	s.rootDiscoveryHandler = &rootDiscoveryHandler{
+		crdLister: s.Informers.Apiextensions().V1().CustomResourceDefinitions().Lister(),
+		delegate:  delegateHandler,
+	}
+	s.DiscoveryGroupLister = s.rootDiscoveryHandler
+
 	establishingController := establish.NewEstablishingController(s.Informers.Apiextensions().V1().CustomResourceDefinitions(), crdClient.ApiextensionsV1())
+
 	crdHandler, err := NewCustomResourceDefinitionHandler(
-		versionDiscoveryHandler,
-		groupDiscoveryHandler,
+		s.versionDiscoveryHandler,
+		s.groupDiscoveryHandler,
 		s.Informers.Apiextensions().V1().CustomResourceDefinitions(),
 		delegateHandler,
 		c.ExtraConfig.CRDRESTOptionsGetter,
@@ -216,12 +248,13 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 	if err != nil {
 		return nil, err
 	}
+	s.crdHandler = crdHandler
+
 	s.GenericAPIServer.Handler.NonGoRestfulMux.Handle("/apis", crdHandler)
 	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
 	// HACK: Added to allow serving core resources registered through CRDs (for the KCP scenario)
 	s.GenericAPIServer.Handler.NonGoRestfulMux.UnlistedHandlePrefix("/api/v1/", crdHandler)
 
-	discoveryController := NewDiscoveryController(s.Informers.Apiextensions().V1().CustomResourceDefinitions(), versionDiscoveryHandler, groupDiscoveryHandler)
 	namingController := status.NewNamingConditionController(s.Informers.Apiextensions().V1().CustomResourceDefinitions(), crdClient.ApiextensionsV1())
 	nonStructuralSchemaController := nonstructuralschema.NewConditionController(s.Informers.Apiextensions().V1().CustomResourceDefinitions(), crdClient.ApiextensionsV1())
 	apiApprovalController := apiapproval.NewKubernetesAPIApprovalPolicyConformantConditionController(s.Informers.Apiextensions().V1().CustomResourceDefinitions(), crdClient.ApiextensionsV1())
@@ -250,13 +283,6 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		go nonStructuralSchemaController.Run(5, context.StopCh)
 		go apiApprovalController.Run(5, context.StopCh)
 		go finalizingController.Run(5, context.StopCh)
-
-		discoverySyncedCh := make(chan struct{})
-		go discoveryController.Run(context.StopCh, discoverySyncedCh)
-		select {
-		case <-context.StopCh:
-		case <-discoverySyncedCh:
-		}
 
 		return nil
 	})
