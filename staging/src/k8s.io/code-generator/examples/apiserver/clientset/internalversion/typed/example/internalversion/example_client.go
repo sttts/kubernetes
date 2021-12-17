@@ -19,8 +19,6 @@ limitations under the License.
 package internalversion
 
 import (
-	"net/http"
-
 	rest "k8s.io/client-go/rest"
 	"k8s.io/code-generator/examples/apiserver/clientset/internalversion/scheme"
 )
@@ -57,7 +55,7 @@ func NewForConfig(c *rest.Config) (*ExampleClient, error) {
 
 // NewForConfigAndClient creates a new ExampleClient for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ExampleClient, error) {
+func NewForConfigAndClient(c *rest.Config, h rest.HTTPClient) (*ExampleClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err

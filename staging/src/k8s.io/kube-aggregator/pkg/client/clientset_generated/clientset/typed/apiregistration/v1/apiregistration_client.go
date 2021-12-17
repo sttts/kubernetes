@@ -19,8 +19,6 @@ limitations under the License.
 package v1
 
 import (
-	"net/http"
-
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
@@ -58,7 +56,7 @@ func NewForConfig(c *rest.Config) (*ApiregistrationV1Client, error) {
 
 // NewForConfigAndClient creates a new ApiregistrationV1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ApiregistrationV1Client, error) {
+func NewForConfigAndClient(c *rest.Config, h rest.HTTPClient) (*ApiregistrationV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err

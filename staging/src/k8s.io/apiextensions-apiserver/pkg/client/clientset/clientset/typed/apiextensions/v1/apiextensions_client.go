@@ -19,8 +19,6 @@ limitations under the License.
 package v1
 
 import (
-	"net/http"
-
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	rest "k8s.io/client-go/rest"
@@ -58,7 +56,7 @@ func NewForConfig(c *rest.Config) (*ApiextensionsV1Client, error) {
 
 // NewForConfigAndClient creates a new ApiextensionsV1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ApiextensionsV1Client, error) {
+func NewForConfigAndClient(c *rest.Config, h rest.HTTPClient) (*ApiextensionsV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err

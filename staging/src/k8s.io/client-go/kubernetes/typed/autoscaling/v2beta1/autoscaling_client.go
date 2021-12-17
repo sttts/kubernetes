@@ -19,8 +19,6 @@ limitations under the License.
 package v2beta1
 
 import (
-	"net/http"
-
 	v2beta1 "k8s.io/api/autoscaling/v2beta1"
 	"k8s.io/client-go/kubernetes/scheme"
 	rest "k8s.io/client-go/rest"
@@ -58,7 +56,7 @@ func NewForConfig(c *rest.Config) (*AutoscalingV2beta1Client, error) {
 
 // NewForConfigAndClient creates a new AutoscalingV2beta1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*AutoscalingV2beta1Client, error) {
+func NewForConfigAndClient(c *rest.Config, h rest.HTTPClient) (*AutoscalingV2beta1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err

@@ -20,7 +20,6 @@ package clientset
 
 import (
 	"fmt"
-	"net/http"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
@@ -116,7 +115,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // Note the http client provided takes precedence over the configured transport values.
 // If config's RateLimiter is not set and QPS and Burst are acceptable,
 // NewForConfigAndClient will generate a rate-limiter in configShallowCopy.
-func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset, error) {
+func NewForConfigAndClient(c *rest.Config, httpClient rest.HTTPClient) (*Clientset, error) {
 	configShallowCopy := *c
 	if configShallowCopy.RateLimiter == nil && configShallowCopy.QPS > 0 {
 		if configShallowCopy.Burst <= 0 {

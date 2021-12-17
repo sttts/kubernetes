@@ -19,8 +19,6 @@ limitations under the License.
 package v1beta1
 
 import (
-	"net/http"
-
 	rest "k8s.io/client-go/rest"
 	v1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"k8s.io/metrics/pkg/client/clientset/versioned/scheme"
@@ -63,7 +61,7 @@ func NewForConfig(c *rest.Config) (*MetricsV1beta1Client, error) {
 
 // NewForConfigAndClient creates a new MetricsV1beta1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*MetricsV1beta1Client, error) {
+func NewForConfigAndClient(c *rest.Config, h rest.HTTPClient) (*MetricsV1beta1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err

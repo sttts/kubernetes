@@ -19,8 +19,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"net/http"
-
 	rest "k8s.io/client-go/rest"
 	v1alpha1 "k8s.io/sample-controller/pkg/apis/samplecontroller/v1alpha1"
 	"k8s.io/sample-controller/pkg/generated/clientset/versioned/scheme"
@@ -58,7 +56,7 @@ func NewForConfig(c *rest.Config) (*SamplecontrollerV1alpha1Client, error) {
 
 // NewForConfigAndClient creates a new SamplecontrollerV1alpha1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*SamplecontrollerV1alpha1Client, error) {
+func NewForConfigAndClient(c *rest.Config, h rest.HTTPClient) (*SamplecontrollerV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err

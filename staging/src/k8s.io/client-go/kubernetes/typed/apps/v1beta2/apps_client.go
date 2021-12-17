@@ -19,8 +19,6 @@ limitations under the License.
 package v1beta2
 
 import (
-	"net/http"
-
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	"k8s.io/client-go/kubernetes/scheme"
 	rest "k8s.io/client-go/rest"
@@ -78,7 +76,7 @@ func NewForConfig(c *rest.Config) (*AppsV1beta2Client, error) {
 
 // NewForConfigAndClient creates a new AppsV1beta2Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*AppsV1beta2Client, error) {
+func NewForConfigAndClient(c *rest.Config, h rest.HTTPClient) (*AppsV1beta2Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err

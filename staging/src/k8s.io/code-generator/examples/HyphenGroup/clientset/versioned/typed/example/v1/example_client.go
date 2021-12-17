@@ -19,8 +19,6 @@ limitations under the License.
 package v1
 
 import (
-	"net/http"
-
 	rest "k8s.io/client-go/rest"
 	v1 "k8s.io/code-generator/examples/HyphenGroup/apis/example/v1"
 	"k8s.io/code-generator/examples/HyphenGroup/clientset/versioned/scheme"
@@ -63,7 +61,7 @@ func NewForConfig(c *rest.Config) (*ExampleGroupV1Client, error) {
 
 // NewForConfigAndClient creates a new ExampleGroupV1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ExampleGroupV1Client, error) {
+func NewForConfigAndClient(c *rest.Config, h rest.HTTPClient) (*ExampleGroupV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
