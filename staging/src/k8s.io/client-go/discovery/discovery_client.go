@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -39,6 +38,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 )
 
@@ -519,7 +519,7 @@ func NewDiscoveryClientForConfig(c *restclient.Config) (*DiscoveryClient, error)
 // NewDiscoveryClientForConfigAndClient creates a new DiscoveryClient for the given config. This client
 // can be used to discover supported resources in the API server.
 // Note the http client provided takes precedence over the configured transport values.
-func NewDiscoveryClientForConfigAndClient(c *restclient.Config, httpClient *http.Client) (*DiscoveryClient, error) {
+func NewDiscoveryClientForConfigAndClient(c *restclient.Config, httpClient rest.HTTPClient) (*DiscoveryClient, error) {
 	config := *c
 	if err := setDiscoveryDefaults(&config); err != nil {
 		return nil, err

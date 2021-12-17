@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -100,7 +99,7 @@ func NewForConfig(inConfig *rest.Config) (Interface, error) {
 
 // NewForConfigAndClient creates a new metadata client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(inConfig *rest.Config, h *http.Client) (Interface, error) {
+func NewForConfigAndClient(inConfig *rest.Config, h rest.HTTPClient) (Interface, error) {
 	config := ConfigFor(inConfig)
 	// for serializing the options
 	config.GroupVersion = &schema.GroupVersion{}

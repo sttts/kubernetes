@@ -101,6 +101,7 @@ func (g *genGroup) GenerateType(c *generator.Context, t *types.Type, w io.Writer
 		"restConfig":                       c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Config"}),
 		"restDefaultKubernetesUserAgent":   c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "DefaultKubernetesUserAgent"}),
 		"restRESTClientInterface":          c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Interface"}),
+		"restHTTPClientInterface":          c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "HTTPClient"}),
 		"RESTHTTPClientFor":                c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "HTTPClientFor"}),
 		"restRESTClientFor":                c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "RESTClientFor"}),
 		"restRESTClientForConfigAndClient": c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "RESTClientForConfigAndClient"}),
@@ -187,7 +188,7 @@ func NewForConfig(c *$.restConfig|raw$) (*$.GroupGoName$$.Version$Client, error)
 var newClientForConfigAndClientTemplate = `
 // NewForConfigAndClient creates a new $.GroupGoName$$.Version$Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *$.restConfig|raw$, h *http.Client) (*$.GroupGoName$$.Version$Client, error) {
+func NewForConfigAndClient(c *$.restConfig|raw$, h $.restHTTPClientInterface|raw$) (*$.GroupGoName$$.Version$Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err

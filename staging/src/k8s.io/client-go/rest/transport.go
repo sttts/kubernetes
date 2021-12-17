@@ -29,22 +29,22 @@ import (
 // HTTPClientFor returns an http.Client that will provide the authentication
 // or transport level security defined by the provided Config. Will return the
 // default http.DefaultClient if no special case behavior is needed.
-func HTTPClientFor(config *Config) (*http.Client, error) {
+func HTTPClientFor(config *Config) (HTTPClient, error) {
 	transport, err := TransportFor(config)
 	if err != nil {
 		return nil, err
 	}
-	var httpClient *http.Client
+	var c *http.Client
 	if transport != http.DefaultTransport || config.Timeout > 0 {
-		httpClient = &http.Client{
+		c = &http.Client{
 			Transport: transport,
 			Timeout:   config.Timeout,
 		}
 	} else {
-		httpClient = http.DefaultClient
+		c = http.DefaultClient
 	}
 
-	return httpClient, nil
+	return &httpClient{c}, nil
 }
 
 // TLSConfigFor returns a tls.Config that will provide the transport level security defined

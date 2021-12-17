@@ -223,7 +223,7 @@ func TestReconnectBrokenTCP_HTTP1(t *testing.T) {
 	stopCh = make(chan struct{})
 	go lb.serve(stopCh)
 	// Close the idle connections
-	utilnet.CloseIdleConnectionsFor(client.Client.Transport)
+	utilnet.CloseIdleConnectionsFor(client.Client.Transport())
 
 	// If the client didn't close the idle connections, the broken connection
 	// would still be in the connection pool, the following request would

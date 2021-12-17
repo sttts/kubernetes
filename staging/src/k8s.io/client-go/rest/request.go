@@ -62,6 +62,24 @@ var (
 // HTTPClient is an interface for testing a request object.
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
+	Timeout() time.Duration
+	Transport() http.RoundTripper
+}
+
+func NewHTTPClient(c *http.Client) HTTPClient {
+	return &httpClient{c}
+}
+
+type httpClient struct {
+	*http.Client
+}
+
+func (c *httpClient) Timeout() time.Duration {
+	return c.Client.Timeout
+}
+
+func (c *httpClient) Transport() http.RoundTripper {
+	return c.Client.Transport
 }
 
 // ResponseWrapper is an interface for getting a response.
@@ -139,7 +157,7 @@ func NewRequest(c *RESTClient) *Request {
 
 	var timeout time.Duration
 	if c.Client != nil {
-		timeout = c.Client.Timeout
+		timeout = c.Client.Timeout()
 	}
 
 	r := &Request{
@@ -163,7 +181,7 @@ func NewRequest(c *RESTClient) *Request {
 }
 
 // NewRequestWithClient creates a Request with an embedded RESTClient for use in test scenarios.
-func NewRequestWithClient(base *url.URL, versionedAPIPath string, content ClientContentConfig, client *http.Client) *Request {
+func NewRequestWithClient(base *url.URL, versionedAPIPath string, content ClientContentConfig, client HTTPClient) *Request {
 	return NewRequest(&RESTClient{
 		base:             base,
 		versionedAPIPath: versionedAPIPath,
@@ -728,7 +746,7 @@ func (r *Request) Watch(ctx context.Context) (watch.Interface, error) {
 
 	client := r.c.Client
 	if client == nil {
-		client = http.DefaultClient
+		client = &httpClient{http.DefaultClient}
 	}
 
 	isErrRetryableFunc := func(request *http.Request, err error) bool {
@@ -864,7 +882,7 @@ func (r *Request) Stream(ctx context.Context) (io.ReadCloser, error) {
 
 	client := r.c.Client
 	if client == nil {
-		client = http.DefaultClient
+		client = &httpClient{http.DefaultClient}
 	}
 
 	var retryAfter *RetryAfter
@@ -1003,7 +1021,7 @@ func (r *Request) request(ctx context.Context, fn func(*http.Request, *http.Resp
 
 	client := r.c.Client
 	if client == nil {
-		client = http.DefaultClient
+		client = &httpClient{http.DefaultClient}
 	}
 
 	// Throttle the first try before setting up the timeout configured on the

@@ -25,16 +25,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
 )
 
 // CreateHTTPClient creates an http.Client that will invoke the provided roundTripper func
 // when a request is made.
-func CreateHTTPClient(roundTripper func(*http.Request) (*http.Response, error)) *http.Client {
-	return &http.Client{
+func CreateHTTPClient(roundTripper func(*http.Request) (*http.Response, error)) rest.HTTPClient {
+	return rest.NewHTTPClient(&http.Client{
 		Transport: roundTripperFunc(roundTripper),
-	}
+	})
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
@@ -59,7 +60,7 @@ type RESTClient struct {
 	Req *http.Request
 	// If Client is specified, the client will be invoked instead of returning Resp if
 	// Err is not set.
-	Client *http.Client
+	Client rest.HTTPClient
 	// Resp is returned to the caller after Req is recorded, unless Err or Client are set.
 	Resp *http.Response
 }

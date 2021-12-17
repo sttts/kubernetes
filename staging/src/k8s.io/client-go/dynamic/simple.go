@@ -19,7 +19,6 @@ package dynamic
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,7 +106,7 @@ func NewForConfig(inConfig *rest.Config) (*DynamicClient, error) {
 
 // NewForConfigAndClient creates a new dynamic client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(inConfig *rest.Config, h *http.Client) (*DynamicClient, error) {
+func NewForConfigAndClient(inConfig *rest.Config, h rest.HTTPClient) (*DynamicClient, error) {
 	config := ConfigFor(inConfig)
 	// for serializing the options
 	config.GroupVersion = &schema.GroupVersion{}

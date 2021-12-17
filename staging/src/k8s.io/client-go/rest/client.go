@@ -17,7 +17,6 @@ limitations under the License.
 package rest
 
 import (
-	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -99,12 +98,13 @@ type RESTClient struct {
 	warningHandler WarningHandler
 
 	// Set specific behavior of the client.  If not set http.DefaultClient will be used.
-	Client *http.Client
+	// Client *http.Client
+	Client HTTPClient
 }
 
 // NewRESTClient creates a new RESTClient. This client performs generic REST functions
 // such as Get, Put, Post, and Delete on specified paths.
-func NewRESTClient(baseURL *url.URL, versionedAPIPath string, config ClientContentConfig, rateLimiter flowcontrol.RateLimiter, client *http.Client) (*RESTClient, error) {
+func NewRESTClient(baseURL *url.URL, versionedAPIPath string, config ClientContentConfig, rateLimiter flowcontrol.RateLimiter, client HTTPClient) (*RESTClient, error) {
 	if len(config.ContentType) == 0 {
 		config.ContentType = "application/json"
 	}

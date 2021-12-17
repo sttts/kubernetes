@@ -38,8 +38,8 @@ import (
 
 	"k8s.io/klog/v2"
 
-	v1 "k8s.io/api/core/v1"
 	"github.com/google/go-cmp/cmp"
+	v1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,9 +69,11 @@ func TestNewRequestSetsAccept(t *testing.T) {
 	}
 }
 
-func clientForFunc(fn clientFunc) *http.Client {
-	return &http.Client{
-		Transport: fn,
+func clientForFunc(fn clientFunc) HTTPClient {
+	return &httpClient{
+		&http.Client{
+			Transport: fn,
+		},
 	}
 }
 
@@ -342,7 +344,7 @@ func TestURLTemplate(t *testing.T) {
 	uri, _ := url.Parse("http://localhost/some/base/url/path")
 	uriSingleSlash, _ := url.Parse("http://localhost/")
 	testCases := []struct {
-		Name string
+		Name             string
 		Request          *Request
 		ExpectedFullURL  string
 		ExpectedFinalURL string
@@ -2261,7 +2263,7 @@ func testRESTClientWithConfig(t testing.TB, srv *httptest.Server, contentConfig 
 		c = srv.Client()
 	}
 	versionedAPIPath := defaultResourcePathWithPrefix("", "", "", "")
-	client, err := NewRESTClient(base, versionedAPIPath, contentConfig, nil, c)
+	client, err := NewRESTClient(base, versionedAPIPath, contentConfig, nil, &httpClient{c})
 	if err != nil {
 		t.Fatalf("failed to create a client: %v", err)
 	}
@@ -2535,7 +2537,7 @@ func TestRequestMaxRetries(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			defer func() { actualCalls = 0 }()
-			_, err := NewRequestWithClient(u, "", defaultContentConfig(), testServer.Client()).
+			_, err := NewRequestWithClient(u, "", defaultContentConfig(), &httpClient{testServer.Client()}).
 				Verb("get").
 				MaxRetries(testCase.maxRetries).
 				AbsPath("/foo").

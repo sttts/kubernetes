@@ -336,7 +336,7 @@ func RESTClientFor(config *Config) (*RESTClient, error) {
 // between all the API Groups and Versions.
 // Note that the http client takes precedence over the transport values configured.
 // The http client defaults to the `http.DefaultClient` if nil.
-func RESTClientForConfigAndClient(config *Config, httpClient *http.Client) (*RESTClient, error) {
+func RESTClientForConfigAndClient(config *Config, httpClient HTTPClient) (*RESTClient, error) {
 	if config.GroupVersion == nil {
 		return nil, fmt.Errorf("GroupVersion is required when initializing a RESTClient")
 	}
@@ -406,7 +406,7 @@ func UnversionedRESTClientFor(config *Config) (*RESTClient, error) {
 
 // UnversionedRESTClientForConfigAndClient is the same as RESTClientForConfigAndClient,
 // except that it allows the config.Version to be empty.
-func UnversionedRESTClientForConfigAndClient(config *Config, httpClient *http.Client) (*RESTClient, error) {
+func UnversionedRESTClientForConfigAndClient(config *Config, httpClient HTTPClient) (*RESTClient, error) {
 	if config.NegotiatedSerializer == nil {
 		return nil, fmt.Errorf("NegotiatedSerializer is required when initializing a RESTClient")
 	}
