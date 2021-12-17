@@ -208,10 +208,15 @@ func NewSharedInformer(lw ListerWatcher, exampleObject runtime.Object, defaultEv
 // defaultEventHandlerResyncPeriod given here and (b) the constant
 // `minimumResyncPeriod` defined in this file.
 func NewSharedIndexInformer(lw ListerWatcher, exampleObject runtime.Object, defaultEventHandlerResyncPeriod time.Duration, indexers Indexers) SharedIndexInformer {
+	return NewSharedIndexInformer2(lw, exampleObject, defaultEventHandlerResyncPeriod, DeletionHandlingMetaNamespaceKeyFunc, indexers)
+}
+
+func NewSharedIndexInformer2(lw ListerWatcher, exampleObject runtime.Object, defaultEventHandlerResyncPeriod time.Duration, keyFunc KeyFunc, indexers Indexers) SharedIndexInformer {
 	realClock := &clock.RealClock{}
 	sharedIndexInformer := &sharedIndexInformer{
 		processor:                       &sharedProcessor{clock: realClock},
-		indexer:                         NewIndexer(DeletionHandlingMetaNamespaceKeyFunc, indexers),
+		keyFunc:                         keyFunc,
+		indexer:                         NewIndexer(DeletionHandlingDelegatingKeyFunc(keyFunc), indexers),
 		listerWatcher:                   lw,
 		objectType:                      exampleObject,
 		resyncCheckPeriod:               defaultEventHandlerResyncPeriod,
@@ -285,6 +290,7 @@ func WaitForCacheSync(stopCh <-chan struct{}, cacheSyncs ...InformerSynced) bool
 // sharedProcessor, which is responsible for relaying those
 // notifications to each of the informer's clients.
 type sharedIndexInformer struct {
+	keyFunc    KeyFunc
 	indexer    Indexer
 	controller Controller
 
@@ -373,6 +379,7 @@ func (s *sharedIndexInformer) Run(stopCh <-chan struct{}) {
 		return
 	}
 	fifo := NewDeltaFIFOWithOptions(DeltaFIFOOptions{
+		KeyFunction:           s.keyFunc,
 		KnownObjects:          s.indexer,
 		EmitDeltaTypeReplaced: true,
 	})

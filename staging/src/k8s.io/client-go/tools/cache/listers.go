@@ -17,6 +17,8 @@ limitations under the License.
 package cache
 
 import (
+	"context"
+
 	"k8s.io/klog/v2"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -51,7 +53,80 @@ func ListAll(store Store, selector labels.Selector, appendFn AppendFunc) error {
 	return nil
 }
 
+func ListAll2(ctx context.Context, indexer Indexer, selector labels.Selector, appendFn AppendFunc) error {
+	selectAll := selector.Empty()
+
+	var (
+		items []interface{}
+	)
+
+	if UseListAllIndex() {
+		indexValue, err := cc.ListAllIndexValueFunc(ctx)
+		if err != nil {
+			return err
+		}
+		items, err = indexer.ByIndex(cc.ListAllIndex, indexValue)
+		if err != nil {
+			return err
+		}
+	} else {
+		items = indexer.List()
+	}
+
+	for _, m := range items {
+		if selectAll {
+			// Avoid computing labels of the objects to speed up common flows
+			// of listing all objects.
+			appendFn(m)
+			continue
+		}
+		metadata, err := meta.Accessor(m)
+		if err != nil {
+			return err
+		}
+		if selector.Matches(labels.Set(metadata.GetLabels())) {
+			appendFn(m)
+		}
+	}
+	return nil
+}
+
 // ListAllByNamespace used to list items belongs to namespace from Indexer.
+func ListAllByNamespace2(ctx context.Context, indexer Indexer, namespace string, selector labels.Selector, appendFn AppendFunc) error {
+	if namespace == metav1.NamespaceAll {
+		return ListAll2(ctx, indexer, selector, appendFn)
+	}
+
+	nsKey, err := cc.NamespaceKeyFunc(ctx, namespace)
+	if err != nil {
+		return err
+	}
+	items, err := indexer.ByIndex(cc.NamespaceIndex, nsKey)
+	if err != nil {
+		return err
+	}
+
+	selectAll := selector.Empty()
+
+	for _, m := range items {
+		if selectAll {
+			// Avoid computing labels of the objects to speed up common flows
+			// of listing all objects.
+			appendFn(m)
+			continue
+		}
+		metadata, err := meta.Accessor(m)
+		if err != nil {
+			return err
+		}
+		if selector.Matches(labels.Set(metadata.GetLabels())) {
+			appendFn(m)
+		}
+	}
+
+	return nil
+}
+
 func ListAllByNamespace(indexer Indexer, namespace string, selector labels.Selector, appendFn AppendFunc) error {
 	selectAll := selector.Empty()
 	if namespace == metav1.NamespaceAll {
