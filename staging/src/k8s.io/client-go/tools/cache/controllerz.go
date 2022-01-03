@@ -21,6 +21,7 @@ type ControllerzConfig struct {
 	NamespaceIndexFunc IndexFunc
 	NamespaceKeyFunc   func(ctx context.Context, namespace string) (string, error)
 
+	NameKeyFunc          func(ctx context.Context, name string) (string, error)
 	NamespaceNameKeyFunc func(ctx context.Context, namespace, name string) (string, error)
 
 	NewSyncContextFunc func(ctx context.Context, key QueueKey) context.Context
@@ -68,6 +69,10 @@ func NamespaceIndex2() string {
 
 func NamespaceIndexFunc() IndexFunc {
 	return cc.NamespaceIndexFunc
+}
+
+func NameKeyFunc(ctx context.Context, name string) (string, error) {
+	return cc.NameKeyFunc(ctx, name)
 }
 
 func NamespaceNameKeyFunc(ctx context.Context, namespace, name string) (string, error) {
