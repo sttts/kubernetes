@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"k8s.io/kubernetes/pkg/genericcontrolplane"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -421,17 +420,15 @@ var _ = SIGDescribe("KCP MultiCluster", func() {
 		simpleRvFor := func(e *v1.ConfigMap) int64 {
 			complexRv := ShardedResourceVersions{}
 			framework.ExpectNoError(complexRv.Decode(e.ResourceVersion), "decoding complex RV from watch event")
-			clusterName, _, err := genericcontrolplane.ParseClusterName(e.ObjectMeta.ClusterName)
-			framework.ExpectNoError(err, "parsing cluster name from watch event object")
 			simpleRv := int64(-1)
 			for _, item := range complexRv.ResourceVersions {
-				if item.Identifier == clusterName {
+				if item.Identifier == e.ObjectMeta.ClusterName {
 					simpleRv = item.ResourceVersion
 					break
 				}
 			}
 			if simpleRv == -1 {
-				framework.Failf("could not find resource version for cluster %q in complex RV %#v", clusterName, complexRv)
+				framework.Failf("could not find resource version for cluster %q in complex RV %#v", e.ObjectMeta.ClusterName, complexRv)
 			}
 			return simpleRv
 		}
