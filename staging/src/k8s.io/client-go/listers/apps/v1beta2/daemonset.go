@@ -58,7 +58,7 @@ func (s *daemonSetLister) List(selector labels.Selector) (ret []*v1beta2.DaemonS
 
 // ListWithContext lists all DaemonSets in the indexer.
 func (s *daemonSetLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.DaemonSet, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.DaemonSet))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type DaemonSetNamespaceLister interface {
 	// List lists all DaemonSets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta2.DaemonSet, err error)
+	// ListWithContext lists all DaemonSets in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.DaemonSet, err error)
 	// Get retrieves the DaemonSet from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta2.DaemonSet, error)
+	// GetWithContext retrieves the DaemonSet from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1beta2.DaemonSet, error)
 	DaemonSetNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s daemonSetNamespaceLister) List(selector labels.Selector) (ret []*v1beta2
 
 // ListWithContext lists all DaemonSets in the indexer for a given namespace.
 func (s daemonSetNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.DaemonSet, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.DaemonSet))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s daemonSetNamespaceLister) Get(name string) (*v1beta2.DaemonSet, error) {
 
 // GetWithContext retrieves the DaemonSet from the indexer for a given namespace and name.
 func (s daemonSetNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1beta2.DaemonSet, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

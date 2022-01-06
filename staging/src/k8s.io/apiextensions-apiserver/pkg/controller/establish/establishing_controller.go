@@ -34,7 +34,6 @@ import (
 	client "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1"
 	listers "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
-	"k8s.io/client-go/tools/clusters"
 )
 
 // EstablishingController controls how and when CRD is established.
@@ -65,8 +64,14 @@ func NewEstablishingController(crdInformer informers.CustomResourceDefinitionInf
 }
 
 // QueueCRD adds CRD into the establishing queue.
-func (ec *EstablishingController) QueueCRD(name, clusterName string, timeout time.Duration) {
-	ec.queue.AddAfter(clusters.ToClusterAwareKey(clusterName, name), timeout)
+func (ec *EstablishingController) QueueCRD(crd *apiextensionsv1.CustomResourceDefinition, timeout time.Duration) {
+	key, err := cache.ObjectKeyFunc(crd)
+	if err != nil {
+		// TODO: there are no returned errors in the call chain (this comes from an informer event handler)...
+		// Should we log and return as best-effort error handling?
+		panic(err)
+	}
+	ec.queue.AddAfter(key, timeout)
 }
 
 // Run starts the EstablishingController.

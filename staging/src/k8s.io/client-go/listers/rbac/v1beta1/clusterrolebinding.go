@@ -62,7 +62,7 @@ func (s *clusterRoleBindingLister) List(selector labels.Selector) (ret []*v1beta
 
 // ListWithContext lists all ClusterRoleBindings in the indexer.
 func (s *clusterRoleBindingLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.ClusterRoleBinding, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.ClusterRoleBinding))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *clusterRoleBindingLister) Get(name string) (*v1beta1.ClusterRoleBinding
 
 // GetWithContext retrieves the ClusterRoleBinding from the index for a given name.
 func (s *clusterRoleBindingLister) GetWithContext(ctx context.Context, name string) (*v1beta1.ClusterRoleBinding, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

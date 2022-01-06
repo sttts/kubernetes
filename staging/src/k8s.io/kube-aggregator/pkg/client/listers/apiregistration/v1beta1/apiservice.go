@@ -62,7 +62,7 @@ func (s *aPIServiceLister) List(selector labels.Selector) (ret []*v1beta1.APISer
 
 // ListWithContext lists all APIServices in the indexer.
 func (s *aPIServiceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.APIService, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.APIService))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *aPIServiceLister) Get(name string) (*v1beta1.APIService, error) {
 
 // GetWithContext retrieves the APIService from the index for a given name.
 func (s *aPIServiceLister) GetWithContext(ctx context.Context, name string) (*v1beta1.APIService, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

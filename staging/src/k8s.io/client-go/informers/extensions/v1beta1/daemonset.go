@@ -78,7 +78,7 @@ func NewFilteredDaemonSetInformer(client kubernetes.Interface, namespace string,
 }
 
 func (f *daemonSetInformer) defaultInformer(client kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredDaemonSetInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredDaemonSetInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.ListAllIndex: cache.ListAllIndexFunc(), cache.NamespaceIndex: cache.NamespaceIndexFunc()}, f.tweakListOptions)
 }
 
 func (f *daemonSetInformer) Informer() cache.SharedIndexInformer {

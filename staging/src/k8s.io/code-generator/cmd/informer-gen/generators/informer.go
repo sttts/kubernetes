@@ -80,10 +80,15 @@ func (g *informerGenerator) GenerateType(c *generator.Context, t *types.Type, w 
 	m := map[string]interface{}{
 		"apiScheme":                       c.Universe.Type(apiScheme),
 		"cacheIndexers":                   c.Universe.Type(cacheIndexers),
+		"cacheKeyFunc":                    c.Universe.Type(cacheKeyFunc),
 		"cacheListWatch":                  c.Universe.Type(cacheListWatch),
+		"cacheListAllIndex":               c.Universe.Variable(cacheListAllIndex),
+		"cacheListAllIndexFunc":           c.Universe.Function(cacheListAllIndexFunc),
 		"cacheMetaNamespaceIndexFunc":     c.Universe.Function(cacheMetaNamespaceIndexFunc),
 		"cacheNamespaceIndex":             c.Universe.Variable(cacheNamespaceIndex),
+		"cacheNamespaceIndexFunc":         c.Universe.Function(cacheNamespaceIndexFunc),
 		"cacheNewSharedIndexInformer":     c.Universe.Function(cacheNewSharedIndexInformer),
+		"cacheObjectKeyFunc":              c.Universe.Type(cacheObjectKeyFunc),
 		"cacheSharedIndexInformer":        c.Universe.Type(cacheSharedIndexInformer),
 		"clientSetInterface":              clientSetInterface,
 		"group":                           namer.IC(g.groupGoName),
@@ -169,7 +174,7 @@ func NewFiltered$.type|public$Informer(client $.clientSetInterface|raw$$if .name
 
 var typeInformerConstructor = `
 func (f *$.type|private$Informer) defaultInformer(client $.clientSetInterface|raw$, resyncPeriod $.timeDuration|raw$) $.cacheSharedIndexInformer|raw$ {
-	return NewFiltered$.type|public$Informer(client$if .namespaced$, f.namespace$end$, resyncPeriod, $.cacheIndexers|raw${$.cacheNamespaceIndex|raw$: $.cacheMetaNamespaceIndexFunc|raw$}, f.tweakListOptions)
+	return NewFiltered$.type|public$Informer(client$if .namespaced$, f.namespace$end$, resyncPeriod, $.cacheIndexers|raw${$.cacheListAllIndex|raw$:$.cacheListAllIndexFunc|raw$()$if .namespaced$, $.cacheNamespaceIndex|raw$:$.cacheNamespaceIndexFunc|raw$()$end$}, f.tweakListOptions)
 }
 `
 

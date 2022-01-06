@@ -58,7 +58,7 @@ func (s *jobLister) List(selector labels.Selector) (ret []*v1.Job, err error) {
 
 // ListWithContext lists all Jobs in the indexer.
 func (s *jobLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Job, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Job))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type JobNamespaceLister interface {
 	// List lists all Jobs in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Job, err error)
+	// ListWithContext lists all Jobs in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Job, err error)
 	// Get retrieves the Job from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Job, error)
+	// GetWithContext retrieves the Job from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1.Job, error)
 	JobNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s jobNamespaceLister) List(selector labels.Selector) (ret []*v1.Job, err e
 
 // ListWithContext lists all Jobs in the indexer for a given namespace.
 func (s jobNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Job, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Job))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s jobNamespaceLister) Get(name string) (*v1.Job, error) {
 
 // GetWithContext retrieves the Job from the indexer for a given namespace and name.
 func (s jobNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.Job, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

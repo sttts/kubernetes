@@ -20,7 +20,7 @@ func ToClusterAwareKey(clusterName, name string) string {
 // ToClusterAwareKey just allows extract the name and clusterName
 // from a Key initially created with ToClusterAwareKey
 func SplitClusterAwareKey(clusterAwareKey string) (clusterName, name string) {
-	parts := strings.SplitN(clusterAwareKey, "#$#", 2)
+	parts := strings.SplitN(clusterAwareKey, "$", 2)
 	if len(parts) == 1 {
 		// name only, no cluster
 		return "", parts[0]

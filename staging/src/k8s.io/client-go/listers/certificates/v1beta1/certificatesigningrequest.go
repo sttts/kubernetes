@@ -62,7 +62,7 @@ func (s *certificateSigningRequestLister) List(selector labels.Selector) (ret []
 
 // ListWithContext lists all CertificateSigningRequests in the indexer.
 func (s *certificateSigningRequestLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.CertificateSigningRequest, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.CertificateSigningRequest))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *certificateSigningRequestLister) Get(name string) (*v1beta1.Certificate
 
 // GetWithContext retrieves the CertificateSigningRequest from the index for a given name.
 func (s *certificateSigningRequestLister) GetWithContext(ctx context.Context, name string) (*v1beta1.CertificateSigningRequest, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

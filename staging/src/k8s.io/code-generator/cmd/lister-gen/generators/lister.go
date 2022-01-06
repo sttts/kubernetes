@@ -316,7 +316,7 @@ func New$.type|public$Lister(indexer cache.Indexer) $.type|public$Lister {
 var typeLister_ListWithContext = `
 // ListWithContext lists all $.type|publicPlural$ in the indexer.
 func (s *$.type|private$Lister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*$.type|raw$, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*$.type|raw$))
 	})
 	return ret, err
@@ -340,7 +340,11 @@ func (s *$.type|private$Lister) $.type|publicPlural$(namespace string) $.type|pu
 var typeLister_NonNamespacedGetWithContext = `
 // GetWithContext retrieves the $.type|public$ from the index for a given name.
 func (s *$.type|private$Lister) GetWithContext(ctx context.Context, name string) (*$.type|raw$, error) {
-  obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+  obj, exists, err := s.indexer.GetByKey(key)
   if err != nil {
     return nil, err
   }
@@ -365,9 +369,15 @@ type $.type|public$NamespaceLister interface {
 	// List lists all $.type|publicPlural$ in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*$.type|raw$, err error)
+	// ListWithContext lists all $.type|publicPlural$ in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*$.type|raw$, err error)
 	// Get retrieves the $.type|public$ from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*$.type|raw$, error)
+	// GetWithContext retrieves the $.type|public$ from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*$.type|raw$, error)
 	$.type|public$NamespaceListerExpansion
 }
 `
@@ -384,7 +394,7 @@ type $.type|private$NamespaceLister struct {
 var namespaceLister_ListWithContext = `
 // ListWithContext lists all $.type|publicPlural$ in the indexer for a given namespace.
 func (s $.type|private$NamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*$.type|raw$, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*$.type|raw$))
 	})
 	return ret, err
@@ -401,7 +411,11 @@ func (s $.type|private$NamespaceLister) List(selector labels.Selector) (ret []*$
 var namespaceLister_GetWithContext = `
 // GetWithContext retrieves the $.type|public$ from the indexer for a given namespace and name.
 func (s $.type|private$NamespaceLister) GetWithContext(ctx context.Context, name string) (*$.type|raw$, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

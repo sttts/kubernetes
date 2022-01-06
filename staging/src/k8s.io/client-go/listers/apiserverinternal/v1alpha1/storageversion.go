@@ -62,7 +62,7 @@ func (s *storageVersionLister) List(selector labels.Selector) (ret []*v1alpha1.S
 
 // ListWithContext lists all StorageVersions in the indexer.
 func (s *storageVersionLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.StorageVersion, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.StorageVersion))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *storageVersionLister) Get(name string) (*v1alpha1.StorageVersion, error
 
 // GetWithContext retrieves the StorageVersion from the index for a given name.
 func (s *storageVersionLister) GetWithContext(ctx context.Context, name string) (*v1alpha1.StorageVersion, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

@@ -78,7 +78,7 @@ func NewFilteredPodDisruptionBudgetInformer(client kubernetes.Interface, namespa
 }
 
 func (f *podDisruptionBudgetInformer) defaultInformer(client kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredPodDisruptionBudgetInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredPodDisruptionBudgetInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.ListAllIndex: cache.ListAllIndexFunc(), cache.NamespaceIndex: cache.NamespaceIndexFunc()}, f.tweakListOptions)
 }
 
 func (f *podDisruptionBudgetInformer) Informer() cache.SharedIndexInformer {

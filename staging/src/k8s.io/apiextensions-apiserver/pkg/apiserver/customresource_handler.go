@@ -562,9 +562,9 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{}) 
 	if !apiextensionshelpers.IsCRDConditionTrue(newCRD, apiextensionsv1.Established) &&
 		apiextensionshelpers.IsCRDConditionTrue(newCRD, apiextensionsv1.NamesAccepted) {
 		if r.masterCount > 1 {
-			r.establishingController.QueueCRD(newCRD.Name, newCRD.GetClusterName(), 5*time.Second)
+			r.establishingController.QueueCRD(newCRD, 5*time.Second)
 		} else {
-			r.establishingController.QueueCRD(newCRD.Name, newCRD.GetClusterName(), 0)
+			r.establishingController.QueueCRD(newCRD, 0)
 		}
 	}
 
@@ -682,7 +682,7 @@ func (r *crdHandler) getOrCreateServingInfoFor(crd *apiextensionsv1.CustomResour
 	// If updateCustomResourceDefinition sees an update and happens later, the storage will be deleted and
 	// we will re-create the updated storage on demand. If updateCustomResourceDefinition happens before,
 	// we make sure that we observe the same up-to-date CRD.
-	key, err := cache.MetaNamespaceKeyFunc(crd)
+	key, err := cache.ObjectKeyFunc(crd)
 	if err != nil {
 		return nil, err
 	}

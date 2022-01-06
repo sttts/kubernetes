@@ -62,7 +62,7 @@ func (s *runtimeClassLister) List(selector labels.Selector) (ret []*v1beta1.Runt
 
 // ListWithContext lists all RuntimeClasses in the indexer.
 func (s *runtimeClassLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.RuntimeClass, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.RuntimeClass))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *runtimeClassLister) Get(name string) (*v1beta1.RuntimeClass, error) {
 
 // GetWithContext retrieves the RuntimeClass from the index for a given name.
 func (s *runtimeClassLister) GetWithContext(ctx context.Context, name string) (*v1beta1.RuntimeClass, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

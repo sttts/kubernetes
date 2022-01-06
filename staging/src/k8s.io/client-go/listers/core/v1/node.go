@@ -62,7 +62,7 @@ func (s *nodeLister) List(selector labels.Selector) (ret []*v1.Node, err error) 
 
 // ListWithContext lists all Nodes in the indexer.
 func (s *nodeLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Node, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Node))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *nodeLister) Get(name string) (*v1.Node, error) {
 
 // GetWithContext retrieves the Node from the index for a given name.
 func (s *nodeLister) GetWithContext(ctx context.Context, name string) (*v1.Node, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

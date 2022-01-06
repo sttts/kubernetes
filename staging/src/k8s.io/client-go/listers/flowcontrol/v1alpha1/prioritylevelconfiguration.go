@@ -62,7 +62,7 @@ func (s *priorityLevelConfigurationLister) List(selector labels.Selector) (ret [
 
 // ListWithContext lists all PriorityLevelConfigurations in the indexer.
 func (s *priorityLevelConfigurationLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.PriorityLevelConfiguration, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.PriorityLevelConfiguration))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *priorityLevelConfigurationLister) Get(name string) (*v1alpha1.PriorityL
 
 // GetWithContext retrieves the PriorityLevelConfiguration from the index for a given name.
 func (s *priorityLevelConfigurationLister) GetWithContext(ctx context.Context, name string) (*v1alpha1.PriorityLevelConfiguration, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

@@ -58,7 +58,7 @@ func (s *resourceQuotaLister) List(selector labels.Selector) (ret []*v1.Resource
 
 // ListWithContext lists all ResourceQuotas in the indexer.
 func (s *resourceQuotaLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.ResourceQuota))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type ResourceQuotaNamespaceLister interface {
 	// List lists all ResourceQuotas in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.ResourceQuota, err error)
+	// ListWithContext lists all ResourceQuotas in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ResourceQuota, err error)
 	// Get retrieves the ResourceQuota from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.ResourceQuota, error)
+	// GetWithContext retrieves the ResourceQuota from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1.ResourceQuota, error)
 	ResourceQuotaNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s resourceQuotaNamespaceLister) List(selector labels.Selector) (ret []*v1.
 
 // ListWithContext lists all ResourceQuotas in the indexer for a given namespace.
 func (s resourceQuotaNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.ResourceQuota))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s resourceQuotaNamespaceLister) Get(name string) (*v1.ResourceQuota, error
 
 // GetWithContext retrieves the ResourceQuota from the indexer for a given namespace and name.
 func (s resourceQuotaNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.ResourceQuota, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

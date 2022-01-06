@@ -58,7 +58,7 @@ func (s *exampleLister) List(selector labels.Selector) (ret []*v1.Example, err e
 
 // ListWithContext lists all Examples in the indexer.
 func (s *exampleLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Example, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Example))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type ExampleNamespaceLister interface {
 	// List lists all Examples in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Example, err error)
+	// ListWithContext lists all Examples in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Example, err error)
 	// Get retrieves the Example from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Example, error)
+	// GetWithContext retrieves the Example from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1.Example, error)
 	ExampleNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s exampleNamespaceLister) List(selector labels.Selector) (ret []*v1.Exampl
 
 // ListWithContext lists all Examples in the indexer for a given namespace.
 func (s exampleNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Example, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Example))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s exampleNamespaceLister) Get(name string) (*v1.Example, error) {
 
 // GetWithContext retrieves the Example from the indexer for a given namespace and name.
 func (s exampleNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.Example, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

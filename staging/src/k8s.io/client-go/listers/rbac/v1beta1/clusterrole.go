@@ -62,7 +62,7 @@ func (s *clusterRoleLister) List(selector labels.Selector) (ret []*v1beta1.Clust
 
 // ListWithContext lists all ClusterRoles in the indexer.
 func (s *clusterRoleLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.ClusterRole, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.ClusterRole))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *clusterRoleLister) Get(name string) (*v1beta1.ClusterRole, error) {
 
 // GetWithContext retrieves the ClusterRole from the index for a given name.
 func (s *clusterRoleLister) GetWithContext(ctx context.Context, name string) (*v1beta1.ClusterRole, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

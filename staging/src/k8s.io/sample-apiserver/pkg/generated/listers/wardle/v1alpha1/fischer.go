@@ -62,7 +62,7 @@ func (s *fischerLister) List(selector labels.Selector) (ret []*v1alpha1.Fischer,
 
 // ListWithContext lists all Fischers in the indexer.
 func (s *fischerLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Fischer, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.Fischer))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *fischerLister) Get(name string) (*v1alpha1.Fischer, error) {
 
 // GetWithContext retrieves the Fischer from the index for a given name.
 func (s *fischerLister) GetWithContext(ctx context.Context, name string) (*v1alpha1.Fischer, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

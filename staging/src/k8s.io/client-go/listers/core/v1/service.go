@@ -58,7 +58,7 @@ func (s *serviceLister) List(selector labels.Selector) (ret []*v1.Service, err e
 
 // ListWithContext lists all Services in the indexer.
 func (s *serviceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Service, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Service))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type ServiceNamespaceLister interface {
 	// List lists all Services in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Service, err error)
+	// ListWithContext lists all Services in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Service, err error)
 	// Get retrieves the Service from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Service, error)
+	// GetWithContext retrieves the Service from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1.Service, error)
 	ServiceNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s serviceNamespaceLister) List(selector labels.Selector) (ret []*v1.Servic
 
 // ListWithContext lists all Services in the indexer for a given namespace.
 func (s serviceNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Service, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Service))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s serviceNamespaceLister) Get(name string) (*v1.Service, error) {
 
 // GetWithContext retrieves the Service from the indexer for a given namespace and name.
 func (s serviceNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.Service, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

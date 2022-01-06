@@ -62,7 +62,7 @@ func (s *namespaceLister) List(selector labels.Selector) (ret []*v1.Namespace, e
 
 // ListWithContext lists all Namespaces in the indexer.
 func (s *namespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Namespace, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Namespace))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *namespaceLister) Get(name string) (*v1.Namespace, error) {
 
 // GetWithContext retrieves the Namespace from the index for a given name.
 func (s *namespaceLister) GetWithContext(ctx context.Context, name string) (*v1.Namespace, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

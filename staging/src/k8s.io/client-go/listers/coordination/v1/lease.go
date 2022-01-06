@@ -58,7 +58,7 @@ func (s *leaseLister) List(selector labels.Selector) (ret []*v1.Lease, err error
 
 // ListWithContext lists all Leases in the indexer.
 func (s *leaseLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Lease, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Lease))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type LeaseNamespaceLister interface {
 	// List lists all Leases in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Lease, err error)
+	// ListWithContext lists all Leases in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Lease, err error)
 	// Get retrieves the Lease from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Lease, error)
+	// GetWithContext retrieves the Lease from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1.Lease, error)
 	LeaseNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s leaseNamespaceLister) List(selector labels.Selector) (ret []*v1.Lease, e
 
 // ListWithContext lists all Leases in the indexer for a given namespace.
 func (s leaseNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Lease, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Lease))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s leaseNamespaceLister) Get(name string) (*v1.Lease, error) {
 
 // GetWithContext retrieves the Lease from the indexer for a given namespace and name.
 func (s leaseNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.Lease, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

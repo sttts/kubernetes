@@ -62,7 +62,7 @@ func (s *storageClassLister) List(selector labels.Selector) (ret []*v1.StorageCl
 
 // ListWithContext lists all StorageClasses in the indexer.
 func (s *storageClassLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.StorageClass, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.StorageClass))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *storageClassLister) Get(name string) (*v1.StorageClass, error) {
 
 // GetWithContext retrieves the StorageClass from the index for a given name.
 func (s *storageClassLister) GetWithContext(ctx context.Context, name string) (*v1.StorageClass, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

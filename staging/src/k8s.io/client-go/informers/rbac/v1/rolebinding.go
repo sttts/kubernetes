@@ -78,7 +78,7 @@ func NewFilteredRoleBindingInformer(client kubernetes.Interface, namespace strin
 }
 
 func (f *roleBindingInformer) defaultInformer(client kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredRoleBindingInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredRoleBindingInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.ListAllIndex: cache.ListAllIndexFunc(), cache.NamespaceIndex: cache.NamespaceIndexFunc()}, f.tweakListOptions)
 }
 
 func (f *roleBindingInformer) Informer() cache.SharedIndexInformer {

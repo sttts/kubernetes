@@ -223,7 +223,7 @@ func (c *KubernetesAPIApprovalPolicyConformantConditionController) processNextWo
 }
 
 func (c *KubernetesAPIApprovalPolicyConformantConditionController) enqueue(obj *apiextensionsv1.CustomResourceDefinition) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+	key, err := cache.DeletionHandlingDelegatingKeyFunc(cache.ObjectKeyFunc)(obj)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", obj, err))
 		return

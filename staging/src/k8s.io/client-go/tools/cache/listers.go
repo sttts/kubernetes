@@ -53,24 +53,20 @@ func ListAll(store Store, selector labels.Selector, appendFn AppendFunc) error {
 	return nil
 }
 
-func ListAll2(ctx context.Context, indexer Indexer, selector labels.Selector, appendFn AppendFunc) error {
+func IndexedListAll(ctx context.Context, indexer Indexer, selector labels.Selector, appendFn AppendFunc) error {
 	selectAll := selector.Empty()
 
 	var (
 		items []interface{}
 	)
 
-	if UseListAllIndex() {
-		indexValue, err := cc.ListAllIndexValueFunc(ctx)
-		if err != nil {
-			return err
-		}
-		items, err = indexer.ByIndex(cc.ListAllIndex, indexValue)
-		if err != nil {
-			return err
-		}
-	} else {
-		items = indexer.List()
+	indexValue, err := cc.ListAllIndexValueFunc(ctx)
+	if err != nil {
+		return err
+	}
+	items, err = indexer.ByIndex(ListAllIndex, indexValue)
+	if err != nil {
+		return err
 	}
 
 	for _, m := range items {
@@ -94,14 +90,14 @@ func ListAll2(ctx context.Context, indexer Indexer, selector labels.Selector, ap
 // ListAllByNamespace used to list items belongs to namespace from Indexer.
 func ListAllByNamespace2(ctx context.Context, indexer Indexer, namespace string, selector labels.Selector, appendFn AppendFunc) error {
 	if namespace == metav1.NamespaceAll {
-		return ListAll2(ctx, indexer, selector, appendFn)
+		return IndexedListAll(ctx, indexer, selector, appendFn)
 	}
 
 	nsKey, err := cc.NamespaceKeyFunc(ctx, namespace)
 	if err != nil {
 		return err
 	}
-	items, err := indexer.ByIndex(cc.NamespaceIndex, nsKey)
+	items, err := indexer.ByIndex(NamespaceIndex, nsKey)
 	if err != nil {
 		return err
 	}

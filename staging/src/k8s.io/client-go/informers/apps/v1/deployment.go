@@ -29,7 +29,7 @@ import (
 	internalinterfaces "k8s.io/client-go/informers/internalinterfaces"
 	kubernetes "k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/listers/apps/v1"
-	"k8s.io/client-go/tools/cache"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // DeploymentInformer provides access to a shared informer and lister for
@@ -77,31 +77,8 @@ func NewFilteredDeploymentInformer(client kubernetes.Interface, namespace string
 	)
 }
 
-func NewFilteredDeploymentInformer2(client kubernetes.Interface, namespace string, resyncPeriod time.Duration, keyFunc cache.KeyFunc, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer2(
-		&cache.ListWatch{
-			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-				if tweakListOptions != nil {
-					tweakListOptions(&options)
-				}
-				return client.AppsV1().Deployments(namespace).List(context.TODO(), options)
-			},
-			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				if tweakListOptions != nil {
-					tweakListOptions(&options)
-				}
-				return client.AppsV1().Deployments(namespace).Watch(context.TODO(), options)
-			},
-		},
-		&appsv1.Deployment{},
-		resyncPeriod,
-		keyFunc,
-		indexers,
-	)
-}
-
 func (f *deploymentInformer) defaultInformer(client kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredDeploymentInformer2(client, f.namespace, resyncPeriod, cache.ObjectKeyFunc, cache.Indexers{cache.ListAllIndex():cache.ListAllIndexFunc(), cache.NamespaceIndex2():cache.NamespaceIndexFunc()}, f.tweakListOptions)
+	return NewFilteredDeploymentInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.ListAllIndex: cache.ListAllIndexFunc(), cache.NamespaceIndex: cache.NamespaceIndexFunc()}, f.tweakListOptions)
 }
 
 func (f *deploymentInformer) Informer() cache.SharedIndexInformer {

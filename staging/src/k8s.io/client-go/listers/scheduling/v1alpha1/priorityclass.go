@@ -62,7 +62,7 @@ func (s *priorityClassLister) List(selector labels.Selector) (ret []*v1alpha1.Pr
 
 // ListWithContext lists all PriorityClasses in the indexer.
 func (s *priorityClassLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.PriorityClass, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.PriorityClass))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *priorityClassLister) Get(name string) (*v1alpha1.PriorityClass, error) 
 
 // GetWithContext retrieves the PriorityClass from the index for a given name.
 func (s *priorityClassLister) GetWithContext(ctx context.Context, name string) (*v1alpha1.PriorityClass, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

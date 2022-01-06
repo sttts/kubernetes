@@ -58,7 +58,7 @@ func (s *persistentVolumeClaimLister) List(selector labels.Selector) (ret []*v1.
 
 // ListWithContext lists all PersistentVolumeClaims in the indexer.
 func (s *persistentVolumeClaimLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.PersistentVolumeClaim))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type PersistentVolumeClaimNamespaceLister interface {
 	// List lists all PersistentVolumeClaims in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error)
+	// ListWithContext lists all PersistentVolumeClaims in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error)
 	// Get retrieves the PersistentVolumeClaim from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.PersistentVolumeClaim, error)
+	// GetWithContext retrieves the PersistentVolumeClaim from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1.PersistentVolumeClaim, error)
 	PersistentVolumeClaimNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s persistentVolumeClaimNamespaceLister) List(selector labels.Selector) (re
 
 // ListWithContext lists all PersistentVolumeClaims in the indexer for a given namespace.
 func (s persistentVolumeClaimNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.PersistentVolumeClaim))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s persistentVolumeClaimNamespaceLister) Get(name string) (*v1.PersistentVo
 
 // GetWithContext retrieves the PersistentVolumeClaim from the indexer for a given namespace and name.
 func (s persistentVolumeClaimNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.PersistentVolumeClaim, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

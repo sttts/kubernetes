@@ -229,7 +229,7 @@ func (c *ConditionController) processNextWorkItem() bool {
 }
 
 func (c *ConditionController) enqueue(obj *apiextensionsv1.CustomResourceDefinition) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+	key, err := cache.DeletionHandlingDelegatingKeyFunc(cache.ObjectKeyFunc)(obj)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", obj, err))
 		return

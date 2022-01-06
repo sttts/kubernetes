@@ -58,7 +58,7 @@ func (s *limitRangeLister) List(selector labels.Selector) (ret []*v1.LimitRange,
 
 // ListWithContext lists all LimitRanges in the indexer.
 func (s *limitRangeLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.LimitRange, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.LimitRange))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type LimitRangeNamespaceLister interface {
 	// List lists all LimitRanges in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.LimitRange, err error)
+	// ListWithContext lists all LimitRanges in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.LimitRange, err error)
 	// Get retrieves the LimitRange from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.LimitRange, error)
+	// GetWithContext retrieves the LimitRange from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1.LimitRange, error)
 	LimitRangeNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s limitRangeNamespaceLister) List(selector labels.Selector) (ret []*v1.Lim
 
 // ListWithContext lists all LimitRanges in the indexer for a given namespace.
 func (s limitRangeNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.LimitRange, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.LimitRange))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s limitRangeNamespaceLister) Get(name string) (*v1.LimitRange, error) {
 
 // GetWithContext retrieves the LimitRange from the indexer for a given namespace and name.
 func (s limitRangeNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.LimitRange, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

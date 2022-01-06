@@ -62,7 +62,7 @@ func (s *podSecurityPolicyLister) List(selector labels.Selector) (ret []*v1beta1
 
 // ListWithContext lists all PodSecurityPolicies in the indexer.
 func (s *podSecurityPolicyLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.PodSecurityPolicy, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.PodSecurityPolicy))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *podSecurityPolicyLister) Get(name string) (*v1beta1.PodSecurityPolicy, 
 
 // GetWithContext retrieves the PodSecurityPolicy from the index for a given name.
 func (s *podSecurityPolicyLister) GetWithContext(ctx context.Context, name string) (*v1beta1.PodSecurityPolicy, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

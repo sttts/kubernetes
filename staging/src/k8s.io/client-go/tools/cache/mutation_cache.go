@@ -201,7 +201,7 @@ func (c *mutationCache) Mutation(obj interface{}) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	key, err := DeletionHandlingMetaNamespaceKeyFunc(obj)
+	key, err := DeletionHandlingDelegatingKeyFunc(ObjectKeyFunc)(obj)
 	if err != nil {
 		// this is a "nice to have", so failures shouldn't do anything weird
 		utilruntime.HandleError(err)

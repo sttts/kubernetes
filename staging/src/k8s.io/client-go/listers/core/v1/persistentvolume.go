@@ -62,7 +62,7 @@ func (s *persistentVolumeLister) List(selector labels.Selector) (ret []*v1.Persi
 
 // ListWithContext lists all PersistentVolumes in the indexer.
 func (s *persistentVolumeLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.PersistentVolume, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.PersistentVolume))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *persistentVolumeLister) Get(name string) (*v1.PersistentVolume, error) 
 
 // GetWithContext retrieves the PersistentVolume from the index for a given name.
 func (s *persistentVolumeLister) GetWithContext(ctx context.Context, name string) (*v1.PersistentVolume, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

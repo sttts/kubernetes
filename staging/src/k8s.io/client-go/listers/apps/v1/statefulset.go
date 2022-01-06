@@ -58,7 +58,7 @@ func (s *statefulSetLister) List(selector labels.Selector) (ret []*v1.StatefulSe
 
 // ListWithContext lists all StatefulSets in the indexer.
 func (s *statefulSetLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.StatefulSet, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.StatefulSet))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type StatefulSetNamespaceLister interface {
 	// List lists all StatefulSets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.StatefulSet, err error)
+	// ListWithContext lists all StatefulSets in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.StatefulSet, err error)
 	// Get retrieves the StatefulSet from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.StatefulSet, error)
+	// GetWithContext retrieves the StatefulSet from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1.StatefulSet, error)
 	StatefulSetNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s statefulSetNamespaceLister) List(selector labels.Selector) (ret []*v1.St
 
 // ListWithContext lists all StatefulSets in the indexer for a given namespace.
 func (s statefulSetNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.StatefulSet, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.StatefulSet))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s statefulSetNamespaceLister) Get(name string) (*v1.StatefulSet, error) {
 
 // GetWithContext retrieves the StatefulSet from the indexer for a given namespace and name.
 func (s statefulSetNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.StatefulSet, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

@@ -58,7 +58,7 @@ func (s *deploymentLister) List(selector labels.Selector) (ret []*v1.Deployment,
 
 // ListWithContext lists all Deployments in the indexer.
 func (s *deploymentLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Deployment, err error) {
-	err = cache.ListAll2(ctx, s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Deployment))
 	})
 	return ret, err
@@ -75,10 +75,14 @@ type DeploymentNamespaceLister interface {
 	// List lists all Deployments in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Deployment, err error)
+	// ListWithContext lists all Deployments in the indexer.
+	// Objects returned here must be treated as read-only.
 	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Deployment, err error)
 	// Get retrieves the Deployment from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Deployment, error)
+	// GetWithContext retrieves the Deployment from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	GetWithContext(ctx context.Context, name string) (*v1.Deployment, error)
 	DeploymentNamespaceListerExpansion
 }

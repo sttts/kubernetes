@@ -77,7 +77,7 @@ func NewFilteredIngressClassInformer(client kubernetes.Interface, resyncPeriod t
 }
 
 func (f *ingressClassInformer) defaultInformer(client kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredIngressClassInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredIngressClassInformer(client, resyncPeriod, cache.Indexers{cache.ListAllIndex: cache.ListAllIndexFunc()}, f.tweakListOptions)
 }
 
 func (f *ingressClassInformer) Informer() cache.SharedIndexInformer {

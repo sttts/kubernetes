@@ -324,6 +324,6 @@ func (c *Controller) deleteCustomResourceDefinition(obj interface{}) {
 }
 
 func (c *Controller) enqueue(obj *apiextensionsv1.CustomResourceDefinition) {
-	key, _ := cache.MetaNamespaceKeyFunc(obj)
+	key, _ := cache.ObjectKeyFunc(obj)
 	c.queue.Add(key)
 }

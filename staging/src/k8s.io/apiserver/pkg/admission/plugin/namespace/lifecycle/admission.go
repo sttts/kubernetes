@@ -32,11 +32,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/admission/initializer"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/clusters"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/clock"
 )
 
@@ -87,18 +86,17 @@ func (l *Lifecycle) Admit(ctx context.Context, a admission.Attributes, o admissi
 		return nil
 	}
 
-	clusterName, err := genericapirequest.ClusterNameFrom(ctx)
-	if err != nil {
-		return errors.NewInternalError(err)
-	}
-
 	if a.GetKind().GroupKind() == v1.SchemeGroupVersion.WithKind("Namespace").GroupKind() {
 		// if a namespace is deleted, we want to prevent all further creates into it
 		// while it is undergoing termination.  to reduce incidences where the cache
 		// is slow to update, we add the namespace into a force live lookup list to ensure
 		// we are not looking at stale state.
 		if a.GetOperation() == admission.Delete {
-			l.forceLiveLookupCache.Add(clusters.ToClusterAwareKey(clusterName, a.GetName()), true, forceLiveLookupTTL)
+			key, err := cache.NameKeyFunc(ctx, a.GetName())
+			if err != nil {
+				return errors.NewInternalError(fmt.Errorf("unable to determine key for namespace %q: %w", a.GetName(), err))
+			}
+			l.forceLiveLookupCache.Add(key, true, forceLiveLookupTTL)
 		}
 		// allow all operations to namespaces
 		return nil
@@ -123,8 +121,10 @@ func (l *Lifecycle) Admit(ctx context.Context, a admission.Attributes, o admissi
 		exists bool
 	)
 
-	namespaceKey := a.GetNamespace()
-	namespaceKey = clusters.ToClusterAwareKey(clusterName, namespaceKey)
+	namespaceKey, err := cache.NameKeyFunc(ctx, a.GetNamespace())
+	if err != nil {
+		return errors.NewInternalError(fmt.Errorf("unable to determine key for namespace %q: %w", a.GetNamespace(), err))
+	}
 
 	namespace, err := l.namespaceLister.Get(namespaceKey)
 	if err != nil {
@@ -163,7 +163,7 @@ func (l *Lifecycle) Admit(ctx context.Context, a admission.Attributes, o admissi
 	// refuse to operate on non-existent namespaces
 	if !exists || forceLiveLookup {
 		// as a last resort, make a call directly to storage
-		namespace, err = l.client.CoreV1().Namespaces().Get(genericapirequest.WithCluster(context.TODO(), genericapirequest.Cluster{Name: clusterName}), a.GetNamespace(), metav1.GetOptions{})
+		namespace, err = l.client.CoreV1().Namespaces().Get(ctx, a.GetNamespace(), metav1.GetOptions{})
 		switch {
 		case errors.IsNotFound(err):
 			return err

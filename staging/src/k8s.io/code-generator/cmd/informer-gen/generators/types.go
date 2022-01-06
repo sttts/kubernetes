@@ -22,11 +22,16 @@ var (
 	apiScheme                   = types.Name{Package: "k8s.io/kubernetes/pkg/api/legacyscheme", Name: "Scheme"}
 	cacheGenericLister          = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "GenericLister"}
 	cacheIndexers               = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "Indexers"}
+	cacheKeyFunc                = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "KeyFunc"}
 	cacheListWatch              = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "ListWatch"}
+	cacheListAllIndex           = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "ListAllIndex"}
+	cacheListAllIndexFunc       = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "ListAllIndexFunc"}
 	cacheMetaNamespaceIndexFunc = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "MetaNamespaceIndexFunc"}
 	cacheNamespaceIndex         = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "NamespaceIndex"}
+	cacheNamespaceIndexFunc     = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "NamespaceIndexFunc"}
 	cacheNewGenericLister       = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "NewGenericLister"}
 	cacheNewSharedIndexInformer = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "NewSharedIndexInformer"}
+	cacheObjectKeyFunc          = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "ObjectKeyFunc"}
 	cacheSharedIndexInformer    = types.Name{Package: "k8s.io/client-go/tools/cache", Name: "SharedIndexInformer"}
 	listOptions                 = types.Name{Package: "k8s.io/kubernetes/pkg/apis/core", Name: "ListOptions"}
 	reflectType                 = types.Name{Package: "reflect", Name: "Type"}

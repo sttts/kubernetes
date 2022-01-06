@@ -62,7 +62,7 @@ func (s *cSINodeLister) List(selector labels.Selector) (ret []*v1.CSINode, err e
 
 // ListWithContext lists all CSINodes in the indexer.
 func (s *cSINodeLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CSINode, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.CSINode))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *cSINodeLister) Get(name string) (*v1.CSINode, error) {
 
 // GetWithContext retrieves the CSINode from the index for a given name.
 func (s *cSINodeLister) GetWithContext(ctx context.Context, name string) (*v1.CSINode, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

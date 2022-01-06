@@ -58,7 +58,7 @@ func (s *replicationControllerLister) List(selector labels.Selector) (ret []*v1.
 
 // ListWithContext lists all ReplicationControllers in the indexer.
 func (s *replicationControllerLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ReplicationController, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.ReplicationController))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type ReplicationControllerNamespaceLister interface {
 	// List lists all ReplicationControllers in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.ReplicationController, err error)
+	// ListWithContext lists all ReplicationControllers in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ReplicationController, err error)
 	// Get retrieves the ReplicationController from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.ReplicationController, error)
+	// GetWithContext retrieves the ReplicationController from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1.ReplicationController, error)
 	ReplicationControllerNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s replicationControllerNamespaceLister) List(selector labels.Selector) (re
 
 // ListWithContext lists all ReplicationControllers in the indexer for a given namespace.
 func (s replicationControllerNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ReplicationController, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.ReplicationController))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s replicationControllerNamespaceLister) Get(name string) (*v1.ReplicationC
 
 // GetWithContext retrieves the ReplicationController from the indexer for a given namespace and name.
 func (s replicationControllerNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.ReplicationController, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

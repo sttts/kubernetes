@@ -58,7 +58,7 @@ func (s *replicaSetLister) List(selector labels.Selector) (ret []*v1beta2.Replic
 
 // ListWithContext lists all ReplicaSets in the indexer.
 func (s *replicaSetLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.ReplicaSet))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type ReplicaSetNamespaceLister interface {
 	// List lists all ReplicaSets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error)
+	// ListWithContext lists all ReplicaSets in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error)
 	// Get retrieves the ReplicaSet from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta2.ReplicaSet, error)
+	// GetWithContext retrieves the ReplicaSet from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1beta2.ReplicaSet, error)
 	ReplicaSetNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s replicaSetNamespaceLister) List(selector labels.Selector) (ret []*v1beta
 
 // ListWithContext lists all ReplicaSets in the indexer for a given namespace.
 func (s replicaSetNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.ReplicaSet))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s replicaSetNamespaceLister) Get(name string) (*v1beta2.ReplicaSet, error)
 
 // GetWithContext retrieves the ReplicaSet from the indexer for a given namespace and name.
 func (s replicaSetNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1beta2.ReplicaSet, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

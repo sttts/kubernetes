@@ -62,7 +62,7 @@ func (s *mutatingWebhookConfigurationLister) List(selector labels.Selector) (ret
 
 // ListWithContext lists all MutatingWebhookConfigurations in the indexer.
 func (s *mutatingWebhookConfigurationLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.MutatingWebhookConfiguration, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.MutatingWebhookConfiguration))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *mutatingWebhookConfigurationLister) Get(name string) (*v1beta1.Mutating
 
 // GetWithContext retrieves the MutatingWebhookConfiguration from the index for a given name.
 func (s *mutatingWebhookConfigurationLister) GetWithContext(ctx context.Context, name string) (*v1beta1.MutatingWebhookConfiguration, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

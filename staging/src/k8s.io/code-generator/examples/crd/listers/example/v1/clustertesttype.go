@@ -62,7 +62,7 @@ func (s *clusterTestTypeLister) List(selector labels.Selector) (ret []*v1.Cluste
 
 // ListWithContext lists all ClusterTestTypes in the indexer.
 func (s *clusterTestTypeLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ClusterTestType, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.ClusterTestType))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *clusterTestTypeLister) Get(name string) (*v1.ClusterTestType, error) {
 
 // GetWithContext retrieves the ClusterTestType from the index for a given name.
 func (s *clusterTestTypeLister) GetWithContext(ctx context.Context, name string) (*v1.ClusterTestType, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

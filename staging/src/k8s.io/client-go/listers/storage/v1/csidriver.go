@@ -62,7 +62,7 @@ func (s *cSIDriverLister) List(selector labels.Selector) (ret []*v1.CSIDriver, e
 
 // ListWithContext lists all CSIDrivers in the indexer.
 func (s *cSIDriverLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CSIDriver, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.CSIDriver))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *cSIDriverLister) Get(name string) (*v1.CSIDriver, error) {
 
 // GetWithContext retrieves the CSIDriver from the index for a given name.
 func (s *cSIDriverLister) GetWithContext(ctx context.Context, name string) (*v1.CSIDriver, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

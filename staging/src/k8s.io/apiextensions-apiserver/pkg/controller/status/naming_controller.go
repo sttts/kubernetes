@@ -41,7 +41,6 @@ import (
 	client "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1"
 	listers "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
-	"k8s.io/client-go/tools/clusters"
 )
 
 // This controller is reserving names. To avoid conflicts, be sure to run only one instance of the worker at a time.
@@ -57,7 +56,7 @@ type NamingConditionController struct {
 	crdMutationCache cache.MutationCache
 
 	// To allow injection for testing.
-	syncFn func(key string) error
+	syncFn func(ctx context.Context, key cache.QueueKey) error
 
 	queue workqueue.RateLimitingInterface
 }
@@ -87,11 +86,11 @@ func NewNamingConditionController(
 	return c
 }
 
-func (c *NamingConditionController) getAcceptedNamesForGroup(clusterName, group string) (allResources sets.String, allKinds sets.String) {
+func (c *NamingConditionController) getAcceptedNamesForGroup(ctx context.Context, group string) (allResources sets.String, allKinds sets.String) {
 	allResources = sets.String{}
 	allKinds = sets.String{}
 
-	list, err := c.crdLister.List(labels.Everything())
+	list, err := c.crdLister.ListWithContext(ctx, labels.Everything())
 	if err != nil {
 		panic(err)
 	}
@@ -101,15 +100,15 @@ func (c *NamingConditionController) getAcceptedNamesForGroup(clusterName, group 
 			continue
 		}
 
-		if curr.GetClusterName() != clusterName {
-			continue
-		}
-
 		// for each item here, see if we have a mutation cache entry that is more recent
 		// this makes sure that if we tight loop on update and run, our mutation cache will show
 		// us the version of the objects we just updated to.
 		item := curr
-		obj, exists, err := c.crdMutationCache.GetByKey(clusters.ToClusterAwareKey(curr.GetClusterName(), curr.Name))
+		key, err := cache.NameKeyFunc(ctx, curr.Name)
+		if err != nil {
+			panic(err)
+		}
+		obj, exists, err := c.crdMutationCache.GetByKey(key)
 		if exists && err == nil {
 			item = obj.(*apiextensionsv1.CustomResourceDefinition)
 		}
@@ -125,9 +124,9 @@ func (c *NamingConditionController) getAcceptedNamesForGroup(clusterName, group 
 	return allResources, allKinds
 }
 
-func (c *NamingConditionController) calculateNamesAndConditions(in *apiextensionsv1.CustomResourceDefinition) (apiextensionsv1.CustomResourceDefinitionNames, apiextensionsv1.CustomResourceDefinitionCondition, apiextensionsv1.CustomResourceDefinitionCondition) {
+func (c *NamingConditionController) calculateNamesAndConditions(ctx context.Context, in *apiextensionsv1.CustomResourceDefinition) (apiextensionsv1.CustomResourceDefinitionNames, apiextensionsv1.CustomResourceDefinitionCondition, apiextensionsv1.CustomResourceDefinitionCondition) {
 	// Get the names that have already been claimed
-	allResources, allKinds := c.getAcceptedNamesForGroup(in.GetClusterName(), in.Spec.Group)
+	allResources, allKinds := c.getAcceptedNamesForGroup(ctx, in.Spec.Group)
 
 	namesAcceptedCondition := apiextensionsv1.CustomResourceDefinitionCondition{
 		Type:   apiextensionsv1.NamesAccepted,
@@ -236,12 +235,12 @@ func equalToAcceptedOrFresh(requestedName, acceptedName string, usedNames sets.S
 	return fmt.Errorf("%q is already in use", requestedName)
 }
 
-func (c *NamingConditionController) sync(key string) error {
-	inCustomResourceDefinition, err := c.crdLister.Get(key)
+func (c *NamingConditionController) sync(ctx context.Context, key cache.QueueKey) error {
+	inCustomResourceDefinition, err := c.crdLister.GetWithContext(ctx, key.Name())
 	if apierrors.IsNotFound(err) {
 		// CRD was deleted and has freed its names.
 		// Reconsider all other CRDs in the same group.
-		if err := c.requeueAllOtherGroupCRDs(key); err != nil {
+		if err := c.requeueAllOtherGroupCRDs(ctx, key.Name()); err != nil {
 			return err
 		}
 		return nil
@@ -255,7 +254,7 @@ func (c *NamingConditionController) sync(key string) error {
 		return nil
 	}
 
-	acceptedNames, namingCondition, establishedCondition := c.calculateNamesAndConditions(inCustomResourceDefinition)
+	acceptedNames, namingCondition, establishedCondition := c.calculateNamesAndConditions(ctx, inCustomResourceDefinition)
 
 	// nothing to do if accepted names and NamesAccepted condition didn't change
 	if reflect.DeepEqual(inCustomResourceDefinition.Status.AcceptedNames, acceptedNames) &&
@@ -282,7 +281,7 @@ func (c *NamingConditionController) sync(key string) error {
 
 	// we updated our status, so we may be releasing a name.  When this happens, we need to rekick everything in our group
 	// if we fail to rekick, just return as normal.  We'll get everything on a resync
-	if err := c.requeueAllOtherGroupCRDs(key); err != nil {
+	if err := c.requeueAllOtherGroupCRDs(ctx, key.Name()); err != nil {
 		return err
 	}
 
@@ -300,26 +299,38 @@ func (c *NamingConditionController) Run(stopCh <-chan struct{}) {
 		return
 	}
 
+	// TODO should really switch to a real context passed in instead of stopCh
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	// only start one worker thread since its a slow moving API and the naming conflict resolution bits aren't thread-safe
-	go wait.Until(c.runWorker, time.Second, stopCh)
+	go wait.Until(func() { c.runWorker(ctx) }, time.Second, stopCh)
 
 	<-stopCh
 }
 
-func (c *NamingConditionController) runWorker() {
-	for c.processNextWorkItem() {
+func (c *NamingConditionController) runWorker(ctx context.Context) {
+	for c.processNextWorkItem(ctx) {
 	}
 }
 
 // processNextWorkItem deals with one key off the queue.  It returns false when it's time to quit.
-func (c *NamingConditionController) processNextWorkItem() bool {
+func (c *NamingConditionController) processNextWorkItem(ctx context.Context) bool {
 	key, quit := c.queue.Get()
 	if quit {
 		return false
 	}
 	defer c.queue.Done(key)
 
-	err := c.syncFn(key.(string))
+	queueKey, err := cache.DecodeKeyFunc(key.(string))
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("error decoding key %q: %w", key, err))
+	}
+
+	ctx = cache.NewSyncContext(ctx, queueKey)
+
+	err = c.syncFn(ctx, queueKey)
 	if err == nil {
 		c.queue.Forget(key)
 		return true
@@ -332,7 +343,7 @@ func (c *NamingConditionController) processNextWorkItem() bool {
 }
 
 func (c *NamingConditionController) enqueue(obj *apiextensionsv1.CustomResourceDefinition) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+	key, err := cache.DeletionHandlingDelegatingKeyFunc(cache.ObjectKeyFunc)(obj)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", obj, err))
 		return
@@ -371,13 +382,7 @@ func (c *NamingConditionController) deleteCustomResourceDefinition(obj interface
 	c.enqueue(castObj)
 }
 
-func (c *NamingConditionController) requeueAllOtherGroupCRDs(name string) error {
-	// HACK(kcp): name is a key from the shared informer's cache. With the changes we've
-	// made to cache.MetaNamespaceKeyFunc to encode the cluster name as part of the key,
-	// we have to decode it here (into "cluster name" and "name") so we can make sure to
-	// re-encode the key correctly down below when adding to the work queue.
-	clusterName, name := clusters.SplitClusterAwareKey(name)
-
+func (c *NamingConditionController) requeueAllOtherGroupCRDs(ctx context.Context, name string) error {
 	pluralGroup := strings.SplitN(name, ".", 2)
 	var groupForName string
 
@@ -391,21 +396,18 @@ func (c *NamingConditionController) requeueAllOtherGroupCRDs(name string) error 
 		groupForName = pluralGroup[1]
 	}
 
-	list, err := c.crdLister.List(labels.Everything())
+	list, err := c.crdLister.ListWithContext(ctx, labels.Everything())
 	if err != nil {
 		return err
 	}
 
 	for _, curr := range list {
-		if curr.ClusterName != clusterName {
-			continue
-		}
-
 		if curr.Spec.Group == groupForName && curr.Name != name {
-			// HACK(kcp): make sure to re-encode the cluster name in the key so
-			// future sync() calls are able to have crdLister.Get() work properly.
-			clusterKey := clusters.ToClusterAwareKey(clusterName, curr.Name)
-			c.queue.Add(clusterKey)
+			key, err := cache.NameKeyFunc(ctx, curr.Name)
+			if err != nil {
+				return err
+			}
+			c.queue.Add(key)
 		}
 	}
 	return nil

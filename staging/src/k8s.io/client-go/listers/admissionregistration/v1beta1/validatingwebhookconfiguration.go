@@ -62,7 +62,7 @@ func (s *validatingWebhookConfigurationLister) List(selector labels.Selector) (r
 
 // ListWithContext lists all ValidatingWebhookConfigurations in the indexer.
 func (s *validatingWebhookConfigurationLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.ValidatingWebhookConfiguration, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.ValidatingWebhookConfiguration))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *validatingWebhookConfigurationLister) Get(name string) (*v1beta1.Valida
 
 // GetWithContext retrieves the ValidatingWebhookConfiguration from the index for a given name.
 func (s *validatingWebhookConfigurationLister) GetWithContext(ctx context.Context, name string) (*v1beta1.ValidatingWebhookConfiguration, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

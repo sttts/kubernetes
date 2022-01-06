@@ -62,7 +62,7 @@ func (s *flowSchemaLister) List(selector labels.Selector) (ret []*v1beta2.FlowSc
 
 // ListWithContext lists all FlowSchemas in the indexer.
 func (s *flowSchemaLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.FlowSchema, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.FlowSchema))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *flowSchemaLister) Get(name string) (*v1beta2.FlowSchema, error) {
 
 // GetWithContext retrieves the FlowSchema from the index for a given name.
 func (s *flowSchemaLister) GetWithContext(ctx context.Context, name string) (*v1beta2.FlowSchema, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

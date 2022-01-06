@@ -62,7 +62,7 @@ func (s *customResourceDefinitionLister) List(selector labels.Selector) (ret []*
 
 // ListWithContext lists all CustomResourceDefinitions in the indexer.
 func (s *customResourceDefinitionLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.CustomResourceDefinition, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.CustomResourceDefinition))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *customResourceDefinitionLister) Get(name string) (*v1beta1.CustomResour
 
 // GetWithContext retrieves the CustomResourceDefinition from the index for a given name.
 func (s *customResourceDefinitionLister) GetWithContext(ctx context.Context, name string) (*v1beta1.CustomResourceDefinition, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

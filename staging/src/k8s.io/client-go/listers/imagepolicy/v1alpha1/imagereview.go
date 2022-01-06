@@ -62,7 +62,7 @@ func (s *imageReviewLister) List(selector labels.Selector) (ret []*v1alpha1.Imag
 
 // ListWithContext lists all ImageReviews in the indexer.
 func (s *imageReviewLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.ImageReview, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.ImageReview))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *imageReviewLister) Get(name string) (*v1alpha1.ImageReview, error) {
 
 // GetWithContext retrieves the ImageReview from the index for a given name.
 func (s *imageReviewLister) GetWithContext(ctx context.Context, name string) (*v1alpha1.ImageReview, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

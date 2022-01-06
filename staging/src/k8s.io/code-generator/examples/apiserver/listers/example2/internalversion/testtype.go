@@ -62,7 +62,7 @@ func (s *testTypeLister) List(selector labels.Selector) (ret []*example2.TestTyp
 
 // ListWithContext lists all TestTypes in the indexer.
 func (s *testTypeLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*example2.TestType, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*example2.TestType))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *testTypeLister) Get(name string) (*example2.TestType, error) {
 
 // GetWithContext retrieves the TestType from the index for a given name.
 func (s *testTypeLister) GetWithContext(ctx context.Context, name string) (*example2.TestType, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

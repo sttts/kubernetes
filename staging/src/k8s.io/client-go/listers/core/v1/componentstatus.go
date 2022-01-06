@@ -62,7 +62,7 @@ func (s *componentStatusLister) List(selector labels.Selector) (ret []*v1.Compon
 
 // ListWithContext lists all ComponentStatuses in the indexer.
 func (s *componentStatusLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ComponentStatus, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.ComponentStatus))
 	})
 	return ret, err
@@ -75,7 +75,11 @@ func (s *componentStatusLister) Get(name string) (*v1.ComponentStatus, error) {
 
 // GetWithContext retrieves the ComponentStatus from the index for a given name.
 func (s *componentStatusLister) GetWithContext(ctx context.Context, name string) (*v1.ComponentStatus, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key, err := cache.NameKeyFunc(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

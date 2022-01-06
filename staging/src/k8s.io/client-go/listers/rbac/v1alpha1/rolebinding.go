@@ -58,7 +58,7 @@ func (s *roleBindingLister) List(selector labels.Selector) (ret []*v1alpha1.Role
 
 // ListWithContext lists all RoleBindings in the indexer.
 func (s *roleBindingLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.RoleBinding, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.RoleBinding))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type RoleBindingNamespaceLister interface {
 	// List lists all RoleBindings in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.RoleBinding, err error)
+	// ListWithContext lists all RoleBindings in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.RoleBinding, err error)
 	// Get retrieves the RoleBinding from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.RoleBinding, error)
+	// GetWithContext retrieves the RoleBinding from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1alpha1.RoleBinding, error)
 	RoleBindingNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s roleBindingNamespaceLister) List(selector labels.Selector) (ret []*v1alp
 
 // ListWithContext lists all RoleBindings in the indexer for a given namespace.
 func (s roleBindingNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.RoleBinding, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.RoleBinding))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s roleBindingNamespaceLister) Get(name string) (*v1alpha1.RoleBinding, err
 
 // GetWithContext retrieves the RoleBinding from the indexer for a given namespace and name.
 func (s roleBindingNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1alpha1.RoleBinding, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}

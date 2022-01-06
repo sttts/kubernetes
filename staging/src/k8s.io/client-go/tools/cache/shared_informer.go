@@ -208,15 +208,11 @@ func NewSharedInformer(lw ListerWatcher, exampleObject runtime.Object, defaultEv
 // defaultEventHandlerResyncPeriod given here and (b) the constant
 // `minimumResyncPeriod` defined in this file.
 func NewSharedIndexInformer(lw ListerWatcher, exampleObject runtime.Object, defaultEventHandlerResyncPeriod time.Duration, indexers Indexers) SharedIndexInformer {
-	return NewSharedIndexInformer2(lw, exampleObject, defaultEventHandlerResyncPeriod, DeletionHandlingMetaNamespaceKeyFunc, indexers)
-}
-
-func NewSharedIndexInformer2(lw ListerWatcher, exampleObject runtime.Object, defaultEventHandlerResyncPeriod time.Duration, keyFunc KeyFunc, indexers Indexers) SharedIndexInformer {
 	realClock := &clock.RealClock{}
 	sharedIndexInformer := &sharedIndexInformer{
 		processor:                       &sharedProcessor{clock: realClock},
-		keyFunc:                         keyFunc,
-		indexer:                         NewIndexer(DeletionHandlingDelegatingKeyFunc(keyFunc), indexers),
+		keyFunc:                         ObjectKeyFunc,
+		indexer:                         NewIndexer(DeletionHandlingDelegatingKeyFunc(ObjectKeyFunc), indexers),
 		listerWatcher:                   lw,
 		objectType:                      exampleObject,
 		resyncCheckPeriod:               defaultEventHandlerResyncPeriod,

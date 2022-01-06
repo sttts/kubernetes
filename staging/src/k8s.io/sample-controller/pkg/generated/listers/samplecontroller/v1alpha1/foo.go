@@ -58,7 +58,7 @@ func (s *fooLister) List(selector labels.Selector) (ret []*v1alpha1.Foo, err err
 
 // ListWithContext lists all Foos in the indexer.
 func (s *fooLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Foo, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.Foo))
 	})
 	return ret, err
@@ -75,9 +75,15 @@ type FooNamespaceLister interface {
 	// List lists all Foos in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.Foo, err error)
+	// ListWithContext lists all Foos in the indexer.
+	// Objects returned here must be treated as read-only.
+	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Foo, err error)
 	// Get retrieves the Foo from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.Foo, error)
+	// GetWithContext retrieves the Foo from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	GetWithContext(ctx context.Context, name string) (*v1alpha1.Foo, error)
 	FooNamespaceListerExpansion
 }
 
@@ -95,7 +101,7 @@ func (s fooNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.Foo,
 
 // ListWithContext lists all Foos in the indexer for a given namespace.
 func (s fooNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Foo, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.Foo))
 	})
 	return ret, err
@@ -108,7 +114,11 @@ func (s fooNamespaceLister) Get(name string) (*v1alpha1.Foo, error) {
 
 // GetWithContext retrieves the Foo from the indexer for a given namespace and name.
 func (s fooNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1alpha1.Foo, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
