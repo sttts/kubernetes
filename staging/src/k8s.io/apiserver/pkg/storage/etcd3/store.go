@@ -812,9 +812,8 @@ func (s *store) List(ctx context.Context, key string, opts storage.ListOptions, 
 				sub := strings.TrimPrefix(string(kv.Key), keyPrefix)
 				if i := strings.Index(sub, "/"); i != -1 {
 					clusterName = sub[:i]
-				}
-				if clusterName == "" {
-					klog.Errorf("the cluster name of extracted object should not be empty for key %q", kv.Key)
+				} else {
+					panic(fmt.Errorf("missing cluster name for key %q", kv.Key))
 				}
 			}
 			if err := appendListItem(v, data, uint64(kv.ModRevision), pred, s.codec, s.versioner, newItemFunc, clusterName); err != nil {

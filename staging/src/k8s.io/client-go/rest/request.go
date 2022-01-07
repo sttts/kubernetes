@@ -122,6 +122,8 @@ type Request struct {
 	headers    http.Header
 
 	// structural elements of the request that are part of the Kubernetes API conventions
+	scope        Scope
+	scopeSet     bool
 	cluster      string
 	clusterSet   bool
 	namespace    string
@@ -334,6 +336,19 @@ func (r *Request) Cluster(cluster string) *Request {
 	}
 	r.clusterSet = true
 	r.cluster = cluster
+	return r
+}
+
+func (r *Request) Scope(scope Scope) *Request {
+	if r.err != nil {
+		return r
+	}
+	if r.scopeSet {
+		r.err = fmt.Errorf("scope already set")
+		return r
+	}
+	r.scopeSet = true
+	r.scope = scope
 	return r
 }
 
@@ -1055,6 +1070,13 @@ func (r *Request) request(ctx context.Context, fn func(*http.Request, *http.Resp
 			}
 			retryAfter = nil
 		}
+
+		if r.scopeSet && r.scope != nil {
+			if err := r.scope.ScopeRequest(req); err != nil {
+				return err
+			}
+		}
+
 		resp, err := client.Do(req)
 		if r.debug {
 			klog.Info("^v=== DELEGATED RESPONSE ===v")

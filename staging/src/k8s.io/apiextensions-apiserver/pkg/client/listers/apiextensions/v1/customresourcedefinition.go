@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -42,12 +43,15 @@ type CustomResourceDefinitionLister interface {
 	// GetWithContext retrieves the CustomResourceDefinition from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	GetWithContext(ctx context.Context, name string) (*v1.CustomResourceDefinition, error)
+
+	Scoped(scope rest.Scope) CustomResourceDefinitionLister
 	CustomResourceDefinitionListerExpansion
 }
 
 // customResourceDefinitionLister implements the CustomResourceDefinitionLister interface.
 type customResourceDefinitionLister struct {
 	indexer cache.Indexer
+	scope rest.Scope
 }
 
 // NewCustomResourceDefinitionLister returns a new CustomResourceDefinitionLister.
@@ -57,27 +61,26 @@ func NewCustomResourceDefinitionLister(indexer cache.Indexer) CustomResourceDefi
 
 // List lists all CustomResourceDefinitions in the indexer.
 func (s *customResourceDefinitionLister) List(selector labels.Selector) (ret []*v1.CustomResourceDefinition, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all CustomResourceDefinitions in the indexer.
-func (s *customResourceDefinitionLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CustomResourceDefinition, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.CustomResourceDefinition))
 	})
 	return ret, err
 }
 
-// Get retrieves the CustomResourceDefinition from the index for a given name.
-func (s *customResourceDefinitionLister) Get(name string) (*v1.CustomResourceDefinition, error) {
-	return s.GetWithContext(context.Background(), name)
+// ListWithContext lists all CustomResourceDefinitions in the indexer.
+func (s *customResourceDefinitionLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CustomResourceDefinition, err error) {
+	panic("no")
 }
 
-// GetWithContext retrieves the CustomResourceDefinition from the index for a given name.
-func (s *customResourceDefinitionLister) GetWithContext(ctx context.Context, name string) (*v1.CustomResourceDefinition, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+// Get retrieves the CustomResourceDefinition from the index for a given name.
+func (s *customResourceDefinitionLister) Get(name string) (*v1.CustomResourceDefinition, error) {
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {
@@ -87,4 +90,16 @@ func (s *customResourceDefinitionLister) GetWithContext(ctx context.Context, nam
 		return nil, errors.NewNotFound(v1.Resource("customresourcedefinition"), name)
 	}
 	return obj.(*v1.CustomResourceDefinition), nil
+}
+
+// GetWithContext retrieves the CustomResourceDefinition from the index for a given name.
+func (s *customResourceDefinitionLister) GetWithContext(ctx context.Context, name string) (*v1.CustomResourceDefinition, error) {
+	panic("no")
+}
+
+func (s *customResourceDefinitionLister) Scoped(scope rest.Scope) CustomResourceDefinitionLister {
+	return &customResourceDefinitionLister{
+		indexer: s.indexer,
+		scope: scope,
+	}
 }

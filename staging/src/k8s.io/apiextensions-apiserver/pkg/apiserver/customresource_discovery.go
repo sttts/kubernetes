@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/apiserver/pkg/endpoints/discovery"
+	"k8s.io/client-go/rest"
 )
 
 type versionDiscoveryHandler struct {
@@ -51,7 +52,14 @@ func (r *versionDiscoveryHandler) ServeHTTP(w http.ResponseWriter, req *http.Req
 	requestedGroup := pathParts[1]
 	requestedVersion := pathParts[2]
 
-	crds, err := r.crdLister.ListWithContext(ctx, labels.Everything())
+	crdLister := r.crdLister
+
+	scope := rest.ScopeFrom(ctx)
+	if scope != nil {
+		crdLister = crdLister.Scoped(scope)
+	}
+
+	crds, err := crdLister.List(labels.Everything())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -172,7 +180,14 @@ func (r *groupDiscoveryHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 
 	requestedGroup := pathParts[1]
 
-	crds, err := r.crdLister.ListWithContext(ctx, labels.Everything())
+	crdLister := r.crdLister
+
+	scope := rest.ScopeFrom(ctx)
+	if scope != nil {
+		crdLister = crdLister.Scoped(scope)
+	}
+
+	crds, err := crdLister.List(labels.Everything())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -239,7 +254,14 @@ func (r *rootDiscoveryHandler) Groups(ctx context.Context, req *http.Request) ([
 	apiVersionsForDiscovery := map[string][]metav1.GroupVersionForDiscovery{}
 	versionsForDiscoveryMap := map[string]map[metav1.GroupVersion]bool{}
 
-	crds, err := r.crdLister.ListWithContext(ctx, labels.Everything())
+	crdLister := r.crdLister
+
+	scope := rest.ScopeFrom(ctx)
+	if scope != nil {
+		crdLister = crdLister.Scoped(scope)
+	}
+
+	crds, err := crdLister.List(labels.Everything())
 	if err != nil {
 		return []metav1.APIGroup{}, err
 	}

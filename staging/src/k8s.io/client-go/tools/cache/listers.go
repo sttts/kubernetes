@@ -53,6 +53,34 @@ func ListAll(store Store, selector labels.Selector, appendFn AppendFunc) error {
 	return nil
 }
 
+func ListAllByIndexAndValue(indexer Indexer, indexName, indexValue string, selector labels.Selector, appendFn AppendFunc) error {
+	selectAll := selector.Empty()
+
+	items, err := indexer.ByIndex(indexName, indexValue)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range items {
+		if selectAll {
+			// Avoid computing labels of the objects to speed up common flows
+			// of listing all objects.
+			appendFn(m)
+			continue
+		}
+
+		metadata, err := meta.Accessor(m)
+		if err != nil {
+			return err
+		}
+		if selector.Matches(labels.Set(metadata.GetLabels())) {
+			appendFn(m)
+		}
+	}
+
+	return nil
+}
+
 func IndexedListAll(ctx context.Context, indexer Indexer, selector labels.Selector, appendFn AppendFunc) error {
 	selectAll := selector.Empty()
 

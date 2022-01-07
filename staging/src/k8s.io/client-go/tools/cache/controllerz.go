@@ -2,6 +2,10 @@ package cache
 
 import (
 	"context"
+	"net/http"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 )
 
 type QueueKey interface {
@@ -33,6 +37,38 @@ func DecodeMetaNamespaceKey(key string) (QueueKey, error) {
 	}, nil
 }
 
+type scope struct {
+	name string
+}
+
+func (s *scope) Name() string {
+	return s.name
+}
+
+func (s *scope) CacheKey(in string) string {
+	return in
+}
+
+func (s *scope) ScopeRequest(req *http.Request) error {
+	return nil
+}
+
+var defaultScope = scope{name: ""}
+
+type defaultScoper struct{}
+
+func (ds *defaultScoper) ScopeFromContext(ctx context.Context) (rest.Scope, error) {
+	return &defaultScope, nil
+}
+
+func (ds *defaultScoper) ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
+	return &defaultScope, nil
+}
+
+func (ds *defaultScoper) ScopeFromKey(key string) (rest.Scope, error) {
+	return &defaultScope, nil
+}
+
 type ControllerzConfig struct {
 	ObjectKeyFunc KeyFunc
 	DecodeKeyFunc func(key string) (QueueKey, error)
@@ -47,6 +83,7 @@ type ControllerzConfig struct {
 	NamespaceNameKeyFunc func(ctx context.Context, namespace, name string) (string, error)
 
 	NewSyncContextFunc func(ctx context.Context, key QueueKey) context.Context
+	Scoper             rest.Scoper
 }
 
 type completedConfig struct {
@@ -88,6 +125,7 @@ func init() {
 			NewSyncContextFunc: func(ctx context.Context, key QueueKey) context.Context {
 				return ctx
 			},
+			Scoper: &defaultScoper{},
 		},
 	}
 }
@@ -127,4 +165,16 @@ func NamespaceNameKeyFunc(ctx context.Context, namespace, name string) (string, 
 
 func NewSyncContext(ctx context.Context, key QueueKey) context.Context {
 	return cc.NewSyncContextFunc(ctx, key)
+}
+
+func ScopeFromContext(ctx context.Context) (rest.Scope, error) {
+	return cc.Scoper.ScopeFromContext(ctx)
+}
+
+func ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
+	return cc.Scoper.ScopeFromObject(obj)
+}
+
+func ScopeFromKey(key string) (rest.Scope, error) {
+	return cc.Scoper.ScopeFromKey(key)
 }

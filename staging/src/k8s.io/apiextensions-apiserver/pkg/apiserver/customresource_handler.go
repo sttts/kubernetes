@@ -85,6 +85,7 @@ import (
 	"k8s.io/apiserver/pkg/util/webhook"
 	"k8s.io/apiserver/pkg/warning"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/scale"
 	"k8s.io/client-go/scale/scheme/autoscalingv1"
 	"k8s.io/client-go/tools/cache"
@@ -263,7 +264,15 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	crdName := requestInfo.Resource + "." + requestInfo.APIGroup
-	crd, err := r.crdLister.GetWithContext(ctx, crdName)
+
+	crdLister := r.crdLister
+
+	scope := rest.ScopeFrom(ctx)
+	if scope != nil {
+		crdLister = crdLister.Scoped(scope)
+	}
+
+	crd, err := crdLister.Get(crdName)
 	if apierrors.IsNotFound(err) {
 		r.delegate.ServeHTTP(w, req)
 		return
@@ -332,7 +341,7 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	verb := strings.ToUpper(requestInfo.Verb)
 	resource := requestInfo.Resource
 	subresource := requestInfo.Subresource
-	scope := metrics.CleanScope(requestInfo)
+	metricsScope := metrics.CleanScope(requestInfo)
 	supportedTypes := []string{
 		string(types.JSONPatchType),
 		string(types.MergePatchType),
@@ -389,7 +398,7 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if handlerFunc != nil {
-		handlerFunc = metrics.InstrumentHandlerFunc(verb, requestInfo.APIGroup, requestInfo.APIVersion, resource, subresource, scope, metrics.APIServerComponent, deprecated, "", handlerFunc)
+		handlerFunc = metrics.InstrumentHandlerFunc(verb, requestInfo.APIGroup, requestInfo.APIVersion, resource, subresource, metricsScope, metrics.APIServerComponent, deprecated, "", handlerFunc)
 		handler := genericfilters.WithWaitGroup(handlerFunc, longRunningFilter, crdInfo.waitGroup)
 		handler.ServeHTTP(w, req)
 		return
