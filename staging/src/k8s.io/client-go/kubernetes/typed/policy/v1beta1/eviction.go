@@ -28,6 +28,10 @@ type EvictionsGetter interface {
 	Evictions(namespace string) EvictionInterface
 }
 
+type ScopedEvictionsGetter interface {
+	ScopedEvictions(scope rest.Scope, namespace string) EvictionInterface
+}
+
 // EvictionInterface has methods to work with Eviction resources.
 type EvictionInterface interface {
 	EvictionExpansion
@@ -37,14 +41,16 @@ type EvictionInterface interface {
 type evictions struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newEvictions returns a Evictions
-func newEvictions(c *PolicyV1beta1Client, namespace string) *evictions {
+func newEvictions(c *PolicyV1beta1Client, scope rest.Scope, namespace string) *evictions {
 	return &evictions{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }

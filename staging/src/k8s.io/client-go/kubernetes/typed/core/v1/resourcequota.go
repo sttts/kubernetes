@@ -39,6 +39,10 @@ type ResourceQuotasGetter interface {
 	ResourceQuotas(namespace string) ResourceQuotaInterface
 }
 
+type ScopedResourceQuotasGetter interface {
+	ScopedResourceQuotas(scope rest.Scope, namespace string) ResourceQuotaInterface
+}
+
 // ResourceQuotaInterface has methods to work with ResourceQuota resources.
 type ResourceQuotaInterface interface {
 	Create(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (*v1.ResourceQuota, error)
@@ -59,14 +63,16 @@ type ResourceQuotaInterface interface {
 type resourceQuotas struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newResourceQuotas returns a ResourceQuotas
-func newResourceQuotas(c *CoreV1Client, namespace string) *resourceQuotas {
+func newResourceQuotas(c *CoreV1Client, scope rest.Scope, namespace string) *resourceQuotas {
 	return &resourceQuotas{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -76,6 +82,7 @@ func (c *resourceQuotas) Get(ctx context.Context, name string, options metav1.Ge
 	result = &v1.ResourceQuota{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		Name(name).
@@ -94,6 +101,7 @@ func (c *resourceQuotas) List(ctx context.Context, opts metav1.ListOptions) (res
 	result = &v1.ResourceQuotaList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -112,6 +120,7 @@ func (c *resourceQuotas) Watch(ctx context.Context, opts metav1.ListOptions) (wa
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -124,6 +133,7 @@ func (c *resourceQuotas) Create(ctx context.Context, resourceQuota *v1.ResourceQ
 	result = &v1.ResourceQuota{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -138,6 +148,7 @@ func (c *resourceQuotas) Update(ctx context.Context, resourceQuota *v1.ResourceQ
 	result = &v1.ResourceQuota{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		Name(resourceQuota.Name).
@@ -154,6 +165,7 @@ func (c *resourceQuotas) UpdateStatus(ctx context.Context, resourceQuota *v1.Res
 	result = &v1.ResourceQuota{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		Name(resourceQuota.Name).
@@ -169,6 +181,7 @@ func (c *resourceQuotas) UpdateStatus(ctx context.Context, resourceQuota *v1.Res
 func (c *resourceQuotas) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		Name(name).
@@ -185,6 +198,7 @@ func (c *resourceQuotas) DeleteCollection(ctx context.Context, opts metav1.Delet
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -199,6 +213,7 @@ func (c *resourceQuotas) Patch(ctx context.Context, name string, pt types.PatchT
 	result = &v1.ResourceQuota{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		Name(name).
@@ -227,6 +242,7 @@ func (c *resourceQuotas) Apply(ctx context.Context, resourceQuota *corev1.Resour
 	result = &v1.ResourceQuota{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		Name(*name).
@@ -257,6 +273,7 @@ func (c *resourceQuotas) ApplyStatus(ctx context.Context, resourceQuota *corev1.
 	result = &v1.ResourceQuota{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
 		Name(*name).

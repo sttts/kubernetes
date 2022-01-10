@@ -39,6 +39,10 @@ type MutatingWebhookConfigurationsGetter interface {
 	MutatingWebhookConfigurations() MutatingWebhookConfigurationInterface
 }
 
+type ScopedMutatingWebhookConfigurationsGetter interface {
+	ScopedMutatingWebhookConfigurations(scope rest.Scope) MutatingWebhookConfigurationInterface
+}
+
 // MutatingWebhookConfigurationInterface has methods to work with MutatingWebhookConfiguration resources.
 type MutatingWebhookConfigurationInterface interface {
 	Create(ctx context.Context, mutatingWebhookConfiguration *v1beta1.MutatingWebhookConfiguration, opts v1.CreateOptions) (*v1beta1.MutatingWebhookConfiguration, error)
@@ -57,13 +61,15 @@ type MutatingWebhookConfigurationInterface interface {
 type mutatingWebhookConfigurations struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newMutatingWebhookConfigurations returns a MutatingWebhookConfigurations
-func newMutatingWebhookConfigurations(c *AdmissionregistrationV1beta1Client) *mutatingWebhookConfigurations {
+func newMutatingWebhookConfigurations(c *AdmissionregistrationV1beta1Client, scope rest.Scope) *mutatingWebhookConfigurations {
 	return &mutatingWebhookConfigurations{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -72,6 +78,7 @@ func (c *mutatingWebhookConfigurations) Get(ctx context.Context, name string, op
 	result = &v1beta1.MutatingWebhookConfiguration{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("mutatingwebhookconfigurations").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -89,6 +96,7 @@ func (c *mutatingWebhookConfigurations) List(ctx context.Context, opts v1.ListOp
 	result = &v1beta1.MutatingWebhookConfigurationList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("mutatingwebhookconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -106,6 +114,7 @@ func (c *mutatingWebhookConfigurations) Watch(ctx context.Context, opts v1.ListO
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("mutatingwebhookconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -117,6 +126,7 @@ func (c *mutatingWebhookConfigurations) Create(ctx context.Context, mutatingWebh
 	result = &v1beta1.MutatingWebhookConfiguration{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("mutatingwebhookconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(mutatingWebhookConfiguration).
@@ -130,6 +140,7 @@ func (c *mutatingWebhookConfigurations) Update(ctx context.Context, mutatingWebh
 	result = &v1beta1.MutatingWebhookConfiguration{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("mutatingwebhookconfigurations").
 		Name(mutatingWebhookConfiguration.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -143,6 +154,7 @@ func (c *mutatingWebhookConfigurations) Update(ctx context.Context, mutatingWebh
 func (c *mutatingWebhookConfigurations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("mutatingwebhookconfigurations").
 		Name(name).
 		Body(&opts).
@@ -158,6 +170,7 @@ func (c *mutatingWebhookConfigurations) DeleteCollection(ctx context.Context, op
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("mutatingwebhookconfigurations").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -171,6 +184,7 @@ func (c *mutatingWebhookConfigurations) Patch(ctx context.Context, name string, 
 	result = &v1beta1.MutatingWebhookConfiguration{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("mutatingwebhookconfigurations").
 		Name(name).
 		SubResource(subresources...).
@@ -198,6 +212,7 @@ func (c *mutatingWebhookConfigurations) Apply(ctx context.Context, mutatingWebho
 	result = &v1beta1.MutatingWebhookConfiguration{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("mutatingwebhookconfigurations").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).

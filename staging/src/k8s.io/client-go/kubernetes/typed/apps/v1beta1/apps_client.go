@@ -27,8 +27,11 @@ import (
 type AppsV1beta1Interface interface {
 	RESTClient() rest.Interface
 	ControllerRevisionsGetter
+	ScopedControllerRevisionsGetter
 	DeploymentsGetter
+	ScopedDeploymentsGetter
 	StatefulSetsGetter
+	ScopedStatefulSetsGetter
 }
 
 // AppsV1beta1Client is used to interact with features provided by the apps group.
@@ -38,15 +41,27 @@ type AppsV1beta1Client struct {
 }
 
 func (c *AppsV1beta1Client) ControllerRevisions(namespace string) ControllerRevisionInterface {
-	return newControllerRevisions(c, namespace)
+	return newControllerRevisions(c, nil, namespace)
+}
+
+func (c *AppsV1beta1Client) ScopedControllerRevisions(scope rest.Scope, namespace string) ControllerRevisionInterface {
+	return newControllerRevisions(c, scope, namespace)
 }
 
 func (c *AppsV1beta1Client) Deployments(namespace string) DeploymentInterface {
-	return newDeployments(c, namespace)
+	return newDeployments(c, nil, namespace)
+}
+
+func (c *AppsV1beta1Client) ScopedDeployments(scope rest.Scope, namespace string) DeploymentInterface {
+	return newDeployments(c, scope, namespace)
 }
 
 func (c *AppsV1beta1Client) StatefulSets(namespace string) StatefulSetInterface {
-	return newStatefulSets(c, namespace)
+	return newStatefulSets(c, nil, namespace)
+}
+
+func (c *AppsV1beta1Client) ScopedStatefulSets(scope rest.Scope, namespace string) StatefulSetInterface {
+	return newStatefulSets(c, scope, namespace)
 }
 
 // NewForConfig creates a new AppsV1beta1Client for the given config.

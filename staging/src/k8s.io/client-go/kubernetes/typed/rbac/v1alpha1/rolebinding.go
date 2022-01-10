@@ -39,6 +39,10 @@ type RoleBindingsGetter interface {
 	RoleBindings(namespace string) RoleBindingInterface
 }
 
+type ScopedRoleBindingsGetter interface {
+	ScopedRoleBindings(scope rest.Scope, namespace string) RoleBindingInterface
+}
+
 // RoleBindingInterface has methods to work with RoleBinding resources.
 type RoleBindingInterface interface {
 	Create(ctx context.Context, roleBinding *v1alpha1.RoleBinding, opts v1.CreateOptions) (*v1alpha1.RoleBinding, error)
@@ -57,14 +61,16 @@ type RoleBindingInterface interface {
 type roleBindings struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newRoleBindings returns a RoleBindings
-func newRoleBindings(c *RbacV1alpha1Client, namespace string) *roleBindings {
+func newRoleBindings(c *RbacV1alpha1Client, scope rest.Scope, namespace string) *roleBindings {
 	return &roleBindings{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -74,6 +80,7 @@ func (c *roleBindings) Get(ctx context.Context, name string, options v1.GetOptio
 	result = &v1alpha1.RoleBinding{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("rolebindings").
 		Name(name).
@@ -92,6 +99,7 @@ func (c *roleBindings) List(ctx context.Context, opts v1.ListOptions) (result *v
 	result = &v1alpha1.RoleBindingList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("rolebindings").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -110,6 +118,7 @@ func (c *roleBindings) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("rolebindings").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -122,6 +131,7 @@ func (c *roleBindings) Create(ctx context.Context, roleBinding *v1alpha1.RoleBin
 	result = &v1alpha1.RoleBinding{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("rolebindings").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -136,6 +146,7 @@ func (c *roleBindings) Update(ctx context.Context, roleBinding *v1alpha1.RoleBin
 	result = &v1alpha1.RoleBinding{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("rolebindings").
 		Name(roleBinding.Name).
@@ -150,6 +161,7 @@ func (c *roleBindings) Update(ctx context.Context, roleBinding *v1alpha1.RoleBin
 func (c *roleBindings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("rolebindings").
 		Name(name).
@@ -166,6 +178,7 @@ func (c *roleBindings) DeleteCollection(ctx context.Context, opts v1.DeleteOptio
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("rolebindings").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -180,6 +193,7 @@ func (c *roleBindings) Patch(ctx context.Context, name string, pt types.PatchTyp
 	result = &v1alpha1.RoleBinding{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("rolebindings").
 		Name(name).
@@ -208,6 +222,7 @@ func (c *roleBindings) Apply(ctx context.Context, roleBinding *rbacv1alpha1.Role
 	result = &v1alpha1.RoleBinding{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("rolebindings").
 		Name(*name).

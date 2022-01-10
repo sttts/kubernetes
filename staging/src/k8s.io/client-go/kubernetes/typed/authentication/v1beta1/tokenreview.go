@@ -33,6 +33,10 @@ type TokenReviewsGetter interface {
 	TokenReviews() TokenReviewInterface
 }
 
+type ScopedTokenReviewsGetter interface {
+	ScopedTokenReviews(scope rest.Scope) TokenReviewInterface
+}
+
 // TokenReviewInterface has methods to work with TokenReview resources.
 type TokenReviewInterface interface {
 	Create(ctx context.Context, tokenReview *v1beta1.TokenReview, opts v1.CreateOptions) (*v1beta1.TokenReview, error)
@@ -43,13 +47,15 @@ type TokenReviewInterface interface {
 type tokenReviews struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newTokenReviews returns a TokenReviews
-func newTokenReviews(c *AuthenticationV1beta1Client) *tokenReviews {
+func newTokenReviews(c *AuthenticationV1beta1Client, scope rest.Scope) *tokenReviews {
 	return &tokenReviews{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -58,6 +64,7 @@ func (c *tokenReviews) Create(ctx context.Context, tokenReview *v1beta1.TokenRev
 	result = &v1beta1.TokenReview{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("tokenreviews").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(tokenReview).

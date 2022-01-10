@@ -36,6 +36,10 @@ type FischersGetter interface {
 	Fischers() FischerInterface
 }
 
+type ScopedFischersGetter interface {
+	ScopedFischers(scope rest.Scope) FischerInterface
+}
+
 // FischerInterface has methods to work with Fischer resources.
 type FischerInterface interface {
 	Create(ctx context.Context, fischer *v1alpha1.Fischer, opts v1.CreateOptions) (*v1alpha1.Fischer, error)
@@ -53,13 +57,15 @@ type FischerInterface interface {
 type fischers struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newFischers returns a Fischers
-func newFischers(c *WardleV1alpha1Client) *fischers {
+func newFischers(c *WardleV1alpha1Client, scope rest.Scope) *fischers {
 	return &fischers{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -68,6 +74,7 @@ func (c *fischers) Get(ctx context.Context, name string, options v1.GetOptions) 
 	result = &v1alpha1.Fischer{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("fischers").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -85,6 +92,7 @@ func (c *fischers) List(ctx context.Context, opts v1.ListOptions) (result *v1alp
 	result = &v1alpha1.FischerList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("fischers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -102,6 +110,7 @@ func (c *fischers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interf
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("fischers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -113,6 +122,7 @@ func (c *fischers) Create(ctx context.Context, fischer *v1alpha1.Fischer, opts v
 	result = &v1alpha1.Fischer{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("fischers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(fischer).
@@ -126,6 +136,7 @@ func (c *fischers) Update(ctx context.Context, fischer *v1alpha1.Fischer, opts v
 	result = &v1alpha1.Fischer{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("fischers").
 		Name(fischer.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -139,6 +150,7 @@ func (c *fischers) Update(ctx context.Context, fischer *v1alpha1.Fischer, opts v
 func (c *fischers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("fischers").
 		Name(name).
 		Body(&opts).
@@ -154,6 +166,7 @@ func (c *fischers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, 
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("fischers").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -167,6 +180,7 @@ func (c *fischers) Patch(ctx context.Context, name string, pt types.PatchType, d
 	result = &v1alpha1.Fischer{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("fischers").
 		Name(name).
 		SubResource(subresources...).

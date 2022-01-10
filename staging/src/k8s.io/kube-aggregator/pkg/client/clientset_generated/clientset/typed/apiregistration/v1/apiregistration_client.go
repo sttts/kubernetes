@@ -27,6 +27,7 @@ import (
 type ApiregistrationV1Interface interface {
 	RESTClient() rest.Interface
 	APIServicesGetter
+	ScopedAPIServicesGetter
 }
 
 // ApiregistrationV1Client is used to interact with features provided by the apiregistration.k8s.io group.
@@ -36,7 +37,11 @@ type ApiregistrationV1Client struct {
 }
 
 func (c *ApiregistrationV1Client) APIServices() APIServiceInterface {
-	return newAPIServices(c)
+	return newAPIServices(c, nil)
+}
+
+func (c *ApiregistrationV1Client) ScopedAPIServices(scope rest.Scope) APIServiceInterface {
+	return newAPIServices(c, scope)
 }
 
 // NewForConfig creates a new ApiregistrationV1Client for the given config.

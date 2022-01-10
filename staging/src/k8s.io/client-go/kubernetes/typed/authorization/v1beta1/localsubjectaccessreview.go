@@ -33,6 +33,10 @@ type LocalSubjectAccessReviewsGetter interface {
 	LocalSubjectAccessReviews(namespace string) LocalSubjectAccessReviewInterface
 }
 
+type ScopedLocalSubjectAccessReviewsGetter interface {
+	ScopedLocalSubjectAccessReviews(scope rest.Scope, namespace string) LocalSubjectAccessReviewInterface
+}
+
 // LocalSubjectAccessReviewInterface has methods to work with LocalSubjectAccessReview resources.
 type LocalSubjectAccessReviewInterface interface {
 	Create(ctx context.Context, localSubjectAccessReview *v1beta1.LocalSubjectAccessReview, opts v1.CreateOptions) (*v1beta1.LocalSubjectAccessReview, error)
@@ -43,14 +47,16 @@ type LocalSubjectAccessReviewInterface interface {
 type localSubjectAccessReviews struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newLocalSubjectAccessReviews returns a LocalSubjectAccessReviews
-func newLocalSubjectAccessReviews(c *AuthorizationV1beta1Client, namespace string) *localSubjectAccessReviews {
+func newLocalSubjectAccessReviews(c *AuthorizationV1beta1Client, scope rest.Scope, namespace string) *localSubjectAccessReviews {
 	return &localSubjectAccessReviews{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -60,6 +66,7 @@ func (c *localSubjectAccessReviews) Create(ctx context.Context, localSubjectAcce
 	result = &v1beta1.LocalSubjectAccessReview{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("localsubjectaccessreviews").
 		VersionedParams(&opts, scheme.ParameterCodec).

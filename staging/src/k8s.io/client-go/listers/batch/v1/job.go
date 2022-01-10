@@ -19,23 +19,20 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	v1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // JobLister helps list Jobs.
 // All objects returned here must be treated as read-only.
 type JobLister interface {
+	Scoped(scope rest.Scope) JobLister
 	// List lists all Jobs in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Job, err error)
-	// ListWithContext lists all Jobs in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Job, err error)
 	// Jobs returns an object that can list and get Jobs.
 	Jobs(namespace string) JobNamespaceLister
 	JobListerExpansion
@@ -44,6 +41,7 @@ type JobLister interface {
 // jobLister implements the JobLister interface.
 type jobLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewJobLister returns a new JobLister.
@@ -51,14 +49,20 @@ func NewJobLister(indexer cache.Indexer) JobLister {
 	return &jobLister{indexer: indexer}
 }
 
-// List lists all Jobs in the indexer.
-func (s *jobLister) List(selector labels.Selector) (ret []*v1.Job, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *jobLister) Scoped(scope rest.Scope) JobLister {
+	return &jobLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all Jobs in the indexer.
-func (s *jobLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Job, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all Jobs in the indexer.
+func (s *jobLister) List(selector labels.Selector) (ret []*v1.Job, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Job))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *jobLister) ListWithContext(ctx context.Context, selector labels.Selecto
 
 // Jobs returns an object that can list and get Jobs.
 func (s *jobLister) Jobs(namespace string) JobNamespaceLister {
-	return jobNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return jobNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // JobNamespaceLister helps list and get Jobs.
@@ -75,15 +79,9 @@ type JobNamespaceLister interface {
 	// List lists all Jobs in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Job, err error)
-	// ListWithContext lists all Jobs in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Job, err error)
 	// Get retrieves the Job from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Job, error)
-	// GetWithContext retrieves the Job from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.Job, error)
 	JobNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type JobNamespaceLister interface {
 type jobNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all Jobs in the indexer for a given namespace.
 func (s jobNamespaceLister) List(selector labels.Selector) (ret []*v1.Job, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all Jobs in the indexer for a given namespace.
-func (s jobNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Job, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Job))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s jobNamespaceLister) ListWithContext(ctx context.Context, selector labels
 
 // Get retrieves the Job from the indexer for a given namespace and name.
 func (s jobNamespaceLister) Get(name string) (*v1.Job, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the Job from the indexer for a given namespace and name.
-func (s jobNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.Job, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

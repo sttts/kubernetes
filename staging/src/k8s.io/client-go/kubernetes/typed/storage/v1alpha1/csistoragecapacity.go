@@ -39,6 +39,10 @@ type CSIStorageCapacitiesGetter interface {
 	CSIStorageCapacities(namespace string) CSIStorageCapacityInterface
 }
 
+type ScopedCSIStorageCapacitiesGetter interface {
+	ScopedCSIStorageCapacities(scope rest.Scope, namespace string) CSIStorageCapacityInterface
+}
+
 // CSIStorageCapacityInterface has methods to work with CSIStorageCapacity resources.
 type CSIStorageCapacityInterface interface {
 	Create(ctx context.Context, cSIStorageCapacity *v1alpha1.CSIStorageCapacity, opts v1.CreateOptions) (*v1alpha1.CSIStorageCapacity, error)
@@ -57,14 +61,16 @@ type CSIStorageCapacityInterface interface {
 type cSIStorageCapacities struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newCSIStorageCapacities returns a CSIStorageCapacities
-func newCSIStorageCapacities(c *StorageV1alpha1Client, namespace string) *cSIStorageCapacities {
+func newCSIStorageCapacities(c *StorageV1alpha1Client, scope rest.Scope, namespace string) *cSIStorageCapacities {
 	return &cSIStorageCapacities{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -74,6 +80,7 @@ func (c *cSIStorageCapacities) Get(ctx context.Context, name string, options v1.
 	result = &v1alpha1.CSIStorageCapacity{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("csistoragecapacities").
 		Name(name).
@@ -92,6 +99,7 @@ func (c *cSIStorageCapacities) List(ctx context.Context, opts v1.ListOptions) (r
 	result = &v1alpha1.CSIStorageCapacityList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("csistoragecapacities").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -110,6 +118,7 @@ func (c *cSIStorageCapacities) Watch(ctx context.Context, opts v1.ListOptions) (
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("csistoragecapacities").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -122,6 +131,7 @@ func (c *cSIStorageCapacities) Create(ctx context.Context, cSIStorageCapacity *v
 	result = &v1alpha1.CSIStorageCapacity{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("csistoragecapacities").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -136,6 +146,7 @@ func (c *cSIStorageCapacities) Update(ctx context.Context, cSIStorageCapacity *v
 	result = &v1alpha1.CSIStorageCapacity{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("csistoragecapacities").
 		Name(cSIStorageCapacity.Name).
@@ -150,6 +161,7 @@ func (c *cSIStorageCapacities) Update(ctx context.Context, cSIStorageCapacity *v
 func (c *cSIStorageCapacities) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("csistoragecapacities").
 		Name(name).
@@ -166,6 +178,7 @@ func (c *cSIStorageCapacities) DeleteCollection(ctx context.Context, opts v1.Del
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("csistoragecapacities").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -180,6 +193,7 @@ func (c *cSIStorageCapacities) Patch(ctx context.Context, name string, pt types.
 	result = &v1alpha1.CSIStorageCapacity{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("csistoragecapacities").
 		Name(name).
@@ -208,6 +222,7 @@ func (c *cSIStorageCapacities) Apply(ctx context.Context, cSIStorageCapacity *st
 	result = &v1alpha1.CSIStorageCapacity{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("csistoragecapacities").
 		Name(*name).

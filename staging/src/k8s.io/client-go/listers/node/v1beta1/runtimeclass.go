@@ -19,35 +19,30 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
 	v1beta1 "k8s.io/api/node/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // RuntimeClassLister helps list RuntimeClasses.
 // All objects returned here must be treated as read-only.
 type RuntimeClassLister interface {
+	Scoped(scope rest.Scope) RuntimeClassLister
 	// List lists all RuntimeClasses in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.RuntimeClass, err error)
-	// ListWithContext lists all RuntimeClasses in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.RuntimeClass, err error)
 	// Get retrieves the RuntimeClass from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.RuntimeClass, error)
-	// GetWithContext retrieves the RuntimeClass from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta1.RuntimeClass, error)
 	RuntimeClassListerExpansion
 }
 
 // runtimeClassLister implements the RuntimeClassLister interface.
 type runtimeClassLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewRuntimeClassLister returns a new RuntimeClassLister.
@@ -55,14 +50,20 @@ func NewRuntimeClassLister(indexer cache.Indexer) RuntimeClassLister {
 	return &runtimeClassLister{indexer: indexer}
 }
 
-// List lists all RuntimeClasses in the indexer.
-func (s *runtimeClassLister) List(selector labels.Selector) (ret []*v1beta1.RuntimeClass, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *runtimeClassLister) Scoped(scope rest.Scope) RuntimeClassLister {
+	return &runtimeClassLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all RuntimeClasses in the indexer.
-func (s *runtimeClassLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.RuntimeClass, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all RuntimeClasses in the indexer.
+func (s *runtimeClassLister) List(selector labels.Selector) (ret []*v1beta1.RuntimeClass, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.RuntimeClass))
 	})
 	return ret, err
@@ -70,14 +71,9 @@ func (s *runtimeClassLister) ListWithContext(ctx context.Context, selector label
 
 // Get retrieves the RuntimeClass from the index for a given name.
 func (s *runtimeClassLister) Get(name string) (*v1beta1.RuntimeClass, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the RuntimeClass from the index for a given name.
-func (s *runtimeClassLister) GetWithContext(ctx context.Context, name string) (*v1beta1.RuntimeClass, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

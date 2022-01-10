@@ -39,6 +39,10 @@ type RuntimeClassesGetter interface {
 	RuntimeClasses() RuntimeClassInterface
 }
 
+type ScopedRuntimeClassesGetter interface {
+	ScopedRuntimeClasses(scope rest.Scope) RuntimeClassInterface
+}
+
 // RuntimeClassInterface has methods to work with RuntimeClass resources.
 type RuntimeClassInterface interface {
 	Create(ctx context.Context, runtimeClass *v1alpha1.RuntimeClass, opts v1.CreateOptions) (*v1alpha1.RuntimeClass, error)
@@ -57,13 +61,15 @@ type RuntimeClassInterface interface {
 type runtimeClasses struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newRuntimeClasses returns a RuntimeClasses
-func newRuntimeClasses(c *NodeV1alpha1Client) *runtimeClasses {
+func newRuntimeClasses(c *NodeV1alpha1Client, scope rest.Scope) *runtimeClasses {
 	return &runtimeClasses{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -72,6 +78,7 @@ func (c *runtimeClasses) Get(ctx context.Context, name string, options v1.GetOpt
 	result = &v1alpha1.RuntimeClass{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -89,6 +96,7 @@ func (c *runtimeClasses) List(ctx context.Context, opts v1.ListOptions) (result 
 	result = &v1alpha1.RuntimeClassList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("runtimeclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -106,6 +114,7 @@ func (c *runtimeClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch.
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("runtimeclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -117,6 +126,7 @@ func (c *runtimeClasses) Create(ctx context.Context, runtimeClass *v1alpha1.Runt
 	result = &v1alpha1.RuntimeClass{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("runtimeclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(runtimeClass).
@@ -130,6 +140,7 @@ func (c *runtimeClasses) Update(ctx context.Context, runtimeClass *v1alpha1.Runt
 	result = &v1alpha1.RuntimeClass{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(runtimeClass.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -143,6 +154,7 @@ func (c *runtimeClasses) Update(ctx context.Context, runtimeClass *v1alpha1.Runt
 func (c *runtimeClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(name).
 		Body(&opts).
@@ -158,6 +170,7 @@ func (c *runtimeClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("runtimeclasses").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -171,6 +184,7 @@ func (c *runtimeClasses) Patch(ctx context.Context, name string, pt types.PatchT
 	result = &v1alpha1.RuntimeClass{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(name).
 		SubResource(subresources...).
@@ -198,6 +212,7 @@ func (c *runtimeClasses) Apply(ctx context.Context, runtimeClass *nodev1alpha1.R
 	result = &v1alpha1.RuntimeClass{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).

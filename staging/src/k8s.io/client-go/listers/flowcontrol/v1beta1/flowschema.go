@@ -19,35 +19,30 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
 	v1beta1 "k8s.io/api/flowcontrol/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // FlowSchemaLister helps list FlowSchemas.
 // All objects returned here must be treated as read-only.
 type FlowSchemaLister interface {
+	Scoped(scope rest.Scope) FlowSchemaLister
 	// List lists all FlowSchemas in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.FlowSchema, err error)
-	// ListWithContext lists all FlowSchemas in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.FlowSchema, err error)
 	// Get retrieves the FlowSchema from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.FlowSchema, error)
-	// GetWithContext retrieves the FlowSchema from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta1.FlowSchema, error)
 	FlowSchemaListerExpansion
 }
 
 // flowSchemaLister implements the FlowSchemaLister interface.
 type flowSchemaLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewFlowSchemaLister returns a new FlowSchemaLister.
@@ -55,14 +50,20 @@ func NewFlowSchemaLister(indexer cache.Indexer) FlowSchemaLister {
 	return &flowSchemaLister{indexer: indexer}
 }
 
-// List lists all FlowSchemas in the indexer.
-func (s *flowSchemaLister) List(selector labels.Selector) (ret []*v1beta1.FlowSchema, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *flowSchemaLister) Scoped(scope rest.Scope) FlowSchemaLister {
+	return &flowSchemaLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all FlowSchemas in the indexer.
-func (s *flowSchemaLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.FlowSchema, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all FlowSchemas in the indexer.
+func (s *flowSchemaLister) List(selector labels.Selector) (ret []*v1beta1.FlowSchema, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.FlowSchema))
 	})
 	return ret, err
@@ -70,14 +71,9 @@ func (s *flowSchemaLister) ListWithContext(ctx context.Context, selector labels.
 
 // Get retrieves the FlowSchema from the index for a given name.
 func (s *flowSchemaLister) Get(name string) (*v1beta1.FlowSchema, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the FlowSchema from the index for a given name.
-func (s *flowSchemaLister) GetWithContext(ctx context.Context, name string) (*v1beta1.FlowSchema, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

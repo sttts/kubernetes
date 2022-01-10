@@ -36,6 +36,10 @@ type FlundersGetter interface {
 	Flunders(namespace string) FlunderInterface
 }
 
+type ScopedFlundersGetter interface {
+	ScopedFlunders(scope rest.Scope, namespace string) FlunderInterface
+}
+
 // FlunderInterface has methods to work with Flunder resources.
 type FlunderInterface interface {
 	Create(ctx context.Context, flunder *v1alpha1.Flunder, opts v1.CreateOptions) (*v1alpha1.Flunder, error)
@@ -54,14 +58,16 @@ type FlunderInterface interface {
 type flunders struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newFlunders returns a Flunders
-func newFlunders(c *WardleV1alpha1Client, namespace string) *flunders {
+func newFlunders(c *WardleV1alpha1Client, scope rest.Scope, namespace string) *flunders {
 	return &flunders{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -71,6 +77,7 @@ func (c *flunders) Get(ctx context.Context, name string, options v1.GetOptions) 
 	result = &v1alpha1.Flunder{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
 		Name(name).
@@ -89,6 +96,7 @@ func (c *flunders) List(ctx context.Context, opts v1.ListOptions) (result *v1alp
 	result = &v1alpha1.FlunderList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -107,6 +115,7 @@ func (c *flunders) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interf
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -119,6 +128,7 @@ func (c *flunders) Create(ctx context.Context, flunder *v1alpha1.Flunder, opts v
 	result = &v1alpha1.Flunder{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -133,6 +143,7 @@ func (c *flunders) Update(ctx context.Context, flunder *v1alpha1.Flunder, opts v
 	result = &v1alpha1.Flunder{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
 		Name(flunder.Name).
@@ -149,6 +160,7 @@ func (c *flunders) UpdateStatus(ctx context.Context, flunder *v1alpha1.Flunder, 
 	result = &v1alpha1.Flunder{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
 		Name(flunder.Name).
@@ -164,6 +176,7 @@ func (c *flunders) UpdateStatus(ctx context.Context, flunder *v1alpha1.Flunder, 
 func (c *flunders) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
 		Name(name).
@@ -180,6 +193,7 @@ func (c *flunders) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, 
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -194,6 +208,7 @@ func (c *flunders) Patch(ctx context.Context, name string, pt types.PatchType, d
 	result = &v1alpha1.Flunder{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
 		Name(name).

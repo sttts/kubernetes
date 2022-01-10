@@ -19,23 +19,20 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // ResourceQuotaLister helps list ResourceQuotas.
 // All objects returned here must be treated as read-only.
 type ResourceQuotaLister interface {
+	Scoped(scope rest.Scope) ResourceQuotaLister
 	// List lists all ResourceQuotas in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.ResourceQuota, err error)
-	// ListWithContext lists all ResourceQuotas in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ResourceQuota, err error)
 	// ResourceQuotas returns an object that can list and get ResourceQuotas.
 	ResourceQuotas(namespace string) ResourceQuotaNamespaceLister
 	ResourceQuotaListerExpansion
@@ -44,6 +41,7 @@ type ResourceQuotaLister interface {
 // resourceQuotaLister implements the ResourceQuotaLister interface.
 type resourceQuotaLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewResourceQuotaLister returns a new ResourceQuotaLister.
@@ -51,14 +49,20 @@ func NewResourceQuotaLister(indexer cache.Indexer) ResourceQuotaLister {
 	return &resourceQuotaLister{indexer: indexer}
 }
 
-// List lists all ResourceQuotas in the indexer.
-func (s *resourceQuotaLister) List(selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *resourceQuotaLister) Scoped(scope rest.Scope) ResourceQuotaLister {
+	return &resourceQuotaLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all ResourceQuotas in the indexer.
-func (s *resourceQuotaLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all ResourceQuotas in the indexer.
+func (s *resourceQuotaLister) List(selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.ResourceQuota))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *resourceQuotaLister) ListWithContext(ctx context.Context, selector labe
 
 // ResourceQuotas returns an object that can list and get ResourceQuotas.
 func (s *resourceQuotaLister) ResourceQuotas(namespace string) ResourceQuotaNamespaceLister {
-	return resourceQuotaNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return resourceQuotaNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // ResourceQuotaNamespaceLister helps list and get ResourceQuotas.
@@ -75,15 +79,9 @@ type ResourceQuotaNamespaceLister interface {
 	// List lists all ResourceQuotas in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.ResourceQuota, err error)
-	// ListWithContext lists all ResourceQuotas in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ResourceQuota, err error)
 	// Get retrieves the ResourceQuota from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.ResourceQuota, error)
-	// GetWithContext retrieves the ResourceQuota from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.ResourceQuota, error)
 	ResourceQuotaNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type ResourceQuotaNamespaceLister interface {
 type resourceQuotaNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all ResourceQuotas in the indexer for a given namespace.
 func (s resourceQuotaNamespaceLister) List(selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all ResourceQuotas in the indexer for a given namespace.
-func (s resourceQuotaNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.ResourceQuota, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.ResourceQuota))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s resourceQuotaNamespaceLister) ListWithContext(ctx context.Context, selec
 
 // Get retrieves the ResourceQuota from the indexer for a given namespace and name.
 func (s resourceQuotaNamespaceLister) Get(name string) (*v1.ResourceQuota, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the ResourceQuota from the indexer for a given namespace and name.
-func (s resourceQuotaNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.ResourceQuota, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

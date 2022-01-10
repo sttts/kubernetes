@@ -19,10 +19,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	v1alpha1 "k8s.io/sample-apiserver/pkg/apis/wardle/v1alpha1"
 )
@@ -30,24 +29,20 @@ import (
 // FischerLister helps list Fischers.
 // All objects returned here must be treated as read-only.
 type FischerLister interface {
+	Scoped(scope rest.Scope) FischerLister
 	// List lists all Fischers in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.Fischer, err error)
-	// ListWithContext lists all Fischers in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Fischer, err error)
 	// Get retrieves the Fischer from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.Fischer, error)
-	// GetWithContext retrieves the Fischer from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1alpha1.Fischer, error)
 	FischerListerExpansion
 }
 
 // fischerLister implements the FischerLister interface.
 type fischerLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewFischerLister returns a new FischerLister.
@@ -55,14 +50,20 @@ func NewFischerLister(indexer cache.Indexer) FischerLister {
 	return &fischerLister{indexer: indexer}
 }
 
-// List lists all Fischers in the indexer.
-func (s *fischerLister) List(selector labels.Selector) (ret []*v1alpha1.Fischer, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *fischerLister) Scoped(scope rest.Scope) FischerLister {
+	return &fischerLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all Fischers in the indexer.
-func (s *fischerLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Fischer, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all Fischers in the indexer.
+func (s *fischerLister) List(selector labels.Selector) (ret []*v1alpha1.Fischer, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.Fischer))
 	})
 	return ret, err
@@ -70,14 +71,9 @@ func (s *fischerLister) ListWithContext(ctx context.Context, selector labels.Sel
 
 // Get retrieves the Fischer from the index for a given name.
 func (s *fischerLister) Get(name string) (*v1alpha1.Fischer, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the Fischer from the index for a given name.
-func (s *fischerLister) GetWithContext(ctx context.Context, name string) (*v1alpha1.Fischer, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

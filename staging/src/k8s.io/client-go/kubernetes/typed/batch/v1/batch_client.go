@@ -27,7 +27,9 @@ import (
 type BatchV1Interface interface {
 	RESTClient() rest.Interface
 	CronJobsGetter
+	ScopedCronJobsGetter
 	JobsGetter
+	ScopedJobsGetter
 }
 
 // BatchV1Client is used to interact with features provided by the batch group.
@@ -37,11 +39,19 @@ type BatchV1Client struct {
 }
 
 func (c *BatchV1Client) CronJobs(namespace string) CronJobInterface {
-	return newCronJobs(c, namespace)
+	return newCronJobs(c, nil, namespace)
+}
+
+func (c *BatchV1Client) ScopedCronJobs(scope rest.Scope, namespace string) CronJobInterface {
+	return newCronJobs(c, scope, namespace)
 }
 
 func (c *BatchV1Client) Jobs(namespace string) JobInterface {
-	return newJobs(c, namespace)
+	return newJobs(c, nil, namespace)
+}
+
+func (c *BatchV1Client) ScopedJobs(scope rest.Scope, namespace string) JobInterface {
+	return newJobs(c, scope, namespace)
 }
 
 // NewForConfig creates a new BatchV1Client for the given config.

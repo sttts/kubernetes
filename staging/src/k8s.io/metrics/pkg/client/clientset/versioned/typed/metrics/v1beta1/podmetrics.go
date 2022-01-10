@@ -35,6 +35,10 @@ type PodMetricsesGetter interface {
 	PodMetricses(namespace string) PodMetricsInterface
 }
 
+type ScopedPodMetricsesGetter interface {
+	ScopedPodMetricses(scope rest.Scope, namespace string) PodMetricsInterface
+}
+
 // PodMetricsInterface has methods to work with PodMetrics resources.
 type PodMetricsInterface interface {
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.PodMetrics, error)
@@ -47,14 +51,16 @@ type PodMetricsInterface interface {
 type podMetricses struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newPodMetricses returns a PodMetricses
-func newPodMetricses(c *MetricsV1beta1Client, namespace string) *podMetricses {
+func newPodMetricses(c *MetricsV1beta1Client, scope rest.Scope, namespace string) *podMetricses {
 	return &podMetricses{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -64,6 +70,7 @@ func (c *podMetricses) Get(ctx context.Context, name string, options v1.GetOptio
 	result = &v1beta1.PodMetrics{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("pods").
 		Name(name).
@@ -82,6 +89,7 @@ func (c *podMetricses) List(ctx context.Context, opts v1.ListOptions) (result *v
 	result = &v1beta1.PodMetricsList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("pods").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -100,6 +108,7 @@ func (c *podMetricses) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("pods").
 		VersionedParams(&opts, scheme.ParameterCodec).

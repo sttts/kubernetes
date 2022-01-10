@@ -33,6 +33,10 @@ type SelfSubjectAccessReviewsGetter interface {
 	SelfSubjectAccessReviews() SelfSubjectAccessReviewInterface
 }
 
+type ScopedSelfSubjectAccessReviewsGetter interface {
+	ScopedSelfSubjectAccessReviews(scope rest.Scope) SelfSubjectAccessReviewInterface
+}
+
 // SelfSubjectAccessReviewInterface has methods to work with SelfSubjectAccessReview resources.
 type SelfSubjectAccessReviewInterface interface {
 	Create(ctx context.Context, selfSubjectAccessReview *v1.SelfSubjectAccessReview, opts metav1.CreateOptions) (*v1.SelfSubjectAccessReview, error)
@@ -43,13 +47,15 @@ type SelfSubjectAccessReviewInterface interface {
 type selfSubjectAccessReviews struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newSelfSubjectAccessReviews returns a SelfSubjectAccessReviews
-func newSelfSubjectAccessReviews(c *AuthorizationV1Client) *selfSubjectAccessReviews {
+func newSelfSubjectAccessReviews(c *AuthorizationV1Client, scope rest.Scope) *selfSubjectAccessReviews {
 	return &selfSubjectAccessReviews{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -58,6 +64,7 @@ func (c *selfSubjectAccessReviews) Create(ctx context.Context, selfSubjectAccess
 	result = &v1.SelfSubjectAccessReview{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("selfsubjectaccessreviews").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(selfSubjectAccessReview).

@@ -19,10 +19,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	v1alpha1 "k8s.io/sample-controller/pkg/apis/samplecontroller/v1alpha1"
 )
@@ -30,12 +29,10 @@ import (
 // FooLister helps list Foos.
 // All objects returned here must be treated as read-only.
 type FooLister interface {
+	Scoped(scope rest.Scope) FooLister
 	// List lists all Foos in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.Foo, err error)
-	// ListWithContext lists all Foos in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Foo, err error)
 	// Foos returns an object that can list and get Foos.
 	Foos(namespace string) FooNamespaceLister
 	FooListerExpansion
@@ -44,6 +41,7 @@ type FooLister interface {
 // fooLister implements the FooLister interface.
 type fooLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewFooLister returns a new FooLister.
@@ -51,14 +49,20 @@ func NewFooLister(indexer cache.Indexer) FooLister {
 	return &fooLister{indexer: indexer}
 }
 
-// List lists all Foos in the indexer.
-func (s *fooLister) List(selector labels.Selector) (ret []*v1alpha1.Foo, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *fooLister) Scoped(scope rest.Scope) FooLister {
+	return &fooLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all Foos in the indexer.
-func (s *fooLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Foo, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all Foos in the indexer.
+func (s *fooLister) List(selector labels.Selector) (ret []*v1alpha1.Foo, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.Foo))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *fooLister) ListWithContext(ctx context.Context, selector labels.Selecto
 
 // Foos returns an object that can list and get Foos.
 func (s *fooLister) Foos(namespace string) FooNamespaceLister {
-	return fooNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return fooNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // FooNamespaceLister helps list and get Foos.
@@ -75,15 +79,9 @@ type FooNamespaceLister interface {
 	// List lists all Foos in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.Foo, err error)
-	// ListWithContext lists all Foos in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Foo, err error)
 	// Get retrieves the Foo from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.Foo, error)
-	// GetWithContext retrieves the Foo from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1alpha1.Foo, error)
 	FooNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type FooNamespaceLister interface {
 type fooNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all Foos in the indexer for a given namespace.
 func (s fooNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.Foo, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all Foos in the indexer for a given namespace.
-func (s fooNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1alpha1.Foo, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.Foo))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s fooNamespaceLister) ListWithContext(ctx context.Context, selector labels
 
 // Get retrieves the Foo from the indexer for a given namespace and name.
 func (s fooNamespaceLister) Get(name string) (*v1alpha1.Foo, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the Foo from the indexer for a given namespace and name.
-func (s fooNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1alpha1.Foo, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

@@ -19,23 +19,20 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
 	v1beta1 "k8s.io/api/events/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // EventLister helps list Events.
 // All objects returned here must be treated as read-only.
 type EventLister interface {
+	Scoped(scope rest.Scope) EventLister
 	// List lists all Events in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Event, err error)
-	// ListWithContext lists all Events in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.Event, err error)
 	// Events returns an object that can list and get Events.
 	Events(namespace string) EventNamespaceLister
 	EventListerExpansion
@@ -44,6 +41,7 @@ type EventLister interface {
 // eventLister implements the EventLister interface.
 type eventLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewEventLister returns a new EventLister.
@@ -51,14 +49,20 @@ func NewEventLister(indexer cache.Indexer) EventLister {
 	return &eventLister{indexer: indexer}
 }
 
-// List lists all Events in the indexer.
-func (s *eventLister) List(selector labels.Selector) (ret []*v1beta1.Event, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *eventLister) Scoped(scope rest.Scope) EventLister {
+	return &eventLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all Events in the indexer.
-func (s *eventLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.Event, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all Events in the indexer.
+func (s *eventLister) List(selector labels.Selector) (ret []*v1beta1.Event, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.Event))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *eventLister) ListWithContext(ctx context.Context, selector labels.Selec
 
 // Events returns an object that can list and get Events.
 func (s *eventLister) Events(namespace string) EventNamespaceLister {
-	return eventNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return eventNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // EventNamespaceLister helps list and get Events.
@@ -75,15 +79,9 @@ type EventNamespaceLister interface {
 	// List lists all Events in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Event, err error)
-	// ListWithContext lists all Events in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.Event, err error)
 	// Get retrieves the Event from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.Event, error)
-	// GetWithContext retrieves the Event from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta1.Event, error)
 	EventNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type EventNamespaceLister interface {
 type eventNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all Events in the indexer for a given namespace.
 func (s eventNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.Event, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all Events in the indexer for a given namespace.
-func (s eventNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.Event, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.Event))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s eventNamespaceLister) ListWithContext(ctx context.Context, selector labe
 
 // Get retrieves the Event from the indexer for a given namespace and name.
 func (s eventNamespaceLister) Get(name string) (*v1beta1.Event, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the Event from the indexer for a given namespace and name.
-func (s eventNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1beta1.Event, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

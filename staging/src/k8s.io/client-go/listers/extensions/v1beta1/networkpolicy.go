@@ -19,23 +19,20 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // NetworkPolicyLister helps list NetworkPolicies.
 // All objects returned here must be treated as read-only.
 type NetworkPolicyLister interface {
+	Scoped(scope rest.Scope) NetworkPolicyLister
 	// List lists all NetworkPolicies in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.NetworkPolicy, err error)
-	// ListWithContext lists all NetworkPolicies in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.NetworkPolicy, err error)
 	// NetworkPolicies returns an object that can list and get NetworkPolicies.
 	NetworkPolicies(namespace string) NetworkPolicyNamespaceLister
 	NetworkPolicyListerExpansion
@@ -44,6 +41,7 @@ type NetworkPolicyLister interface {
 // networkPolicyLister implements the NetworkPolicyLister interface.
 type networkPolicyLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewNetworkPolicyLister returns a new NetworkPolicyLister.
@@ -51,14 +49,20 @@ func NewNetworkPolicyLister(indexer cache.Indexer) NetworkPolicyLister {
 	return &networkPolicyLister{indexer: indexer}
 }
 
-// List lists all NetworkPolicies in the indexer.
-func (s *networkPolicyLister) List(selector labels.Selector) (ret []*v1beta1.NetworkPolicy, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *networkPolicyLister) Scoped(scope rest.Scope) NetworkPolicyLister {
+	return &networkPolicyLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all NetworkPolicies in the indexer.
-func (s *networkPolicyLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.NetworkPolicy, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all NetworkPolicies in the indexer.
+func (s *networkPolicyLister) List(selector labels.Selector) (ret []*v1beta1.NetworkPolicy, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.NetworkPolicy))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *networkPolicyLister) ListWithContext(ctx context.Context, selector labe
 
 // NetworkPolicies returns an object that can list and get NetworkPolicies.
 func (s *networkPolicyLister) NetworkPolicies(namespace string) NetworkPolicyNamespaceLister {
-	return networkPolicyNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return networkPolicyNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // NetworkPolicyNamespaceLister helps list and get NetworkPolicies.
@@ -75,15 +79,9 @@ type NetworkPolicyNamespaceLister interface {
 	// List lists all NetworkPolicies in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.NetworkPolicy, err error)
-	// ListWithContext lists all NetworkPolicies in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.NetworkPolicy, err error)
 	// Get retrieves the NetworkPolicy from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.NetworkPolicy, error)
-	// GetWithContext retrieves the NetworkPolicy from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta1.NetworkPolicy, error)
 	NetworkPolicyNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type NetworkPolicyNamespaceLister interface {
 type networkPolicyNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all NetworkPolicies in the indexer for a given namespace.
 func (s networkPolicyNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.NetworkPolicy, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all NetworkPolicies in the indexer for a given namespace.
-func (s networkPolicyNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.NetworkPolicy, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.NetworkPolicy))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s networkPolicyNamespaceLister) ListWithContext(ctx context.Context, selec
 
 // Get retrieves the NetworkPolicy from the indexer for a given namespace and name.
 func (s networkPolicyNamespaceLister) Get(name string) (*v1beta1.NetworkPolicy, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the NetworkPolicy from the indexer for a given namespace and name.
-func (s networkPolicyNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1beta1.NetworkPolicy, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

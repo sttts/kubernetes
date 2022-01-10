@@ -27,11 +27,17 @@ import (
 type ExtensionsV1beta1Interface interface {
 	RESTClient() rest.Interface
 	DaemonSetsGetter
+	ScopedDaemonSetsGetter
 	DeploymentsGetter
+	ScopedDeploymentsGetter
 	IngressesGetter
+	ScopedIngressesGetter
 	NetworkPoliciesGetter
+	ScopedNetworkPoliciesGetter
 	PodSecurityPoliciesGetter
+	ScopedPodSecurityPoliciesGetter
 	ReplicaSetsGetter
+	ScopedReplicaSetsGetter
 }
 
 // ExtensionsV1beta1Client is used to interact with features provided by the extensions group.
@@ -41,27 +47,51 @@ type ExtensionsV1beta1Client struct {
 }
 
 func (c *ExtensionsV1beta1Client) DaemonSets(namespace string) DaemonSetInterface {
-	return newDaemonSets(c, namespace)
+	return newDaemonSets(c, nil, namespace)
+}
+
+func (c *ExtensionsV1beta1Client) ScopedDaemonSets(scope rest.Scope, namespace string) DaemonSetInterface {
+	return newDaemonSets(c, scope, namespace)
 }
 
 func (c *ExtensionsV1beta1Client) Deployments(namespace string) DeploymentInterface {
-	return newDeployments(c, namespace)
+	return newDeployments(c, nil, namespace)
+}
+
+func (c *ExtensionsV1beta1Client) ScopedDeployments(scope rest.Scope, namespace string) DeploymentInterface {
+	return newDeployments(c, scope, namespace)
 }
 
 func (c *ExtensionsV1beta1Client) Ingresses(namespace string) IngressInterface {
-	return newIngresses(c, namespace)
+	return newIngresses(c, nil, namespace)
+}
+
+func (c *ExtensionsV1beta1Client) ScopedIngresses(scope rest.Scope, namespace string) IngressInterface {
+	return newIngresses(c, scope, namespace)
 }
 
 func (c *ExtensionsV1beta1Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
-	return newNetworkPolicies(c, namespace)
+	return newNetworkPolicies(c, nil, namespace)
+}
+
+func (c *ExtensionsV1beta1Client) ScopedNetworkPolicies(scope rest.Scope, namespace string) NetworkPolicyInterface {
+	return newNetworkPolicies(c, scope, namespace)
 }
 
 func (c *ExtensionsV1beta1Client) PodSecurityPolicies() PodSecurityPolicyInterface {
-	return newPodSecurityPolicies(c)
+	return newPodSecurityPolicies(c, nil)
+}
+
+func (c *ExtensionsV1beta1Client) ScopedPodSecurityPolicies(scope rest.Scope) PodSecurityPolicyInterface {
+	return newPodSecurityPolicies(c, scope)
 }
 
 func (c *ExtensionsV1beta1Client) ReplicaSets(namespace string) ReplicaSetInterface {
-	return newReplicaSets(c, namespace)
+	return newReplicaSets(c, nil, namespace)
+}
+
+func (c *ExtensionsV1beta1Client) ScopedReplicaSets(scope rest.Scope, namespace string) ReplicaSetInterface {
+	return newReplicaSets(c, scope, namespace)
 }
 
 // NewForConfig creates a new ExtensionsV1beta1Client for the given config.

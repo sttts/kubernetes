@@ -228,6 +228,7 @@ func (g *listerGenerator) GenerateType(c *generator.Context, t *types.Type, w io
 		"Resource":   c.Universe.Function(types.Name{Package: t.Name.Package, Name: "Resource"}),
 		"type":       t,
 		"objectMeta": g.objectMeta,
+		"restScope":  c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Scope"}),
 	}
 
 	tags, err := util.ParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
@@ -243,6 +244,7 @@ func (g *listerGenerator) GenerateType(c *generator.Context, t *types.Type, w io
 
 	sw.Do(typeListerStruct, m)
 	sw.Do(typeListerConstructor, m)
+	sw.Do(typeLister_Scoped, m)
 	sw.Do(typeLister_List, m)
 
 	if tags.NonNamespaced {
@@ -263,6 +265,7 @@ var typeListerInterface = `
 // $.type|public$Lister helps list $.type|publicPlural$.
 // All objects returned here must be treated as read-only.
 type $.type|public$Lister interface {
+	Scoped(scope $.restScope|raw$) $.type|public$Lister
 	// List lists all $.type|publicPlural$ in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*$.type|raw$, err error)
@@ -276,6 +279,7 @@ var typeListerInterface_NonNamespaced = `
 // $.type|public$Lister helps list $.type|publicPlural$.
 // All objects returned here must be treated as read-only.
 type $.type|public$Lister interface {
+	Scoped(scope $.restScope|raw$) $.type|public$Lister
 	// List lists all $.type|publicPlural$ in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*$.type|raw$, err error)
@@ -290,6 +294,7 @@ var typeListerStruct = `
 // $.type|private$Lister implements the $.type|public$Lister interface.
 type $.type|private$Lister struct {
 	indexer cache.Indexer
+	scope	$.restScope|raw$
 }
 `
 
@@ -300,6 +305,15 @@ func New$.type|public$Lister(indexer cache.Indexer) $.type|public$Lister {
 }
 `
 
+var typeLister_Scoped = `
+func (s *$.type|private$Lister) Scoped(scope $.restScope|raw$) $.type|public$Lister {
+	return &$.type|private$Lister{
+		indexer: s.indexer,
+		scope: scope,
+	}
+}
+`
+
 var typeLister_List = `
 // List lists all $.type|publicPlural$ in the indexer.
 func (s *$.type|private$Lister) List(selector labels.Selector) (ret []*$.type|raw$, err error) {
@@ -307,7 +321,7 @@ func (s *$.type|private$Lister) List(selector labels.Selector) (ret []*$.type|ra
 	if s.scope != nil {
 		indexValue = s.scope.Name()
 	}
-	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue selector, func(m interface{}) {
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*$.type|raw$))
 	})
 	return ret, err
@@ -317,7 +331,7 @@ func (s *$.type|private$Lister) List(selector labels.Selector) (ret []*$.type|ra
 var typeLister_NamespaceLister = `
 // $.type|publicPlural$ returns an object that can list and get $.type|publicPlural$.
 func (s *$.type|private$Lister) $.type|publicPlural$(namespace string) $.type|public$NamespaceLister {
-	return $.type|private$NamespaceLister{indexer: s.indexer, namespace: namespace}
+	return $.type|private$NamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 `
 
@@ -359,6 +373,7 @@ var namespaceListerStruct = `
 type $.type|private$NamespaceLister struct {
 	indexer cache.Indexer
 	namespace string
+	scope $.restScope|raw$
 }
 `
 
@@ -369,7 +384,7 @@ func (s $.type|private$NamespaceLister) List(selector labels.Selector) (ret []*$
 	if s.scope != nil {
 		indexValue = s.scope.CacheKey(s.namespace)
 	}
-	err = cache.ListAllByIndexAndValue(ctx, s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*$.type|raw$))
 	})
 	return ret, err
@@ -379,7 +394,7 @@ func (s $.type|private$NamespaceLister) List(selector labels.Selector) (ret []*$
 var namespaceLister_Get = `
 // Get retrieves the $.type|public$ from the indexer for a given namespace and name.
 func (s $.type|private$NamespaceLister) Get(name string) (*$.type|raw$, error) {
-	key := name
+	key := s.namespace + "/" + name
 	if s.scope != nil {
 		key = s.scope.CacheKey(key)
 	}

@@ -19,23 +19,20 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // DaemonSetLister helps list DaemonSets.
 // All objects returned here must be treated as read-only.
 type DaemonSetLister interface {
+	Scoped(scope rest.Scope) DaemonSetLister
 	// List lists all DaemonSets in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.DaemonSet, err error)
-	// ListWithContext lists all DaemonSets in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.DaemonSet, err error)
 	// DaemonSets returns an object that can list and get DaemonSets.
 	DaemonSets(namespace string) DaemonSetNamespaceLister
 	DaemonSetListerExpansion
@@ -44,6 +41,7 @@ type DaemonSetLister interface {
 // daemonSetLister implements the DaemonSetLister interface.
 type daemonSetLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewDaemonSetLister returns a new DaemonSetLister.
@@ -51,14 +49,20 @@ func NewDaemonSetLister(indexer cache.Indexer) DaemonSetLister {
 	return &daemonSetLister{indexer: indexer}
 }
 
-// List lists all DaemonSets in the indexer.
-func (s *daemonSetLister) List(selector labels.Selector) (ret []*v1beta1.DaemonSet, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *daemonSetLister) Scoped(scope rest.Scope) DaemonSetLister {
+	return &daemonSetLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all DaemonSets in the indexer.
-func (s *daemonSetLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.DaemonSet, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all DaemonSets in the indexer.
+func (s *daemonSetLister) List(selector labels.Selector) (ret []*v1beta1.DaemonSet, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.DaemonSet))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *daemonSetLister) ListWithContext(ctx context.Context, selector labels.S
 
 // DaemonSets returns an object that can list and get DaemonSets.
 func (s *daemonSetLister) DaemonSets(namespace string) DaemonSetNamespaceLister {
-	return daemonSetNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return daemonSetNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // DaemonSetNamespaceLister helps list and get DaemonSets.
@@ -75,15 +79,9 @@ type DaemonSetNamespaceLister interface {
 	// List lists all DaemonSets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.DaemonSet, err error)
-	// ListWithContext lists all DaemonSets in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.DaemonSet, err error)
 	// Get retrieves the DaemonSet from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.DaemonSet, error)
-	// GetWithContext retrieves the DaemonSet from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta1.DaemonSet, error)
 	DaemonSetNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type DaemonSetNamespaceLister interface {
 type daemonSetNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all DaemonSets in the indexer for a given namespace.
 func (s daemonSetNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.DaemonSet, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all DaemonSets in the indexer for a given namespace.
-func (s daemonSetNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.DaemonSet, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.DaemonSet))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s daemonSetNamespaceLister) ListWithContext(ctx context.Context, selector 
 
 // Get retrieves the DaemonSet from the indexer for a given namespace and name.
 func (s daemonSetNamespaceLister) Get(name string) (*v1beta1.DaemonSet, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the DaemonSet from the indexer for a given namespace and name.
-func (s daemonSetNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1beta1.DaemonSet, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

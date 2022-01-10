@@ -27,6 +27,7 @@ import (
 type InternalV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	StorageVersionsGetter
+	ScopedStorageVersionsGetter
 }
 
 // InternalV1alpha1Client is used to interact with features provided by the internal.apiserver.k8s.io group.
@@ -36,7 +37,11 @@ type InternalV1alpha1Client struct {
 }
 
 func (c *InternalV1alpha1Client) StorageVersions() StorageVersionInterface {
-	return newStorageVersions(c)
+	return newStorageVersions(c, nil)
+}
+
+func (c *InternalV1alpha1Client) ScopedStorageVersions(scope rest.Scope) StorageVersionInterface {
+	return newStorageVersions(c, scope)
 }
 
 // NewForConfig creates a new InternalV1alpha1Client for the given config.

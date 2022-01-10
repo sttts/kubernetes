@@ -19,23 +19,20 @@ limitations under the License.
 package v1beta2
 
 import (
-	"context"
-
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // ReplicaSetLister helps list ReplicaSets.
 // All objects returned here must be treated as read-only.
 type ReplicaSetLister interface {
+	Scoped(scope rest.Scope) ReplicaSetLister
 	// List lists all ReplicaSets in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error)
-	// ListWithContext lists all ReplicaSets in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error)
 	// ReplicaSets returns an object that can list and get ReplicaSets.
 	ReplicaSets(namespace string) ReplicaSetNamespaceLister
 	ReplicaSetListerExpansion
@@ -44,6 +41,7 @@ type ReplicaSetLister interface {
 // replicaSetLister implements the ReplicaSetLister interface.
 type replicaSetLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewReplicaSetLister returns a new ReplicaSetLister.
@@ -51,14 +49,20 @@ func NewReplicaSetLister(indexer cache.Indexer) ReplicaSetLister {
 	return &replicaSetLister{indexer: indexer}
 }
 
-// List lists all ReplicaSets in the indexer.
-func (s *replicaSetLister) List(selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *replicaSetLister) Scoped(scope rest.Scope) ReplicaSetLister {
+	return &replicaSetLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all ReplicaSets in the indexer.
-func (s *replicaSetLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all ReplicaSets in the indexer.
+func (s *replicaSetLister) List(selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.ReplicaSet))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *replicaSetLister) ListWithContext(ctx context.Context, selector labels.
 
 // ReplicaSets returns an object that can list and get ReplicaSets.
 func (s *replicaSetLister) ReplicaSets(namespace string) ReplicaSetNamespaceLister {
-	return replicaSetNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return replicaSetNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // ReplicaSetNamespaceLister helps list and get ReplicaSets.
@@ -75,15 +79,9 @@ type ReplicaSetNamespaceLister interface {
 	// List lists all ReplicaSets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error)
-	// ListWithContext lists all ReplicaSets in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error)
 	// Get retrieves the ReplicaSet from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta2.ReplicaSet, error)
-	// GetWithContext retrieves the ReplicaSet from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta2.ReplicaSet, error)
 	ReplicaSetNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type ReplicaSetNamespaceLister interface {
 type replicaSetNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all ReplicaSets in the indexer for a given namespace.
 func (s replicaSetNamespaceLister) List(selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all ReplicaSets in the indexer for a given namespace.
-func (s replicaSetNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.ReplicaSet))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s replicaSetNamespaceLister) ListWithContext(ctx context.Context, selector
 
 // Get retrieves the ReplicaSet from the indexer for a given namespace and name.
 func (s replicaSetNamespaceLister) Get(name string) (*v1beta2.ReplicaSet, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the ReplicaSet from the indexer for a given namespace and name.
-func (s replicaSetNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1beta2.ReplicaSet, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

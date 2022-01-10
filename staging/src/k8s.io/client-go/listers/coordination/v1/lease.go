@@ -19,23 +19,20 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	v1 "k8s.io/api/coordination/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // LeaseLister helps list Leases.
 // All objects returned here must be treated as read-only.
 type LeaseLister interface {
+	Scoped(scope rest.Scope) LeaseLister
 	// List lists all Leases in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Lease, err error)
-	// ListWithContext lists all Leases in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Lease, err error)
 	// Leases returns an object that can list and get Leases.
 	Leases(namespace string) LeaseNamespaceLister
 	LeaseListerExpansion
@@ -44,6 +41,7 @@ type LeaseLister interface {
 // leaseLister implements the LeaseLister interface.
 type leaseLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewLeaseLister returns a new LeaseLister.
@@ -51,14 +49,20 @@ func NewLeaseLister(indexer cache.Indexer) LeaseLister {
 	return &leaseLister{indexer: indexer}
 }
 
-// List lists all Leases in the indexer.
-func (s *leaseLister) List(selector labels.Selector) (ret []*v1.Lease, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *leaseLister) Scoped(scope rest.Scope) LeaseLister {
+	return &leaseLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all Leases in the indexer.
-func (s *leaseLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Lease, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all Leases in the indexer.
+func (s *leaseLister) List(selector labels.Selector) (ret []*v1.Lease, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Lease))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *leaseLister) ListWithContext(ctx context.Context, selector labels.Selec
 
 // Leases returns an object that can list and get Leases.
 func (s *leaseLister) Leases(namespace string) LeaseNamespaceLister {
-	return leaseNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return leaseNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // LeaseNamespaceLister helps list and get Leases.
@@ -75,15 +79,9 @@ type LeaseNamespaceLister interface {
 	// List lists all Leases in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Lease, err error)
-	// ListWithContext lists all Leases in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Lease, err error)
 	// Get retrieves the Lease from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Lease, error)
-	// GetWithContext retrieves the Lease from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.Lease, error)
 	LeaseNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type LeaseNamespaceLister interface {
 type leaseNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all Leases in the indexer for a given namespace.
 func (s leaseNamespaceLister) List(selector labels.Selector) (ret []*v1.Lease, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all Leases in the indexer for a given namespace.
-func (s leaseNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Lease, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Lease))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s leaseNamespaceLister) ListWithContext(ctx context.Context, selector labe
 
 // Get retrieves the Lease from the indexer for a given namespace and name.
 func (s leaseNamespaceLister) Get(name string) (*v1.Lease, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the Lease from the indexer for a given namespace and name.
-func (s leaseNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.Lease, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

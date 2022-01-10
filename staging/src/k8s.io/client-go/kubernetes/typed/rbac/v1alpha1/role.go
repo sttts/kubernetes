@@ -39,6 +39,10 @@ type RolesGetter interface {
 	Roles(namespace string) RoleInterface
 }
 
+type ScopedRolesGetter interface {
+	ScopedRoles(scope rest.Scope, namespace string) RoleInterface
+}
+
 // RoleInterface has methods to work with Role resources.
 type RoleInterface interface {
 	Create(ctx context.Context, role *v1alpha1.Role, opts v1.CreateOptions) (*v1alpha1.Role, error)
@@ -57,14 +61,16 @@ type RoleInterface interface {
 type roles struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newRoles returns a Roles
-func newRoles(c *RbacV1alpha1Client, namespace string) *roles {
+func newRoles(c *RbacV1alpha1Client, scope rest.Scope, namespace string) *roles {
 	return &roles{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -74,6 +80,7 @@ func (c *roles) Get(ctx context.Context, name string, options v1.GetOptions) (re
 	result = &v1alpha1.Role{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("roles").
 		Name(name).
@@ -92,6 +99,7 @@ func (c *roles) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1
 	result = &v1alpha1.RoleList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("roles").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -110,6 +118,7 @@ func (c *roles) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("roles").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -122,6 +131,7 @@ func (c *roles) Create(ctx context.Context, role *v1alpha1.Role, opts v1.CreateO
 	result = &v1alpha1.Role{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("roles").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -136,6 +146,7 @@ func (c *roles) Update(ctx context.Context, role *v1alpha1.Role, opts v1.UpdateO
 	result = &v1alpha1.Role{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("roles").
 		Name(role.Name).
@@ -150,6 +161,7 @@ func (c *roles) Update(ctx context.Context, role *v1alpha1.Role, opts v1.UpdateO
 func (c *roles) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("roles").
 		Name(name).
@@ -166,6 +178,7 @@ func (c *roles) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, lis
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("roles").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -180,6 +193,7 @@ func (c *roles) Patch(ctx context.Context, name string, pt types.PatchType, data
 	result = &v1alpha1.Role{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("roles").
 		Name(name).
@@ -208,6 +222,7 @@ func (c *roles) Apply(ctx context.Context, role *rbacv1alpha1.RoleApplyConfigura
 	result = &v1alpha1.Role{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("roles").
 		Name(*name).

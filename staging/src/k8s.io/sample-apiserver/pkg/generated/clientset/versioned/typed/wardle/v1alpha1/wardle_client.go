@@ -27,7 +27,9 @@ import (
 type WardleV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	FischersGetter
+	ScopedFischersGetter
 	FlundersGetter
+	ScopedFlundersGetter
 }
 
 // WardleV1alpha1Client is used to interact with features provided by the wardle.example.com group.
@@ -37,11 +39,19 @@ type WardleV1alpha1Client struct {
 }
 
 func (c *WardleV1alpha1Client) Fischers() FischerInterface {
-	return newFischers(c)
+	return newFischers(c, nil)
+}
+
+func (c *WardleV1alpha1Client) ScopedFischers(scope rest.Scope) FischerInterface {
+	return newFischers(c, scope)
 }
 
 func (c *WardleV1alpha1Client) Flunders(namespace string) FlunderInterface {
-	return newFlunders(c, namespace)
+	return newFlunders(c, nil, namespace)
+}
+
+func (c *WardleV1alpha1Client) ScopedFlunders(scope rest.Scope, namespace string) FlunderInterface {
+	return newFlunders(c, scope, namespace)
 }
 
 // NewForConfig creates a new WardleV1alpha1Client for the given config.

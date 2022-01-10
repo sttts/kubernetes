@@ -39,6 +39,10 @@ type ClusterRoleBindingsGetter interface {
 	ClusterRoleBindings() ClusterRoleBindingInterface
 }
 
+type ScopedClusterRoleBindingsGetter interface {
+	ScopedClusterRoleBindings(scope rest.Scope) ClusterRoleBindingInterface
+}
+
 // ClusterRoleBindingInterface has methods to work with ClusterRoleBinding resources.
 type ClusterRoleBindingInterface interface {
 	Create(ctx context.Context, clusterRoleBinding *v1beta1.ClusterRoleBinding, opts v1.CreateOptions) (*v1beta1.ClusterRoleBinding, error)
@@ -57,13 +61,15 @@ type ClusterRoleBindingInterface interface {
 type clusterRoleBindings struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newClusterRoleBindings returns a ClusterRoleBindings
-func newClusterRoleBindings(c *RbacV1beta1Client) *clusterRoleBindings {
+func newClusterRoleBindings(c *RbacV1beta1Client, scope rest.Scope) *clusterRoleBindings {
 	return &clusterRoleBindings{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -72,6 +78,7 @@ func (c *clusterRoleBindings) Get(ctx context.Context, name string, options v1.G
 	result = &v1beta1.ClusterRoleBinding{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("clusterrolebindings").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -89,6 +96,7 @@ func (c *clusterRoleBindings) List(ctx context.Context, opts v1.ListOptions) (re
 	result = &v1beta1.ClusterRoleBindingList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("clusterrolebindings").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -106,6 +114,7 @@ func (c *clusterRoleBindings) Watch(ctx context.Context, opts v1.ListOptions) (w
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("clusterrolebindings").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -117,6 +126,7 @@ func (c *clusterRoleBindings) Create(ctx context.Context, clusterRoleBinding *v1
 	result = &v1beta1.ClusterRoleBinding{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("clusterrolebindings").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(clusterRoleBinding).
@@ -130,6 +140,7 @@ func (c *clusterRoleBindings) Update(ctx context.Context, clusterRoleBinding *v1
 	result = &v1beta1.ClusterRoleBinding{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("clusterrolebindings").
 		Name(clusterRoleBinding.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -143,6 +154,7 @@ func (c *clusterRoleBindings) Update(ctx context.Context, clusterRoleBinding *v1
 func (c *clusterRoleBindings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("clusterrolebindings").
 		Name(name).
 		Body(&opts).
@@ -158,6 +170,7 @@ func (c *clusterRoleBindings) DeleteCollection(ctx context.Context, opts v1.Dele
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("clusterrolebindings").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -171,6 +184,7 @@ func (c *clusterRoleBindings) Patch(ctx context.Context, name string, pt types.P
 	result = &v1beta1.ClusterRoleBinding{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("clusterrolebindings").
 		Name(name).
 		SubResource(subresources...).
@@ -198,6 +212,7 @@ func (c *clusterRoleBindings) Apply(ctx context.Context, clusterRoleBinding *rba
 	result = &v1beta1.ClusterRoleBinding{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("clusterrolebindings").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).

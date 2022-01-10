@@ -39,6 +39,10 @@ type StorageVersionsGetter interface {
 	StorageVersions() StorageVersionInterface
 }
 
+type ScopedStorageVersionsGetter interface {
+	ScopedStorageVersions(scope rest.Scope) StorageVersionInterface
+}
+
 // StorageVersionInterface has methods to work with StorageVersion resources.
 type StorageVersionInterface interface {
 	Create(ctx context.Context, storageVersion *v1alpha1.StorageVersion, opts v1.CreateOptions) (*v1alpha1.StorageVersion, error)
@@ -59,13 +63,15 @@ type StorageVersionInterface interface {
 type storageVersions struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newStorageVersions returns a StorageVersions
-func newStorageVersions(c *InternalV1alpha1Client) *storageVersions {
+func newStorageVersions(c *InternalV1alpha1Client, scope rest.Scope) *storageVersions {
 	return &storageVersions{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -74,6 +80,7 @@ func (c *storageVersions) Get(ctx context.Context, name string, options v1.GetOp
 	result = &v1alpha1.StorageVersion{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -91,6 +98,7 @@ func (c *storageVersions) List(ctx context.Context, opts v1.ListOptions) (result
 	result = &v1alpha1.StorageVersionList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +116,7 @@ func (c *storageVersions) Watch(ctx context.Context, opts v1.ListOptions) (watch
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -119,6 +128,7 @@ func (c *storageVersions) Create(ctx context.Context, storageVersion *v1alpha1.S
 	result = &v1alpha1.StorageVersion{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(storageVersion).
@@ -132,6 +142,7 @@ func (c *storageVersions) Update(ctx context.Context, storageVersion *v1alpha1.S
 	result = &v1alpha1.StorageVersion{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		Name(storageVersion.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -147,6 +158,7 @@ func (c *storageVersions) UpdateStatus(ctx context.Context, storageVersion *v1al
 	result = &v1alpha1.StorageVersion{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		Name(storageVersion.Name).
 		SubResource("status").
@@ -161,6 +173,7 @@ func (c *storageVersions) UpdateStatus(ctx context.Context, storageVersion *v1al
 func (c *storageVersions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		Name(name).
 		Body(&opts).
@@ -176,6 +189,7 @@ func (c *storageVersions) DeleteCollection(ctx context.Context, opts v1.DeleteOp
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -189,6 +203,7 @@ func (c *storageVersions) Patch(ctx context.Context, name string, pt types.Patch
 	result = &v1alpha1.StorageVersion{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		Name(name).
 		SubResource(subresources...).
@@ -216,6 +231,7 @@ func (c *storageVersions) Apply(ctx context.Context, storageVersion *apiserverin
 	result = &v1alpha1.StorageVersion{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).
@@ -245,6 +261,7 @@ func (c *storageVersions) ApplyStatus(ctx context.Context, storageVersion *apise
 	result = &v1alpha1.StorageVersion{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageversions").
 		Name(*name).
 		SubResource("status").

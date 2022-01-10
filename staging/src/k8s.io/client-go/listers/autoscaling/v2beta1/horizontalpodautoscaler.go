@@ -19,23 +19,20 @@ limitations under the License.
 package v2beta1
 
 import (
-	"context"
-
 	v2beta1 "k8s.io/api/autoscaling/v2beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // HorizontalPodAutoscalerLister helps list HorizontalPodAutoscalers.
 // All objects returned here must be treated as read-only.
 type HorizontalPodAutoscalerLister interface {
+	Scoped(scope rest.Scope) HorizontalPodAutoscalerLister
 	// List lists all HorizontalPodAutoscalers in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error)
-	// ListWithContext lists all HorizontalPodAutoscalers in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error)
 	// HorizontalPodAutoscalers returns an object that can list and get HorizontalPodAutoscalers.
 	HorizontalPodAutoscalers(namespace string) HorizontalPodAutoscalerNamespaceLister
 	HorizontalPodAutoscalerListerExpansion
@@ -44,6 +41,7 @@ type HorizontalPodAutoscalerLister interface {
 // horizontalPodAutoscalerLister implements the HorizontalPodAutoscalerLister interface.
 type horizontalPodAutoscalerLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewHorizontalPodAutoscalerLister returns a new HorizontalPodAutoscalerLister.
@@ -51,14 +49,20 @@ func NewHorizontalPodAutoscalerLister(indexer cache.Indexer) HorizontalPodAutosc
 	return &horizontalPodAutoscalerLister{indexer: indexer}
 }
 
-// List lists all HorizontalPodAutoscalers in the indexer.
-func (s *horizontalPodAutoscalerLister) List(selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *horizontalPodAutoscalerLister) Scoped(scope rest.Scope) HorizontalPodAutoscalerLister {
+	return &horizontalPodAutoscalerLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all HorizontalPodAutoscalers in the indexer.
-func (s *horizontalPodAutoscalerLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all HorizontalPodAutoscalers in the indexer.
+func (s *horizontalPodAutoscalerLister) List(selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v2beta1.HorizontalPodAutoscaler))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *horizontalPodAutoscalerLister) ListWithContext(ctx context.Context, sel
 
 // HorizontalPodAutoscalers returns an object that can list and get HorizontalPodAutoscalers.
 func (s *horizontalPodAutoscalerLister) HorizontalPodAutoscalers(namespace string) HorizontalPodAutoscalerNamespaceLister {
-	return horizontalPodAutoscalerNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return horizontalPodAutoscalerNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // HorizontalPodAutoscalerNamespaceLister helps list and get HorizontalPodAutoscalers.
@@ -75,15 +79,9 @@ type HorizontalPodAutoscalerNamespaceLister interface {
 	// List lists all HorizontalPodAutoscalers in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error)
-	// ListWithContext lists all HorizontalPodAutoscalers in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error)
 	// Get retrieves the HorizontalPodAutoscaler from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v2beta1.HorizontalPodAutoscaler, error)
-	// GetWithContext retrieves the HorizontalPodAutoscaler from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v2beta1.HorizontalPodAutoscaler, error)
 	HorizontalPodAutoscalerNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type HorizontalPodAutoscalerNamespaceLister interface {
 type horizontalPodAutoscalerNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all HorizontalPodAutoscalers in the indexer for a given namespace.
 func (s horizontalPodAutoscalerNamespaceLister) List(selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all HorizontalPodAutoscalers in the indexer for a given namespace.
-func (s horizontalPodAutoscalerNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v2beta1.HorizontalPodAutoscaler))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s horizontalPodAutoscalerNamespaceLister) ListWithContext(ctx context.Cont
 
 // Get retrieves the HorizontalPodAutoscaler from the indexer for a given namespace and name.
 func (s horizontalPodAutoscalerNamespaceLister) Get(name string) (*v2beta1.HorizontalPodAutoscaler, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the HorizontalPodAutoscaler from the indexer for a given namespace and name.
-func (s horizontalPodAutoscalerNamespaceLister) GetWithContext(ctx context.Context, name string) (*v2beta1.HorizontalPodAutoscaler, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

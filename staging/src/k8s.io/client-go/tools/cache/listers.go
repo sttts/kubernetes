@@ -17,8 +17,6 @@ limitations under the License.
 package cache
 
 import (
-	"context"
-
 	"k8s.io/klog/v2"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -81,75 +79,75 @@ func ListAllByIndexAndValue(indexer Indexer, indexName, indexValue string, selec
 	return nil
 }
 
-func IndexedListAll(ctx context.Context, indexer Indexer, selector labels.Selector, appendFn AppendFunc) error {
-	selectAll := selector.Empty()
+// func IndexedListAll(ctx context.Context, indexer Indexer, selector labels.Selector, appendFn AppendFunc) error {
+// 	selectAll := selector.Empty()
 
-	var (
-		items []interface{}
-	)
+// 	var (
+// 		items []interface{}
+// 	)
 
-	indexValue, err := cc.ListAllIndexValueFunc(ctx)
-	if err != nil {
-		return err
-	}
-	items, err = indexer.ByIndex(ListAllIndex, indexValue)
-	if err != nil {
-		return err
-	}
+// 	indexValue, err := cc.ListAllIndexValueFunc(ctx)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	items, err = indexer.ByIndex(ListAllIndex, indexValue)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	for _, m := range items {
-		if selectAll {
-			// Avoid computing labels of the objects to speed up common flows
-			// of listing all objects.
-			appendFn(m)
-			continue
-		}
-		metadata, err := meta.Accessor(m)
-		if err != nil {
-			return err
-		}
-		if selector.Matches(labels.Set(metadata.GetLabels())) {
-			appendFn(m)
-		}
-	}
-	return nil
-}
+// 	for _, m := range items {
+// 		if selectAll {
+// 			// Avoid computing labels of the objects to speed up common flows
+// 			// of listing all objects.
+// 			appendFn(m)
+// 			continue
+// 		}
+// 		metadata, err := meta.Accessor(m)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if selector.Matches(labels.Set(metadata.GetLabels())) {
+// 			appendFn(m)
+// 		}
+// 	}
+// 	return nil
+// }
 
-// ListAllByNamespace used to list items belongs to namespace from Indexer.
-func ListAllByNamespace2(ctx context.Context, indexer Indexer, namespace string, selector labels.Selector, appendFn AppendFunc) error {
-	if namespace == metav1.NamespaceAll {
-		return IndexedListAll(ctx, indexer, selector, appendFn)
-	}
+// // ListAllByNamespace used to list items belongs to namespace from Indexer.
+// func ListAllByNamespace2(ctx context.Context, indexer Indexer, namespace string, selector labels.Selector, appendFn AppendFunc) error {
+// 	if namespace == metav1.NamespaceAll {
+// 		return IndexedListAll(ctx, indexer, selector, appendFn)
+// 	}
 
-	nsKey, err := cc.NamespaceKeyFunc(ctx, namespace)
-	if err != nil {
-		return err
-	}
-	items, err := indexer.ByIndex(NamespaceIndex, nsKey)
-	if err != nil {
-		return err
-	}
+// 	nsKey, err := cc.NamespaceKeyFunc(ctx, namespace)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	items, err := indexer.ByIndex(NamespaceIndex, nsKey)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	selectAll := selector.Empty()
+// 	selectAll := selector.Empty()
 
-	for _, m := range items {
-		if selectAll {
-			// Avoid computing labels of the objects to speed up common flows
-			// of listing all objects.
-			appendFn(m)
-			continue
-		}
-		metadata, err := meta.Accessor(m)
-		if err != nil {
-			return err
-		}
-		if selector.Matches(labels.Set(metadata.GetLabels())) {
-			appendFn(m)
-		}
-	}
+// 	for _, m := range items {
+// 		if selectAll {
+// 			// Avoid computing labels of the objects to speed up common flows
+// 			// of listing all objects.
+// 			appendFn(m)
+// 			continue
+// 		}
+// 		metadata, err := meta.Accessor(m)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if selector.Matches(labels.Set(metadata.GetLabels())) {
+// 			appendFn(m)
+// 		}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func ListAllByNamespace(indexer Indexer, namespace string, selector labels.Selector, appendFn AppendFunc) error {
 	selectAll := selector.Empty()

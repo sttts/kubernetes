@@ -19,35 +19,30 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
 	v1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // MutatingWebhookConfigurationLister helps list MutatingWebhookConfigurations.
 // All objects returned here must be treated as read-only.
 type MutatingWebhookConfigurationLister interface {
+	Scoped(scope rest.Scope) MutatingWebhookConfigurationLister
 	// List lists all MutatingWebhookConfigurations in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.MutatingWebhookConfiguration, err error)
-	// ListWithContext lists all MutatingWebhookConfigurations in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.MutatingWebhookConfiguration, err error)
 	// Get retrieves the MutatingWebhookConfiguration from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.MutatingWebhookConfiguration, error)
-	// GetWithContext retrieves the MutatingWebhookConfiguration from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta1.MutatingWebhookConfiguration, error)
 	MutatingWebhookConfigurationListerExpansion
 }
 
 // mutatingWebhookConfigurationLister implements the MutatingWebhookConfigurationLister interface.
 type mutatingWebhookConfigurationLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewMutatingWebhookConfigurationLister returns a new MutatingWebhookConfigurationLister.
@@ -55,14 +50,20 @@ func NewMutatingWebhookConfigurationLister(indexer cache.Indexer) MutatingWebhoo
 	return &mutatingWebhookConfigurationLister{indexer: indexer}
 }
 
-// List lists all MutatingWebhookConfigurations in the indexer.
-func (s *mutatingWebhookConfigurationLister) List(selector labels.Selector) (ret []*v1beta1.MutatingWebhookConfiguration, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *mutatingWebhookConfigurationLister) Scoped(scope rest.Scope) MutatingWebhookConfigurationLister {
+	return &mutatingWebhookConfigurationLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all MutatingWebhookConfigurations in the indexer.
-func (s *mutatingWebhookConfigurationLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.MutatingWebhookConfiguration, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all MutatingWebhookConfigurations in the indexer.
+func (s *mutatingWebhookConfigurationLister) List(selector labels.Selector) (ret []*v1beta1.MutatingWebhookConfiguration, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.MutatingWebhookConfiguration))
 	})
 	return ret, err
@@ -70,14 +71,9 @@ func (s *mutatingWebhookConfigurationLister) ListWithContext(ctx context.Context
 
 // Get retrieves the MutatingWebhookConfiguration from the index for a given name.
 func (s *mutatingWebhookConfigurationLister) Get(name string) (*v1beta1.MutatingWebhookConfiguration, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the MutatingWebhookConfiguration from the index for a given name.
-func (s *mutatingWebhookConfigurationLister) GetWithContext(ctx context.Context, name string) (*v1beta1.MutatingWebhookConfiguration, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

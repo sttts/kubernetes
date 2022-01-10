@@ -39,6 +39,10 @@ type SecretsGetter interface {
 	Secrets(namespace string) SecretInterface
 }
 
+type ScopedSecretsGetter interface {
+	ScopedSecrets(scope rest.Scope, namespace string) SecretInterface
+}
+
 // SecretInterface has methods to work with Secret resources.
 type SecretInterface interface {
 	Create(ctx context.Context, secret *v1.Secret, opts metav1.CreateOptions) (*v1.Secret, error)
@@ -57,14 +61,16 @@ type SecretInterface interface {
 type secrets struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newSecrets returns a Secrets
-func newSecrets(c *CoreV1Client, namespace string) *secrets {
+func newSecrets(c *CoreV1Client, scope rest.Scope, namespace string) *secrets {
 	return &secrets{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -74,6 +80,7 @@ func (c *secrets) Get(ctx context.Context, name string, options metav1.GetOption
 	result = &v1.Secret{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("secrets").
 		Name(name).
@@ -92,6 +99,7 @@ func (c *secrets) List(ctx context.Context, opts metav1.ListOptions) (result *v1
 	result = &v1.SecretList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("secrets").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -110,6 +118,7 @@ func (c *secrets) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Int
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("secrets").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -122,6 +131,7 @@ func (c *secrets) Create(ctx context.Context, secret *v1.Secret, opts metav1.Cre
 	result = &v1.Secret{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("secrets").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -136,6 +146,7 @@ func (c *secrets) Update(ctx context.Context, secret *v1.Secret, opts metav1.Upd
 	result = &v1.Secret{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("secrets").
 		Name(secret.Name).
@@ -150,6 +161,7 @@ func (c *secrets) Update(ctx context.Context, secret *v1.Secret, opts metav1.Upd
 func (c *secrets) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("secrets").
 		Name(name).
@@ -166,6 +178,7 @@ func (c *secrets) DeleteCollection(ctx context.Context, opts metav1.DeleteOption
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("secrets").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -180,6 +193,7 @@ func (c *secrets) Patch(ctx context.Context, name string, pt types.PatchType, da
 	result = &v1.Secret{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("secrets").
 		Name(name).
@@ -208,6 +222,7 @@ func (c *secrets) Apply(ctx context.Context, secret *corev1.SecretApplyConfigura
 	result = &v1.Secret{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("secrets").
 		Name(*name).

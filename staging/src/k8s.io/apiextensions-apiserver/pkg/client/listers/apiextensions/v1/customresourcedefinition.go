@@ -19,44 +19,42 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/rest"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // CustomResourceDefinitionLister helps list CustomResourceDefinitions.
 // All objects returned here must be treated as read-only.
 type CustomResourceDefinitionLister interface {
+	Scoped(scope rest.Scope) CustomResourceDefinitionLister
 	// List lists all CustomResourceDefinitions in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.CustomResourceDefinition, err error)
-	// ListWithContext lists all CustomResourceDefinitions in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CustomResourceDefinition, err error)
 	// Get retrieves the CustomResourceDefinition from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.CustomResourceDefinition, error)
-	// GetWithContext retrieves the CustomResourceDefinition from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.CustomResourceDefinition, error)
-
-	Scoped(scope rest.Scope) CustomResourceDefinitionLister
 	CustomResourceDefinitionListerExpansion
 }
 
 // customResourceDefinitionLister implements the CustomResourceDefinitionLister interface.
 type customResourceDefinitionLister struct {
 	indexer cache.Indexer
-	scope rest.Scope
+	scope   rest.Scope
 }
 
 // NewCustomResourceDefinitionLister returns a new CustomResourceDefinitionLister.
 func NewCustomResourceDefinitionLister(indexer cache.Indexer) CustomResourceDefinitionLister {
 	return &customResourceDefinitionLister{indexer: indexer}
+}
+
+func (s *customResourceDefinitionLister) Scoped(scope rest.Scope) CustomResourceDefinitionLister {
+	return &customResourceDefinitionLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
 // List lists all CustomResourceDefinitions in the indexer.
@@ -69,11 +67,6 @@ func (s *customResourceDefinitionLister) List(selector labels.Selector) (ret []*
 		ret = append(ret, m.(*v1.CustomResourceDefinition))
 	})
 	return ret, err
-}
-
-// ListWithContext lists all CustomResourceDefinitions in the indexer.
-func (s *customResourceDefinitionLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CustomResourceDefinition, err error) {
-	panic("no")
 }
 
 // Get retrieves the CustomResourceDefinition from the index for a given name.
@@ -90,16 +83,4 @@ func (s *customResourceDefinitionLister) Get(name string) (*v1.CustomResourceDef
 		return nil, errors.NewNotFound(v1.Resource("customresourcedefinition"), name)
 	}
 	return obj.(*v1.CustomResourceDefinition), nil
-}
-
-// GetWithContext retrieves the CustomResourceDefinition from the index for a given name.
-func (s *customResourceDefinitionLister) GetWithContext(ctx context.Context, name string) (*v1.CustomResourceDefinition, error) {
-	panic("no")
-}
-
-func (s *customResourceDefinitionLister) Scoped(scope rest.Scope) CustomResourceDefinitionLister {
-	return &customResourceDefinitionLister{
-		indexer: s.indexer,
-		scope: scope,
-	}
 }

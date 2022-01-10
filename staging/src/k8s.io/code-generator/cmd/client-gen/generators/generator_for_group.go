@@ -118,11 +118,14 @@ func (g *genGroup) GenerateType(c *generator.Context, t *types.Type, w io.Writer
 			"type":        t,
 			"GroupGoName": g.groupGoName,
 			"Version":     namer.IC(g.version),
+			"restScope":   c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Scope"}),
 		}
 		if tags.NonNamespaced {
 			sw.Do(getterImplNonNamespaced, wrapper)
+			sw.Do(scopedGetterImplNonNamespaced, wrapper)
 		} else {
 			sw.Do(getterImplNamespaced, wrapper)
+			sw.Do(scopedGetterImplNamespaced, wrapper)
 		}
 	}
 	sw.Do(newClientForConfigTemplate, m)
@@ -144,6 +147,7 @@ var groupInterfaceTemplate = `
 type $.GroupGoName$$.Version$Interface interface {
     RESTClient() $.restRESTClientInterface|raw$
     $range .types$ $.|publicPlural$Getter
+	Scoped$.|publicPlural$Getter
     $end$
 }
 `
@@ -158,13 +162,25 @@ type $.GroupGoName$$.Version$Client struct {
 
 var getterImplNamespaced = `
 func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$(namespace string) $.type|public$Interface {
-	return new$.type|publicPlural$(c, namespace)
+	return new$.type|publicPlural$(c, nil, namespace)
 }
 `
 
 var getterImplNonNamespaced = `
 func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$() $.type|public$Interface {
-	return new$.type|publicPlural$(c)
+	return new$.type|publicPlural$(c, nil)
+}
+`
+
+var scopedGetterImplNamespaced = `
+func (c *$.GroupGoName$$.Version$Client) Scoped$.type|publicPlural$(scope $.restScope|raw$, namespace string) $.type|public$Interface {
+	return new$.type|publicPlural$(c, scope, namespace)
+}
+`
+
+var scopedGetterImplNonNamespaced = `
+func (c *$.GroupGoName$$.Version$Client) Scoped$.type|publicPlural$(scope $.restScope|raw$) $.type|public$Interface {
+	return new$.type|publicPlural$(c, scope)
 }
 `
 

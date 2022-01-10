@@ -27,7 +27,9 @@ import (
 type FlowcontrolV1beta2Interface interface {
 	RESTClient() rest.Interface
 	FlowSchemasGetter
+	ScopedFlowSchemasGetter
 	PriorityLevelConfigurationsGetter
+	ScopedPriorityLevelConfigurationsGetter
 }
 
 // FlowcontrolV1beta2Client is used to interact with features provided by the flowcontrol.apiserver.k8s.io group.
@@ -37,11 +39,19 @@ type FlowcontrolV1beta2Client struct {
 }
 
 func (c *FlowcontrolV1beta2Client) FlowSchemas() FlowSchemaInterface {
-	return newFlowSchemas(c)
+	return newFlowSchemas(c, nil)
+}
+
+func (c *FlowcontrolV1beta2Client) ScopedFlowSchemas(scope rest.Scope) FlowSchemaInterface {
+	return newFlowSchemas(c, scope)
 }
 
 func (c *FlowcontrolV1beta2Client) PriorityLevelConfigurations() PriorityLevelConfigurationInterface {
-	return newPriorityLevelConfigurations(c)
+	return newPriorityLevelConfigurations(c, nil)
+}
+
+func (c *FlowcontrolV1beta2Client) ScopedPriorityLevelConfigurations(scope rest.Scope) PriorityLevelConfigurationInterface {
+	return newPriorityLevelConfigurations(c, scope)
 }
 
 // NewForConfig creates a new FlowcontrolV1beta2Client for the given config.

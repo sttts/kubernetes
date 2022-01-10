@@ -39,6 +39,10 @@ type DeploymentsGetter interface {
 	Deployments(namespace string) DeploymentInterface
 }
 
+type ScopedDeploymentsGetter interface {
+	ScopedDeployments(scope rest.Scope, namespace string) DeploymentInterface
+}
+
 // DeploymentInterface has methods to work with Deployment resources.
 type DeploymentInterface interface {
 	Create(ctx context.Context, deployment *v1beta1.Deployment, opts v1.CreateOptions) (*v1beta1.Deployment, error)
@@ -59,14 +63,16 @@ type DeploymentInterface interface {
 type deployments struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newDeployments returns a Deployments
-func newDeployments(c *AppsV1beta1Client, namespace string) *deployments {
+func newDeployments(c *AppsV1beta1Client, scope rest.Scope, namespace string) *deployments {
 	return &deployments{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -76,6 +82,7 @@ func (c *deployments) Get(ctx context.Context, name string, options v1.GetOption
 	result = &v1beta1.Deployment{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		Name(name).
@@ -94,6 +101,7 @@ func (c *deployments) List(ctx context.Context, opts v1.ListOptions) (result *v1
 	result = &v1beta1.DeploymentList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -112,6 +120,7 @@ func (c *deployments) Watch(ctx context.Context, opts v1.ListOptions) (watch.Int
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -124,6 +133,7 @@ func (c *deployments) Create(ctx context.Context, deployment *v1beta1.Deployment
 	result = &v1beta1.Deployment{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -138,6 +148,7 @@ func (c *deployments) Update(ctx context.Context, deployment *v1beta1.Deployment
 	result = &v1beta1.Deployment{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		Name(deployment.Name).
@@ -154,6 +165,7 @@ func (c *deployments) UpdateStatus(ctx context.Context, deployment *v1beta1.Depl
 	result = &v1beta1.Deployment{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		Name(deployment.Name).
@@ -169,6 +181,7 @@ func (c *deployments) UpdateStatus(ctx context.Context, deployment *v1beta1.Depl
 func (c *deployments) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		Name(name).
@@ -185,6 +198,7 @@ func (c *deployments) DeleteCollection(ctx context.Context, opts v1.DeleteOption
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -199,6 +213,7 @@ func (c *deployments) Patch(ctx context.Context, name string, pt types.PatchType
 	result = &v1beta1.Deployment{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		Name(name).
@@ -227,6 +242,7 @@ func (c *deployments) Apply(ctx context.Context, deployment *appsv1beta1.Deploym
 	result = &v1beta1.Deployment{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		Name(*name).
@@ -257,6 +273,7 @@ func (c *deployments) ApplyStatus(ctx context.Context, deployment *appsv1beta1.D
 	result = &v1beta1.Deployment{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("deployments").
 		Name(*name).

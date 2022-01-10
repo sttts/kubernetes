@@ -27,8 +27,11 @@ import (
 type NetworkingV1Interface interface {
 	RESTClient() rest.Interface
 	IngressesGetter
+	ScopedIngressesGetter
 	IngressClassesGetter
+	ScopedIngressClassesGetter
 	NetworkPoliciesGetter
+	ScopedNetworkPoliciesGetter
 }
 
 // NetworkingV1Client is used to interact with features provided by the networking.k8s.io group.
@@ -38,15 +41,27 @@ type NetworkingV1Client struct {
 }
 
 func (c *NetworkingV1Client) Ingresses(namespace string) IngressInterface {
-	return newIngresses(c, namespace)
+	return newIngresses(c, nil, namespace)
+}
+
+func (c *NetworkingV1Client) ScopedIngresses(scope rest.Scope, namespace string) IngressInterface {
+	return newIngresses(c, scope, namespace)
 }
 
 func (c *NetworkingV1Client) IngressClasses() IngressClassInterface {
-	return newIngressClasses(c)
+	return newIngressClasses(c, nil)
+}
+
+func (c *NetworkingV1Client) ScopedIngressClasses(scope rest.Scope) IngressClassInterface {
+	return newIngressClasses(c, scope)
 }
 
 func (c *NetworkingV1Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
-	return newNetworkPolicies(c, namespace)
+	return newNetworkPolicies(c, nil, namespace)
+}
+
+func (c *NetworkingV1Client) ScopedNetworkPolicies(scope rest.Scope, namespace string) NetworkPolicyInterface {
+	return newNetworkPolicies(c, scope, namespace)
 }
 
 // NewForConfig creates a new NetworkingV1Client for the given config.

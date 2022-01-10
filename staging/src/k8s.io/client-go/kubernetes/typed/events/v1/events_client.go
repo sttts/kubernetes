@@ -27,6 +27,7 @@ import (
 type EventsV1Interface interface {
 	RESTClient() rest.Interface
 	EventsGetter
+	ScopedEventsGetter
 }
 
 // EventsV1Client is used to interact with features provided by the events.k8s.io group.
@@ -36,7 +37,11 @@ type EventsV1Client struct {
 }
 
 func (c *EventsV1Client) Events(namespace string) EventInterface {
-	return newEvents(c, namespace)
+	return newEvents(c, nil, namespace)
+}
+
+func (c *EventsV1Client) ScopedEvents(scope rest.Scope, namespace string) EventInterface {
+	return newEvents(c, scope, namespace)
 }
 
 // NewForConfig creates a new EventsV1Client for the given config.

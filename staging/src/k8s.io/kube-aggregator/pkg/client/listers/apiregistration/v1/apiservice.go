@@ -19,10 +19,9 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	v1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 )
@@ -30,24 +29,20 @@ import (
 // APIServiceLister helps list APIServices.
 // All objects returned here must be treated as read-only.
 type APIServiceLister interface {
+	Scoped(scope rest.Scope) APIServiceLister
 	// List lists all APIServices in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.APIService, err error)
-	// ListWithContext lists all APIServices in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.APIService, err error)
 	// Get retrieves the APIService from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.APIService, error)
-	// GetWithContext retrieves the APIService from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.APIService, error)
 	APIServiceListerExpansion
 }
 
 // aPIServiceLister implements the APIServiceLister interface.
 type aPIServiceLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewAPIServiceLister returns a new APIServiceLister.
@@ -55,14 +50,20 @@ func NewAPIServiceLister(indexer cache.Indexer) APIServiceLister {
 	return &aPIServiceLister{indexer: indexer}
 }
 
-// List lists all APIServices in the indexer.
-func (s *aPIServiceLister) List(selector labels.Selector) (ret []*v1.APIService, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *aPIServiceLister) Scoped(scope rest.Scope) APIServiceLister {
+	return &aPIServiceLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all APIServices in the indexer.
-func (s *aPIServiceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.APIService, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all APIServices in the indexer.
+func (s *aPIServiceLister) List(selector labels.Selector) (ret []*v1.APIService, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.APIService))
 	})
 	return ret, err
@@ -70,14 +71,9 @@ func (s *aPIServiceLister) ListWithContext(ctx context.Context, selector labels.
 
 // Get retrieves the APIService from the index for a given name.
 func (s *aPIServiceLister) Get(name string) (*v1.APIService, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the APIService from the index for a given name.
-func (s *aPIServiceLister) GetWithContext(ctx context.Context, name string) (*v1.APIService, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

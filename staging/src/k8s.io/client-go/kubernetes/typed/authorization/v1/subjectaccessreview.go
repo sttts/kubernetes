@@ -33,6 +33,10 @@ type SubjectAccessReviewsGetter interface {
 	SubjectAccessReviews() SubjectAccessReviewInterface
 }
 
+type ScopedSubjectAccessReviewsGetter interface {
+	ScopedSubjectAccessReviews(scope rest.Scope) SubjectAccessReviewInterface
+}
+
 // SubjectAccessReviewInterface has methods to work with SubjectAccessReview resources.
 type SubjectAccessReviewInterface interface {
 	Create(ctx context.Context, subjectAccessReview *v1.SubjectAccessReview, opts metav1.CreateOptions) (*v1.SubjectAccessReview, error)
@@ -43,13 +47,15 @@ type SubjectAccessReviewInterface interface {
 type subjectAccessReviews struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newSubjectAccessReviews returns a SubjectAccessReviews
-func newSubjectAccessReviews(c *AuthorizationV1Client) *subjectAccessReviews {
+func newSubjectAccessReviews(c *AuthorizationV1Client, scope rest.Scope) *subjectAccessReviews {
 	return &subjectAccessReviews{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -58,6 +64,7 @@ func (c *subjectAccessReviews) Create(ctx context.Context, subjectAccessReview *
 	result = &v1.SubjectAccessReview{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("subjectaccessreviews").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(subjectAccessReview).

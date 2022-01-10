@@ -27,6 +27,7 @@ import (
 type NodeV1beta1Interface interface {
 	RESTClient() rest.Interface
 	RuntimeClassesGetter
+	ScopedRuntimeClassesGetter
 }
 
 // NodeV1beta1Client is used to interact with features provided by the node.k8s.io group.
@@ -36,7 +37,11 @@ type NodeV1beta1Client struct {
 }
 
 func (c *NodeV1beta1Client) RuntimeClasses() RuntimeClassInterface {
-	return newRuntimeClasses(c)
+	return newRuntimeClasses(c, nil)
+}
+
+func (c *NodeV1beta1Client) ScopedRuntimeClasses(scope rest.Scope) RuntimeClassInterface {
+	return newRuntimeClasses(c, scope)
 }
 
 // NewForConfig creates a new NodeV1beta1Client for the given config.

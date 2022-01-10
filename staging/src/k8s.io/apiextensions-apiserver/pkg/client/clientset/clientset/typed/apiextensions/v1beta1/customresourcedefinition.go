@@ -36,6 +36,10 @@ type CustomResourceDefinitionsGetter interface {
 	CustomResourceDefinitions() CustomResourceDefinitionInterface
 }
 
+type ScopedCustomResourceDefinitionsGetter interface {
+	ScopedCustomResourceDefinitions(scope rest.Scope) CustomResourceDefinitionInterface
+}
+
 // CustomResourceDefinitionInterface has methods to work with CustomResourceDefinition resources.
 type CustomResourceDefinitionInterface interface {
 	Create(ctx context.Context, customResourceDefinition *v1beta1.CustomResourceDefinition, opts v1.CreateOptions) (*v1beta1.CustomResourceDefinition, error)
@@ -54,13 +58,15 @@ type CustomResourceDefinitionInterface interface {
 type customResourceDefinitions struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newCustomResourceDefinitions returns a CustomResourceDefinitions
-func newCustomResourceDefinitions(c *ApiextensionsV1beta1Client) *customResourceDefinitions {
+func newCustomResourceDefinitions(c *ApiextensionsV1beta1Client, scope rest.Scope) *customResourceDefinitions {
 	return &customResourceDefinitions{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -69,6 +75,7 @@ func (c *customResourceDefinitions) Get(ctx context.Context, name string, option
 	result = &v1beta1.CustomResourceDefinition{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("customresourcedefinitions").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -86,6 +93,7 @@ func (c *customResourceDefinitions) List(ctx context.Context, opts v1.ListOption
 	result = &v1beta1.CustomResourceDefinitionList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("customresourcedefinitions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -103,6 +111,7 @@ func (c *customResourceDefinitions) Watch(ctx context.Context, opts v1.ListOptio
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("customresourcedefinitions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -114,6 +123,7 @@ func (c *customResourceDefinitions) Create(ctx context.Context, customResourceDe
 	result = &v1beta1.CustomResourceDefinition{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("customresourcedefinitions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(customResourceDefinition).
@@ -127,6 +137,7 @@ func (c *customResourceDefinitions) Update(ctx context.Context, customResourceDe
 	result = &v1beta1.CustomResourceDefinition{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("customresourcedefinitions").
 		Name(customResourceDefinition.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -142,6 +153,7 @@ func (c *customResourceDefinitions) UpdateStatus(ctx context.Context, customReso
 	result = &v1beta1.CustomResourceDefinition{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("customresourcedefinitions").
 		Name(customResourceDefinition.Name).
 		SubResource("status").
@@ -156,6 +168,7 @@ func (c *customResourceDefinitions) UpdateStatus(ctx context.Context, customReso
 func (c *customResourceDefinitions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("customresourcedefinitions").
 		Name(name).
 		Body(&opts).
@@ -171,6 +184,7 @@ func (c *customResourceDefinitions) DeleteCollection(ctx context.Context, opts v
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("customresourcedefinitions").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -184,6 +198,7 @@ func (c *customResourceDefinitions) Patch(ctx context.Context, name string, pt t
 	result = &v1beta1.CustomResourceDefinition{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("customresourcedefinitions").
 		Name(name).
 		SubResource(subresources...).

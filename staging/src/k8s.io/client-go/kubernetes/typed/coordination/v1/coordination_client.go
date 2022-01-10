@@ -27,6 +27,7 @@ import (
 type CoordinationV1Interface interface {
 	RESTClient() rest.Interface
 	LeasesGetter
+	ScopedLeasesGetter
 }
 
 // CoordinationV1Client is used to interact with features provided by the coordination.k8s.io group.
@@ -36,7 +37,11 @@ type CoordinationV1Client struct {
 }
 
 func (c *CoordinationV1Client) Leases(namespace string) LeaseInterface {
-	return newLeases(c, namespace)
+	return newLeases(c, nil, namespace)
+}
+
+func (c *CoordinationV1Client) ScopedLeases(scope rest.Scope, namespace string) LeaseInterface {
+	return newLeases(c, scope, namespace)
 }
 
 // NewForConfig creates a new CoordinationV1Client for the given config.

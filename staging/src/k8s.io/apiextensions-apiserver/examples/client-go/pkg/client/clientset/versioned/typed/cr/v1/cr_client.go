@@ -27,6 +27,7 @@ import (
 type CrV1Interface interface {
 	RESTClient() rest.Interface
 	ExamplesGetter
+	ScopedExamplesGetter
 }
 
 // CrV1Client is used to interact with features provided by the cr.example.apiextensions.k8s.io group.
@@ -36,7 +37,11 @@ type CrV1Client struct {
 }
 
 func (c *CrV1Client) Examples(namespace string) ExampleInterface {
-	return newExamples(c, namespace)
+	return newExamples(c, nil, namespace)
+}
+
+func (c *CrV1Client) ScopedExamples(scope rest.Scope, namespace string) ExampleInterface {
+	return newExamples(c, scope, namespace)
 }
 
 // NewForConfig creates a new CrV1Client for the given config.

@@ -190,6 +190,9 @@ func (c *CRDFinalizer) deleteInstances(crd *apiextensionsv1.CustomResourceDefini
 		}, err
 	}
 
+	if true {
+		panic("FIXME")
+	}
 	ctx := genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{
 		Name: crd.GetClusterName(),
 	})

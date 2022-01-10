@@ -39,6 +39,10 @@ type NamespacesGetter interface {
 	Namespaces() NamespaceInterface
 }
 
+type ScopedNamespacesGetter interface {
+	ScopedNamespaces(scope rest.Scope) NamespaceInterface
+}
+
 // NamespaceInterface has methods to work with Namespace resources.
 type NamespaceInterface interface {
 	Create(ctx context.Context, namespace *v1.Namespace, opts metav1.CreateOptions) (*v1.Namespace, error)
@@ -58,13 +62,15 @@ type NamespaceInterface interface {
 type namespaces struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newNamespaces returns a Namespaces
-func newNamespaces(c *CoreV1Client) *namespaces {
+func newNamespaces(c *CoreV1Client, scope rest.Scope) *namespaces {
 	return &namespaces{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -73,6 +79,7 @@ func (c *namespaces) Get(ctx context.Context, name string, options metav1.GetOpt
 	result = &v1.Namespace{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -90,6 +97,7 @@ func (c *namespaces) List(ctx context.Context, opts metav1.ListOptions) (result 
 	result = &v1.NamespaceList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -107,6 +115,7 @@ func (c *namespaces) Watch(ctx context.Context, opts metav1.ListOptions) (watch.
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -118,6 +127,7 @@ func (c *namespaces) Create(ctx context.Context, namespace *v1.Namespace, opts m
 	result = &v1.Namespace{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(namespace).
@@ -131,6 +141,7 @@ func (c *namespaces) Update(ctx context.Context, namespace *v1.Namespace, opts m
 	result = &v1.Namespace{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		Name(namespace.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -146,6 +157,7 @@ func (c *namespaces) UpdateStatus(ctx context.Context, namespace *v1.Namespace, 
 	result = &v1.Namespace{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		Name(namespace.Name).
 		SubResource("status").
@@ -160,6 +172,7 @@ func (c *namespaces) UpdateStatus(ctx context.Context, namespace *v1.Namespace, 
 func (c *namespaces) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		Name(name).
 		Body(&opts).
@@ -172,6 +185,7 @@ func (c *namespaces) Patch(ctx context.Context, name string, pt types.PatchType,
 	result = &v1.Namespace{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		Name(name).
 		SubResource(subresources...).
@@ -199,6 +213,7 @@ func (c *namespaces) Apply(ctx context.Context, namespace *corev1.NamespaceApply
 	result = &v1.Namespace{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).
@@ -228,6 +243,7 @@ func (c *namespaces) ApplyStatus(ctx context.Context, namespace *corev1.Namespac
 	result = &v1.Namespace{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("namespaces").
 		Name(*name).
 		SubResource("status").

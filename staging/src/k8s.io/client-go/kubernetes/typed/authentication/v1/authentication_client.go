@@ -27,6 +27,7 @@ import (
 type AuthenticationV1Interface interface {
 	RESTClient() rest.Interface
 	TokenReviewsGetter
+	ScopedTokenReviewsGetter
 }
 
 // AuthenticationV1Client is used to interact with features provided by the authentication.k8s.io group.
@@ -36,7 +37,11 @@ type AuthenticationV1Client struct {
 }
 
 func (c *AuthenticationV1Client) TokenReviews() TokenReviewInterface {
-	return newTokenReviews(c)
+	return newTokenReviews(c, nil)
+}
+
+func (c *AuthenticationV1Client) ScopedTokenReviews(scope rest.Scope) TokenReviewInterface {
+	return newTokenReviews(c, scope)
 }
 
 // NewForConfig creates a new AuthenticationV1Client for the given config.

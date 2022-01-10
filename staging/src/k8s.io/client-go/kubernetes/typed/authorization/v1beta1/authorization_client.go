@@ -27,9 +27,13 @@ import (
 type AuthorizationV1beta1Interface interface {
 	RESTClient() rest.Interface
 	LocalSubjectAccessReviewsGetter
+	ScopedLocalSubjectAccessReviewsGetter
 	SelfSubjectAccessReviewsGetter
+	ScopedSelfSubjectAccessReviewsGetter
 	SelfSubjectRulesReviewsGetter
+	ScopedSelfSubjectRulesReviewsGetter
 	SubjectAccessReviewsGetter
+	ScopedSubjectAccessReviewsGetter
 }
 
 // AuthorizationV1beta1Client is used to interact with features provided by the authorization.k8s.io group.
@@ -39,19 +43,35 @@ type AuthorizationV1beta1Client struct {
 }
 
 func (c *AuthorizationV1beta1Client) LocalSubjectAccessReviews(namespace string) LocalSubjectAccessReviewInterface {
-	return newLocalSubjectAccessReviews(c, namespace)
+	return newLocalSubjectAccessReviews(c, nil, namespace)
+}
+
+func (c *AuthorizationV1beta1Client) ScopedLocalSubjectAccessReviews(scope rest.Scope, namespace string) LocalSubjectAccessReviewInterface {
+	return newLocalSubjectAccessReviews(c, scope, namespace)
 }
 
 func (c *AuthorizationV1beta1Client) SelfSubjectAccessReviews() SelfSubjectAccessReviewInterface {
-	return newSelfSubjectAccessReviews(c)
+	return newSelfSubjectAccessReviews(c, nil)
+}
+
+func (c *AuthorizationV1beta1Client) ScopedSelfSubjectAccessReviews(scope rest.Scope) SelfSubjectAccessReviewInterface {
+	return newSelfSubjectAccessReviews(c, scope)
 }
 
 func (c *AuthorizationV1beta1Client) SelfSubjectRulesReviews() SelfSubjectRulesReviewInterface {
-	return newSelfSubjectRulesReviews(c)
+	return newSelfSubjectRulesReviews(c, nil)
+}
+
+func (c *AuthorizationV1beta1Client) ScopedSelfSubjectRulesReviews(scope rest.Scope) SelfSubjectRulesReviewInterface {
+	return newSelfSubjectRulesReviews(c, scope)
 }
 
 func (c *AuthorizationV1beta1Client) SubjectAccessReviews() SubjectAccessReviewInterface {
-	return newSubjectAccessReviews(c)
+	return newSubjectAccessReviews(c, nil)
+}
+
+func (c *AuthorizationV1beta1Client) ScopedSubjectAccessReviews(scope rest.Scope) SubjectAccessReviewInterface {
+	return newSubjectAccessReviews(c, scope)
 }
 
 // NewForConfig creates a new AuthorizationV1beta1Client for the given config.

@@ -27,7 +27,9 @@ import (
 type ExampleGroupV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterTestTypesGetter
+	ScopedClusterTestTypesGetter
 	TestTypesGetter
+	ScopedTestTypesGetter
 }
 
 // ExampleGroupV1Client is used to interact with features provided by the example-group.hyphens.code-generator.k8s.io group.
@@ -37,11 +39,19 @@ type ExampleGroupV1Client struct {
 }
 
 func (c *ExampleGroupV1Client) ClusterTestTypes() ClusterTestTypeInterface {
-	return newClusterTestTypes(c)
+	return newClusterTestTypes(c, nil)
+}
+
+func (c *ExampleGroupV1Client) ScopedClusterTestTypes(scope rest.Scope) ClusterTestTypeInterface {
+	return newClusterTestTypes(c, scope)
 }
 
 func (c *ExampleGroupV1Client) TestTypes(namespace string) TestTypeInterface {
-	return newTestTypes(c, namespace)
+	return newTestTypes(c, nil, namespace)
+}
+
+func (c *ExampleGroupV1Client) ScopedTestTypes(scope rest.Scope, namespace string) TestTypeInterface {
+	return newTestTypes(c, scope, namespace)
 }
 
 // NewForConfig creates a new ExampleGroupV1Client for the given config.

@@ -27,6 +27,7 @@ import (
 type DiscoveryV1Interface interface {
 	RESTClient() rest.Interface
 	EndpointSlicesGetter
+	ScopedEndpointSlicesGetter
 }
 
 // DiscoveryV1Client is used to interact with features provided by the discovery.k8s.io group.
@@ -36,7 +37,11 @@ type DiscoveryV1Client struct {
 }
 
 func (c *DiscoveryV1Client) EndpointSlices(namespace string) EndpointSliceInterface {
-	return newEndpointSlices(c, namespace)
+	return newEndpointSlices(c, nil, namespace)
+}
+
+func (c *DiscoveryV1Client) ScopedEndpointSlices(scope rest.Scope, namespace string) EndpointSliceInterface {
+	return newEndpointSlices(c, scope, namespace)
 }
 
 // NewForConfig creates a new DiscoveryV1Client for the given config.

@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/server/mux"
+	"k8s.io/client-go/rest"
 )
 
 // ListedPathProvider is an interface for providing paths that should be reported at /.
@@ -66,10 +66,10 @@ type IndexLister struct {
 
 // ServeHTTP serves the available paths.
 func (i IndexLister) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	clusterName, err := genericapirequest.ClusterNameFrom(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	scope := rest.ScopeFrom(r.Context())
+	if scope == nil {
+		http.Error(w, "unable to determine scope from request context", http.StatusInternalServerError)
 		return
 	}
-	responsewriters.WriteRawJSON(i.StatusCode, metav1.RootPaths{Paths: i.PathProvider.ListedPaths(clusterName)}, w)
+	responsewriters.WriteRawJSON(i.StatusCode, metav1.RootPaths{Paths: i.PathProvider.ListedPaths(scope.Name())}, w)
 }

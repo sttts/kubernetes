@@ -27,9 +27,13 @@ import (
 type StorageV1Interface interface {
 	RESTClient() rest.Interface
 	CSIDriversGetter
+	ScopedCSIDriversGetter
 	CSINodesGetter
+	ScopedCSINodesGetter
 	StorageClassesGetter
+	ScopedStorageClassesGetter
 	VolumeAttachmentsGetter
+	ScopedVolumeAttachmentsGetter
 }
 
 // StorageV1Client is used to interact with features provided by the storage.k8s.io group.
@@ -39,19 +43,35 @@ type StorageV1Client struct {
 }
 
 func (c *StorageV1Client) CSIDrivers() CSIDriverInterface {
-	return newCSIDrivers(c)
+	return newCSIDrivers(c, nil)
+}
+
+func (c *StorageV1Client) ScopedCSIDrivers(scope rest.Scope) CSIDriverInterface {
+	return newCSIDrivers(c, scope)
 }
 
 func (c *StorageV1Client) CSINodes() CSINodeInterface {
-	return newCSINodes(c)
+	return newCSINodes(c, nil)
+}
+
+func (c *StorageV1Client) ScopedCSINodes(scope rest.Scope) CSINodeInterface {
+	return newCSINodes(c, scope)
 }
 
 func (c *StorageV1Client) StorageClasses() StorageClassInterface {
-	return newStorageClasses(c)
+	return newStorageClasses(c, nil)
+}
+
+func (c *StorageV1Client) ScopedStorageClasses(scope rest.Scope) StorageClassInterface {
+	return newStorageClasses(c, scope)
 }
 
 func (c *StorageV1Client) VolumeAttachments() VolumeAttachmentInterface {
-	return newVolumeAttachments(c)
+	return newVolumeAttachments(c, nil)
+}
+
+func (c *StorageV1Client) ScopedVolumeAttachments(scope rest.Scope) VolumeAttachmentInterface {
+	return newVolumeAttachments(c, scope)
 }
 
 // NewForConfig creates a new StorageV1Client for the given config.

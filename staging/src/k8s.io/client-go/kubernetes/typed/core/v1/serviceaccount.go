@@ -40,6 +40,10 @@ type ServiceAccountsGetter interface {
 	ServiceAccounts(namespace string) ServiceAccountInterface
 }
 
+type ScopedServiceAccountsGetter interface {
+	ScopedServiceAccounts(scope rest.Scope, namespace string) ServiceAccountInterface
+}
+
 // ServiceAccountInterface has methods to work with ServiceAccount resources.
 type ServiceAccountInterface interface {
 	Create(ctx context.Context, serviceAccount *v1.ServiceAccount, opts metav1.CreateOptions) (*v1.ServiceAccount, error)
@@ -60,14 +64,16 @@ type ServiceAccountInterface interface {
 type serviceAccounts struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newServiceAccounts returns a ServiceAccounts
-func newServiceAccounts(c *CoreV1Client, namespace string) *serviceAccounts {
+func newServiceAccounts(c *CoreV1Client, scope rest.Scope, namespace string) *serviceAccounts {
 	return &serviceAccounts{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -77,6 +83,7 @@ func (c *serviceAccounts) Get(ctx context.Context, name string, options metav1.G
 	result = &v1.ServiceAccount{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		Name(name).
@@ -95,6 +102,7 @@ func (c *serviceAccounts) List(ctx context.Context, opts metav1.ListOptions) (re
 	result = &v1.ServiceAccountList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -113,6 +121,7 @@ func (c *serviceAccounts) Watch(ctx context.Context, opts metav1.ListOptions) (w
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -125,6 +134,7 @@ func (c *serviceAccounts) Create(ctx context.Context, serviceAccount *v1.Service
 	result = &v1.ServiceAccount{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -139,6 +149,7 @@ func (c *serviceAccounts) Update(ctx context.Context, serviceAccount *v1.Service
 	result = &v1.ServiceAccount{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		Name(serviceAccount.Name).
@@ -153,6 +164,7 @@ func (c *serviceAccounts) Update(ctx context.Context, serviceAccount *v1.Service
 func (c *serviceAccounts) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		Name(name).
@@ -169,6 +181,7 @@ func (c *serviceAccounts) DeleteCollection(ctx context.Context, opts metav1.Dele
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -183,6 +196,7 @@ func (c *serviceAccounts) Patch(ctx context.Context, name string, pt types.Patch
 	result = &v1.ServiceAccount{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		Name(name).
@@ -211,6 +225,7 @@ func (c *serviceAccounts) Apply(ctx context.Context, serviceAccount *corev1.Serv
 	result = &v1.ServiceAccount{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		Name(*name).
@@ -226,6 +241,7 @@ func (c *serviceAccounts) CreateToken(ctx context.Context, serviceAccountName st
 	result = &authenticationv1.TokenRequest{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("serviceaccounts").
 		Name(serviceAccountName).

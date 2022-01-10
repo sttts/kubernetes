@@ -27,7 +27,9 @@ import (
 type AdmissionregistrationV1Interface interface {
 	RESTClient() rest.Interface
 	MutatingWebhookConfigurationsGetter
+	ScopedMutatingWebhookConfigurationsGetter
 	ValidatingWebhookConfigurationsGetter
+	ScopedValidatingWebhookConfigurationsGetter
 }
 
 // AdmissionregistrationV1Client is used to interact with features provided by the admissionregistration.k8s.io group.
@@ -37,11 +39,19 @@ type AdmissionregistrationV1Client struct {
 }
 
 func (c *AdmissionregistrationV1Client) MutatingWebhookConfigurations() MutatingWebhookConfigurationInterface {
-	return newMutatingWebhookConfigurations(c)
+	return newMutatingWebhookConfigurations(c, nil)
+}
+
+func (c *AdmissionregistrationV1Client) ScopedMutatingWebhookConfigurations(scope rest.Scope) MutatingWebhookConfigurationInterface {
+	return newMutatingWebhookConfigurations(c, scope)
 }
 
 func (c *AdmissionregistrationV1Client) ValidatingWebhookConfigurations() ValidatingWebhookConfigurationInterface {
-	return newValidatingWebhookConfigurations(c)
+	return newValidatingWebhookConfigurations(c, nil)
+}
+
+func (c *AdmissionregistrationV1Client) ScopedValidatingWebhookConfigurations(scope rest.Scope) ValidatingWebhookConfigurationInterface {
+	return newValidatingWebhookConfigurations(c, scope)
 }
 
 // NewForConfig creates a new AdmissionregistrationV1Client for the given config.

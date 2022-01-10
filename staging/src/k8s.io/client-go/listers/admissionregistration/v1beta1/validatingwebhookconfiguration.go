@@ -19,35 +19,30 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
 	v1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // ValidatingWebhookConfigurationLister helps list ValidatingWebhookConfigurations.
 // All objects returned here must be treated as read-only.
 type ValidatingWebhookConfigurationLister interface {
+	Scoped(scope rest.Scope) ValidatingWebhookConfigurationLister
 	// List lists all ValidatingWebhookConfigurations in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.ValidatingWebhookConfiguration, err error)
-	// ListWithContext lists all ValidatingWebhookConfigurations in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.ValidatingWebhookConfiguration, err error)
 	// Get retrieves the ValidatingWebhookConfiguration from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.ValidatingWebhookConfiguration, error)
-	// GetWithContext retrieves the ValidatingWebhookConfiguration from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta1.ValidatingWebhookConfiguration, error)
 	ValidatingWebhookConfigurationListerExpansion
 }
 
 // validatingWebhookConfigurationLister implements the ValidatingWebhookConfigurationLister interface.
 type validatingWebhookConfigurationLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewValidatingWebhookConfigurationLister returns a new ValidatingWebhookConfigurationLister.
@@ -55,14 +50,20 @@ func NewValidatingWebhookConfigurationLister(indexer cache.Indexer) ValidatingWe
 	return &validatingWebhookConfigurationLister{indexer: indexer}
 }
 
-// List lists all ValidatingWebhookConfigurations in the indexer.
-func (s *validatingWebhookConfigurationLister) List(selector labels.Selector) (ret []*v1beta1.ValidatingWebhookConfiguration, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *validatingWebhookConfigurationLister) Scoped(scope rest.Scope) ValidatingWebhookConfigurationLister {
+	return &validatingWebhookConfigurationLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all ValidatingWebhookConfigurations in the indexer.
-func (s *validatingWebhookConfigurationLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.ValidatingWebhookConfiguration, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all ValidatingWebhookConfigurations in the indexer.
+func (s *validatingWebhookConfigurationLister) List(selector labels.Selector) (ret []*v1beta1.ValidatingWebhookConfiguration, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.ValidatingWebhookConfiguration))
 	})
 	return ret, err
@@ -70,14 +71,9 @@ func (s *validatingWebhookConfigurationLister) ListWithContext(ctx context.Conte
 
 // Get retrieves the ValidatingWebhookConfiguration from the index for a given name.
 func (s *validatingWebhookConfigurationLister) Get(name string) (*v1beta1.ValidatingWebhookConfiguration, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the ValidatingWebhookConfiguration from the index for a given name.
-func (s *validatingWebhookConfigurationLister) GetWithContext(ctx context.Context, name string) (*v1beta1.ValidatingWebhookConfiguration, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

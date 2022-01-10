@@ -27,6 +27,7 @@ import (
 type ExampleV1Interface interface {
 	RESTClient() rest.Interface
 	TestTypesGetter
+	ScopedTestTypesGetter
 }
 
 // ExampleV1Client is used to interact with features provided by the example.apiserver.code-generator.k8s.io group.
@@ -36,7 +37,11 @@ type ExampleV1Client struct {
 }
 
 func (c *ExampleV1Client) TestTypes(namespace string) TestTypeInterface {
-	return newTestTypes(c, namespace)
+	return newTestTypes(c, nil, namespace)
+}
+
+func (c *ExampleV1Client) ScopedTestTypes(scope rest.Scope, namespace string) TestTypeInterface {
+	return newTestTypes(c, scope, namespace)
 }
 
 // NewForConfig creates a new ExampleV1Client for the given config.

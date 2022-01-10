@@ -39,6 +39,10 @@ type PriorityClassesGetter interface {
 	PriorityClasses() PriorityClassInterface
 }
 
+type ScopedPriorityClassesGetter interface {
+	ScopedPriorityClasses(scope rest.Scope) PriorityClassInterface
+}
+
 // PriorityClassInterface has methods to work with PriorityClass resources.
 type PriorityClassInterface interface {
 	Create(ctx context.Context, priorityClass *v1alpha1.PriorityClass, opts v1.CreateOptions) (*v1alpha1.PriorityClass, error)
@@ -57,13 +61,15 @@ type PriorityClassInterface interface {
 type priorityClasses struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newPriorityClasses returns a PriorityClasses
-func newPriorityClasses(c *SchedulingV1alpha1Client) *priorityClasses {
+func newPriorityClasses(c *SchedulingV1alpha1Client, scope rest.Scope) *priorityClasses {
 	return &priorityClasses{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -72,6 +78,7 @@ func (c *priorityClasses) Get(ctx context.Context, name string, options v1.GetOp
 	result = &v1alpha1.PriorityClass{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("priorityclasses").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -89,6 +96,7 @@ func (c *priorityClasses) List(ctx context.Context, opts v1.ListOptions) (result
 	result = &v1alpha1.PriorityClassList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("priorityclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -106,6 +114,7 @@ func (c *priorityClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("priorityclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -117,6 +126,7 @@ func (c *priorityClasses) Create(ctx context.Context, priorityClass *v1alpha1.Pr
 	result = &v1alpha1.PriorityClass{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("priorityclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(priorityClass).
@@ -130,6 +140,7 @@ func (c *priorityClasses) Update(ctx context.Context, priorityClass *v1alpha1.Pr
 	result = &v1alpha1.PriorityClass{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("priorityclasses").
 		Name(priorityClass.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -143,6 +154,7 @@ func (c *priorityClasses) Update(ctx context.Context, priorityClass *v1alpha1.Pr
 func (c *priorityClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("priorityclasses").
 		Name(name).
 		Body(&opts).
@@ -158,6 +170,7 @@ func (c *priorityClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOp
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("priorityclasses").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -171,6 +184,7 @@ func (c *priorityClasses) Patch(ctx context.Context, name string, pt types.Patch
 	result = &v1alpha1.PriorityClass{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("priorityclasses").
 		Name(name).
 		SubResource(subresources...).
@@ -198,6 +212,7 @@ func (c *priorityClasses) Apply(ctx context.Context, priorityClass *schedulingv1
 	result = &v1alpha1.PriorityClass{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("priorityclasses").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).

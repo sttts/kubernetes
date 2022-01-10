@@ -19,23 +19,20 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	v1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // CronJobLister helps list CronJobs.
 // All objects returned here must be treated as read-only.
 type CronJobLister interface {
+	Scoped(scope rest.Scope) CronJobLister
 	// List lists all CronJobs in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.CronJob, err error)
-	// ListWithContext lists all CronJobs in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CronJob, err error)
 	// CronJobs returns an object that can list and get CronJobs.
 	CronJobs(namespace string) CronJobNamespaceLister
 	CronJobListerExpansion
@@ -44,6 +41,7 @@ type CronJobLister interface {
 // cronJobLister implements the CronJobLister interface.
 type cronJobLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewCronJobLister returns a new CronJobLister.
@@ -51,14 +49,20 @@ func NewCronJobLister(indexer cache.Indexer) CronJobLister {
 	return &cronJobLister{indexer: indexer}
 }
 
-// List lists all CronJobs in the indexer.
-func (s *cronJobLister) List(selector labels.Selector) (ret []*v1.CronJob, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *cronJobLister) Scoped(scope rest.Scope) CronJobLister {
+	return &cronJobLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all CronJobs in the indexer.
-func (s *cronJobLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CronJob, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all CronJobs in the indexer.
+func (s *cronJobLister) List(selector labels.Selector) (ret []*v1.CronJob, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.CronJob))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *cronJobLister) ListWithContext(ctx context.Context, selector labels.Sel
 
 // CronJobs returns an object that can list and get CronJobs.
 func (s *cronJobLister) CronJobs(namespace string) CronJobNamespaceLister {
-	return cronJobNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return cronJobNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // CronJobNamespaceLister helps list and get CronJobs.
@@ -75,15 +79,9 @@ type CronJobNamespaceLister interface {
 	// List lists all CronJobs in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.CronJob, err error)
-	// ListWithContext lists all CronJobs in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CronJob, err error)
 	// Get retrieves the CronJob from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.CronJob, error)
-	// GetWithContext retrieves the CronJob from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.CronJob, error)
 	CronJobNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type CronJobNamespaceLister interface {
 type cronJobNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all CronJobs in the indexer for a given namespace.
 func (s cronJobNamespaceLister) List(selector labels.Selector) (ret []*v1.CronJob, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all CronJobs in the indexer for a given namespace.
-func (s cronJobNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.CronJob, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.CronJob))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s cronJobNamespaceLister) ListWithContext(ctx context.Context, selector la
 
 // Get retrieves the CronJob from the indexer for a given namespace and name.
 func (s cronJobNamespaceLister) Get(name string) (*v1.CronJob, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the CronJob from the indexer for a given namespace and name.
-func (s cronJobNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.CronJob, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

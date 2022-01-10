@@ -19,35 +19,30 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
-
 	v1beta1 "k8s.io/api/flowcontrol/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // PriorityLevelConfigurationLister helps list PriorityLevelConfigurations.
 // All objects returned here must be treated as read-only.
 type PriorityLevelConfigurationLister interface {
+	Scoped(scope rest.Scope) PriorityLevelConfigurationLister
 	// List lists all PriorityLevelConfigurations in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.PriorityLevelConfiguration, err error)
-	// ListWithContext lists all PriorityLevelConfigurations in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.PriorityLevelConfiguration, err error)
 	// Get retrieves the PriorityLevelConfiguration from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.PriorityLevelConfiguration, error)
-	// GetWithContext retrieves the PriorityLevelConfiguration from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta1.PriorityLevelConfiguration, error)
 	PriorityLevelConfigurationListerExpansion
 }
 
 // priorityLevelConfigurationLister implements the PriorityLevelConfigurationLister interface.
 type priorityLevelConfigurationLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewPriorityLevelConfigurationLister returns a new PriorityLevelConfigurationLister.
@@ -55,14 +50,20 @@ func NewPriorityLevelConfigurationLister(indexer cache.Indexer) PriorityLevelCon
 	return &priorityLevelConfigurationLister{indexer: indexer}
 }
 
-// List lists all PriorityLevelConfigurations in the indexer.
-func (s *priorityLevelConfigurationLister) List(selector labels.Selector) (ret []*v1beta1.PriorityLevelConfiguration, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *priorityLevelConfigurationLister) Scoped(scope rest.Scope) PriorityLevelConfigurationLister {
+	return &priorityLevelConfigurationLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all PriorityLevelConfigurations in the indexer.
-func (s *priorityLevelConfigurationLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta1.PriorityLevelConfiguration, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all PriorityLevelConfigurations in the indexer.
+func (s *priorityLevelConfigurationLister) List(selector labels.Selector) (ret []*v1beta1.PriorityLevelConfiguration, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.PriorityLevelConfiguration))
 	})
 	return ret, err
@@ -70,14 +71,9 @@ func (s *priorityLevelConfigurationLister) ListWithContext(ctx context.Context, 
 
 // Get retrieves the PriorityLevelConfiguration from the index for a given name.
 func (s *priorityLevelConfigurationLister) Get(name string) (*v1beta1.PriorityLevelConfiguration, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the PriorityLevelConfiguration from the index for a given name.
-func (s *priorityLevelConfigurationLister) GetWithContext(ctx context.Context, name string) (*v1beta1.PriorityLevelConfiguration, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

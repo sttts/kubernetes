@@ -39,6 +39,10 @@ type IngressClassesGetter interface {
 	IngressClasses() IngressClassInterface
 }
 
+type ScopedIngressClassesGetter interface {
+	ScopedIngressClasses(scope rest.Scope) IngressClassInterface
+}
+
 // IngressClassInterface has methods to work with IngressClass resources.
 type IngressClassInterface interface {
 	Create(ctx context.Context, ingressClass *v1beta1.IngressClass, opts v1.CreateOptions) (*v1beta1.IngressClass, error)
@@ -57,13 +61,15 @@ type IngressClassInterface interface {
 type ingressClasses struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newIngressClasses returns a IngressClasses
-func newIngressClasses(c *NetworkingV1beta1Client) *ingressClasses {
+func newIngressClasses(c *NetworkingV1beta1Client, scope rest.Scope) *ingressClasses {
 	return &ingressClasses{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -72,6 +78,7 @@ func (c *ingressClasses) Get(ctx context.Context, name string, options v1.GetOpt
 	result = &v1beta1.IngressClass{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("ingressclasses").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -89,6 +96,7 @@ func (c *ingressClasses) List(ctx context.Context, opts v1.ListOptions) (result 
 	result = &v1beta1.IngressClassList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("ingressclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -106,6 +114,7 @@ func (c *ingressClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch.
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("ingressclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -117,6 +126,7 @@ func (c *ingressClasses) Create(ctx context.Context, ingressClass *v1beta1.Ingre
 	result = &v1beta1.IngressClass{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("ingressclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(ingressClass).
@@ -130,6 +140,7 @@ func (c *ingressClasses) Update(ctx context.Context, ingressClass *v1beta1.Ingre
 	result = &v1beta1.IngressClass{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("ingressclasses").
 		Name(ingressClass.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -143,6 +154,7 @@ func (c *ingressClasses) Update(ctx context.Context, ingressClass *v1beta1.Ingre
 func (c *ingressClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("ingressclasses").
 		Name(name).
 		Body(&opts).
@@ -158,6 +170,7 @@ func (c *ingressClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("ingressclasses").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -171,6 +184,7 @@ func (c *ingressClasses) Patch(ctx context.Context, name string, pt types.PatchT
 	result = &v1beta1.IngressClass{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("ingressclasses").
 		Name(name).
 		SubResource(subresources...).
@@ -198,6 +212,7 @@ func (c *ingressClasses) Apply(ctx context.Context, ingressClass *networkingv1be
 	result = &v1beta1.IngressClass{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("ingressclasses").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).

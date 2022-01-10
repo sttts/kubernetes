@@ -35,6 +35,10 @@ type NodeMetricsesGetter interface {
 	NodeMetricses() NodeMetricsInterface
 }
 
+type ScopedNodeMetricsesGetter interface {
+	ScopedNodeMetricses(scope rest.Scope) NodeMetricsInterface
+}
+
 // NodeMetricsInterface has methods to work with NodeMetrics resources.
 type NodeMetricsInterface interface {
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.NodeMetrics, error)
@@ -47,13 +51,15 @@ type NodeMetricsInterface interface {
 type nodeMetricses struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newNodeMetricses returns a NodeMetricses
-func newNodeMetricses(c *MetricsV1alpha1Client) *nodeMetricses {
+func newNodeMetricses(c *MetricsV1alpha1Client, scope rest.Scope) *nodeMetricses {
 	return &nodeMetricses{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -62,6 +68,7 @@ func (c *nodeMetricses) Get(ctx context.Context, name string, options v1.GetOpti
 	result = &v1alpha1.NodeMetrics{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("nodes").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -79,6 +86,7 @@ func (c *nodeMetricses) List(ctx context.Context, opts v1.ListOptions) (result *
 	result = &v1alpha1.NodeMetricsList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("nodes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -96,6 +104,7 @@ func (c *nodeMetricses) Watch(ctx context.Context, opts v1.ListOptions) (watch.I
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("nodes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).

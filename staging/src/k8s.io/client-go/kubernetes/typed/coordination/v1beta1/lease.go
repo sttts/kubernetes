@@ -39,6 +39,10 @@ type LeasesGetter interface {
 	Leases(namespace string) LeaseInterface
 }
 
+type ScopedLeasesGetter interface {
+	ScopedLeases(scope rest.Scope, namespace string) LeaseInterface
+}
+
 // LeaseInterface has methods to work with Lease resources.
 type LeaseInterface interface {
 	Create(ctx context.Context, lease *v1beta1.Lease, opts v1.CreateOptions) (*v1beta1.Lease, error)
@@ -57,14 +61,16 @@ type LeaseInterface interface {
 type leases struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newLeases returns a Leases
-func newLeases(c *CoordinationV1beta1Client, namespace string) *leases {
+func newLeases(c *CoordinationV1beta1Client, scope rest.Scope, namespace string) *leases {
 	return &leases{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -74,6 +80,7 @@ func (c *leases) Get(ctx context.Context, name string, options v1.GetOptions) (r
 	result = &v1beta1.Lease{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
 		Name(name).
@@ -92,6 +99,7 @@ func (c *leases) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1
 	result = &v1beta1.LeaseList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -110,6 +118,7 @@ func (c *leases) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interfac
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -122,6 +131,7 @@ func (c *leases) Create(ctx context.Context, lease *v1beta1.Lease, opts v1.Creat
 	result = &v1beta1.Lease{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -136,6 +146,7 @@ func (c *leases) Update(ctx context.Context, lease *v1beta1.Lease, opts v1.Updat
 	result = &v1beta1.Lease{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
 		Name(lease.Name).
@@ -150,6 +161,7 @@ func (c *leases) Update(ctx context.Context, lease *v1beta1.Lease, opts v1.Updat
 func (c *leases) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
 		Name(name).
@@ -166,6 +178,7 @@ func (c *leases) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, li
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -180,6 +193,7 @@ func (c *leases) Patch(ctx context.Context, name string, pt types.PatchType, dat
 	result = &v1beta1.Lease{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
 		Name(name).
@@ -208,6 +222,7 @@ func (c *leases) Apply(ctx context.Context, lease *coordinationv1beta1.LeaseAppl
 	result = &v1beta1.Lease{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
 		Name(*name).

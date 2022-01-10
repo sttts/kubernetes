@@ -19,35 +19,30 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // IngressClassLister helps list IngressClasses.
 // All objects returned here must be treated as read-only.
 type IngressClassLister interface {
+	Scoped(scope rest.Scope) IngressClassLister
 	// List lists all IngressClasses in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.IngressClass, err error)
-	// ListWithContext lists all IngressClasses in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.IngressClass, err error)
 	// Get retrieves the IngressClass from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.IngressClass, error)
-	// GetWithContext retrieves the IngressClass from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.IngressClass, error)
 	IngressClassListerExpansion
 }
 
 // ingressClassLister implements the IngressClassLister interface.
 type ingressClassLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewIngressClassLister returns a new IngressClassLister.
@@ -55,14 +50,20 @@ func NewIngressClassLister(indexer cache.Indexer) IngressClassLister {
 	return &ingressClassLister{indexer: indexer}
 }
 
-// List lists all IngressClasses in the indexer.
-func (s *ingressClassLister) List(selector labels.Selector) (ret []*v1.IngressClass, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *ingressClassLister) Scoped(scope rest.Scope) IngressClassLister {
+	return &ingressClassLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all IngressClasses in the indexer.
-func (s *ingressClassLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.IngressClass, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all IngressClasses in the indexer.
+func (s *ingressClassLister) List(selector labels.Selector) (ret []*v1.IngressClass, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.IngressClass))
 	})
 	return ret, err
@@ -70,14 +71,9 @@ func (s *ingressClassLister) ListWithContext(ctx context.Context, selector label
 
 // Get retrieves the IngressClass from the index for a given name.
 func (s *ingressClassLister) Get(name string) (*v1.IngressClass, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the IngressClass from the index for a given name.
-func (s *ingressClassLister) GetWithContext(ctx context.Context, name string) (*v1.IngressClass, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

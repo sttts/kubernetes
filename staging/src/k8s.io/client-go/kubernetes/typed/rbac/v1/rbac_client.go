@@ -27,9 +27,13 @@ import (
 type RbacV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterRolesGetter
+	ScopedClusterRolesGetter
 	ClusterRoleBindingsGetter
+	ScopedClusterRoleBindingsGetter
 	RolesGetter
+	ScopedRolesGetter
 	RoleBindingsGetter
+	ScopedRoleBindingsGetter
 }
 
 // RbacV1Client is used to interact with features provided by the rbac.authorization.k8s.io group.
@@ -39,19 +43,35 @@ type RbacV1Client struct {
 }
 
 func (c *RbacV1Client) ClusterRoles() ClusterRoleInterface {
-	return newClusterRoles(c)
+	return newClusterRoles(c, nil)
+}
+
+func (c *RbacV1Client) ScopedClusterRoles(scope rest.Scope) ClusterRoleInterface {
+	return newClusterRoles(c, scope)
 }
 
 func (c *RbacV1Client) ClusterRoleBindings() ClusterRoleBindingInterface {
-	return newClusterRoleBindings(c)
+	return newClusterRoleBindings(c, nil)
+}
+
+func (c *RbacV1Client) ScopedClusterRoleBindings(scope rest.Scope) ClusterRoleBindingInterface {
+	return newClusterRoleBindings(c, scope)
 }
 
 func (c *RbacV1Client) Roles(namespace string) RoleInterface {
-	return newRoles(c, namespace)
+	return newRoles(c, nil, namespace)
+}
+
+func (c *RbacV1Client) ScopedRoles(scope rest.Scope, namespace string) RoleInterface {
+	return newRoles(c, scope, namespace)
 }
 
 func (c *RbacV1Client) RoleBindings(namespace string) RoleBindingInterface {
-	return newRoleBindings(c, namespace)
+	return newRoleBindings(c, nil, namespace)
+}
+
+func (c *RbacV1Client) ScopedRoleBindings(scope rest.Scope, namespace string) RoleBindingInterface {
+	return newRoleBindings(c, scope, namespace)
 }
 
 // NewForConfig creates a new RbacV1Client for the given config.

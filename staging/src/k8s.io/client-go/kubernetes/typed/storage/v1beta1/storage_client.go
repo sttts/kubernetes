@@ -27,10 +27,15 @@ import (
 type StorageV1beta1Interface interface {
 	RESTClient() rest.Interface
 	CSIDriversGetter
+	ScopedCSIDriversGetter
 	CSINodesGetter
+	ScopedCSINodesGetter
 	CSIStorageCapacitiesGetter
+	ScopedCSIStorageCapacitiesGetter
 	StorageClassesGetter
+	ScopedStorageClassesGetter
 	VolumeAttachmentsGetter
+	ScopedVolumeAttachmentsGetter
 }
 
 // StorageV1beta1Client is used to interact with features provided by the storage.k8s.io group.
@@ -40,23 +45,43 @@ type StorageV1beta1Client struct {
 }
 
 func (c *StorageV1beta1Client) CSIDrivers() CSIDriverInterface {
-	return newCSIDrivers(c)
+	return newCSIDrivers(c, nil)
+}
+
+func (c *StorageV1beta1Client) ScopedCSIDrivers(scope rest.Scope) CSIDriverInterface {
+	return newCSIDrivers(c, scope)
 }
 
 func (c *StorageV1beta1Client) CSINodes() CSINodeInterface {
-	return newCSINodes(c)
+	return newCSINodes(c, nil)
+}
+
+func (c *StorageV1beta1Client) ScopedCSINodes(scope rest.Scope) CSINodeInterface {
+	return newCSINodes(c, scope)
 }
 
 func (c *StorageV1beta1Client) CSIStorageCapacities(namespace string) CSIStorageCapacityInterface {
-	return newCSIStorageCapacities(c, namespace)
+	return newCSIStorageCapacities(c, nil, namespace)
+}
+
+func (c *StorageV1beta1Client) ScopedCSIStorageCapacities(scope rest.Scope, namespace string) CSIStorageCapacityInterface {
+	return newCSIStorageCapacities(c, scope, namespace)
 }
 
 func (c *StorageV1beta1Client) StorageClasses() StorageClassInterface {
-	return newStorageClasses(c)
+	return newStorageClasses(c, nil)
+}
+
+func (c *StorageV1beta1Client) ScopedStorageClasses(scope rest.Scope) StorageClassInterface {
+	return newStorageClasses(c, scope)
 }
 
 func (c *StorageV1beta1Client) VolumeAttachments() VolumeAttachmentInterface {
-	return newVolumeAttachments(c)
+	return newVolumeAttachments(c, nil)
+}
+
+func (c *StorageV1beta1Client) ScopedVolumeAttachments(scope rest.Scope) VolumeAttachmentInterface {
+	return newVolumeAttachments(c, scope)
 }
 
 // NewForConfig creates a new StorageV1beta1Client for the given config.

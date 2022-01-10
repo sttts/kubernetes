@@ -39,6 +39,10 @@ type StorageClassesGetter interface {
 	StorageClasses() StorageClassInterface
 }
 
+type ScopedStorageClassesGetter interface {
+	ScopedStorageClasses(scope rest.Scope) StorageClassInterface
+}
+
 // StorageClassInterface has methods to work with StorageClass resources.
 type StorageClassInterface interface {
 	Create(ctx context.Context, storageClass *v1.StorageClass, opts metav1.CreateOptions) (*v1.StorageClass, error)
@@ -57,13 +61,15 @@ type StorageClassInterface interface {
 type storageClasses struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newStorageClasses returns a StorageClasses
-func newStorageClasses(c *StorageV1Client) *storageClasses {
+func newStorageClasses(c *StorageV1Client, scope rest.Scope) *storageClasses {
 	return &storageClasses{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -72,6 +78,7 @@ func (c *storageClasses) Get(ctx context.Context, name string, options metav1.Ge
 	result = &v1.StorageClass{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageclasses").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -89,6 +96,7 @@ func (c *storageClasses) List(ctx context.Context, opts metav1.ListOptions) (res
 	result = &v1.StorageClassList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -106,6 +114,7 @@ func (c *storageClasses) Watch(ctx context.Context, opts metav1.ListOptions) (wa
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -117,6 +126,7 @@ func (c *storageClasses) Create(ctx context.Context, storageClass *v1.StorageCla
 	result = &v1.StorageClass{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(storageClass).
@@ -130,6 +140,7 @@ func (c *storageClasses) Update(ctx context.Context, storageClass *v1.StorageCla
 	result = &v1.StorageClass{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageclasses").
 		Name(storageClass.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -143,6 +154,7 @@ func (c *storageClasses) Update(ctx context.Context, storageClass *v1.StorageCla
 func (c *storageClasses) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageclasses").
 		Name(name).
 		Body(&opts).
@@ -158,6 +170,7 @@ func (c *storageClasses) DeleteCollection(ctx context.Context, opts metav1.Delet
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageclasses").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -171,6 +184,7 @@ func (c *storageClasses) Patch(ctx context.Context, name string, pt types.PatchT
 	result = &v1.StorageClass{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageclasses").
 		Name(name).
 		SubResource(subresources...).
@@ -198,6 +212,7 @@ func (c *storageClasses) Apply(ctx context.Context, storageClass *storagev1.Stor
 	result = &v1.StorageClass{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("storageclasses").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).

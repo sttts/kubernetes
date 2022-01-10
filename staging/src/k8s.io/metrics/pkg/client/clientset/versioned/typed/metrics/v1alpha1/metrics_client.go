@@ -27,7 +27,9 @@ import (
 type MetricsV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	NodeMetricsesGetter
+	ScopedNodeMetricsesGetter
 	PodMetricsesGetter
+	ScopedPodMetricsesGetter
 }
 
 // MetricsV1alpha1Client is used to interact with features provided by the metrics.k8s.io group.
@@ -37,11 +39,19 @@ type MetricsV1alpha1Client struct {
 }
 
 func (c *MetricsV1alpha1Client) NodeMetricses() NodeMetricsInterface {
-	return newNodeMetricses(c)
+	return newNodeMetricses(c, nil)
+}
+
+func (c *MetricsV1alpha1Client) ScopedNodeMetricses(scope rest.Scope) NodeMetricsInterface {
+	return newNodeMetricses(c, scope)
 }
 
 func (c *MetricsV1alpha1Client) PodMetricses(namespace string) PodMetricsInterface {
-	return newPodMetricses(c, namespace)
+	return newPodMetricses(c, nil, namespace)
+}
+
+func (c *MetricsV1alpha1Client) ScopedPodMetricses(scope rest.Scope, namespace string) PodMetricsInterface {
+	return newPodMetricses(c, scope, namespace)
 }
 
 // NewForConfig creates a new MetricsV1alpha1Client for the given config.

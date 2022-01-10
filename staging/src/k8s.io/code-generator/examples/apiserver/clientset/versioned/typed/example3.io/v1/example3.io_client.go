@@ -27,6 +27,7 @@ import (
 type ThirdExampleV1Interface interface {
 	RESTClient() rest.Interface
 	TestTypesGetter
+	ScopedTestTypesGetter
 }
 
 // ThirdExampleV1Client is used to interact with features provided by the example.dots.apiserver.code-generator.k8s.io group.
@@ -36,7 +37,11 @@ type ThirdExampleV1Client struct {
 }
 
 func (c *ThirdExampleV1Client) TestTypes(namespace string) TestTypeInterface {
-	return newTestTypes(c, namespace)
+	return newTestTypes(c, nil, namespace)
+}
+
+func (c *ThirdExampleV1Client) ScopedTestTypes(scope rest.Scope, namespace string) TestTypeInterface {
+	return newTestTypes(c, scope, namespace)
 }
 
 // NewForConfig creates a new ThirdExampleV1Client for the given config.

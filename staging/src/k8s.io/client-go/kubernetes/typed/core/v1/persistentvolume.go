@@ -39,6 +39,10 @@ type PersistentVolumesGetter interface {
 	PersistentVolumes() PersistentVolumeInterface
 }
 
+type ScopedPersistentVolumesGetter interface {
+	ScopedPersistentVolumes(scope rest.Scope) PersistentVolumeInterface
+}
+
 // PersistentVolumeInterface has methods to work with PersistentVolume resources.
 type PersistentVolumeInterface interface {
 	Create(ctx context.Context, persistentVolume *v1.PersistentVolume, opts metav1.CreateOptions) (*v1.PersistentVolume, error)
@@ -59,13 +63,15 @@ type PersistentVolumeInterface interface {
 type persistentVolumes struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newPersistentVolumes returns a PersistentVolumes
-func newPersistentVolumes(c *CoreV1Client) *persistentVolumes {
+func newPersistentVolumes(c *CoreV1Client, scope rest.Scope) *persistentVolumes {
 	return &persistentVolumes{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -74,6 +80,7 @@ func (c *persistentVolumes) Get(ctx context.Context, name string, options metav1
 	result = &v1.PersistentVolume{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -91,6 +98,7 @@ func (c *persistentVolumes) List(ctx context.Context, opts metav1.ListOptions) (
 	result = &v1.PersistentVolumeList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +116,7 @@ func (c *persistentVolumes) Watch(ctx context.Context, opts metav1.ListOptions) 
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -119,6 +128,7 @@ func (c *persistentVolumes) Create(ctx context.Context, persistentVolume *v1.Per
 	result = &v1.PersistentVolume{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(persistentVolume).
@@ -132,6 +142,7 @@ func (c *persistentVolumes) Update(ctx context.Context, persistentVolume *v1.Per
 	result = &v1.PersistentVolume{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		Name(persistentVolume.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -147,6 +158,7 @@ func (c *persistentVolumes) UpdateStatus(ctx context.Context, persistentVolume *
 	result = &v1.PersistentVolume{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		Name(persistentVolume.Name).
 		SubResource("status").
@@ -161,6 +173,7 @@ func (c *persistentVolumes) UpdateStatus(ctx context.Context, persistentVolume *
 func (c *persistentVolumes) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		Name(name).
 		Body(&opts).
@@ -176,6 +189,7 @@ func (c *persistentVolumes) DeleteCollection(ctx context.Context, opts metav1.De
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -189,6 +203,7 @@ func (c *persistentVolumes) Patch(ctx context.Context, name string, pt types.Pat
 	result = &v1.PersistentVolume{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		Name(name).
 		SubResource(subresources...).
@@ -216,6 +231,7 @@ func (c *persistentVolumes) Apply(ctx context.Context, persistentVolume *corev1.
 	result = &v1.PersistentVolume{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).
@@ -245,6 +261,7 @@ func (c *persistentVolumes) ApplyStatus(ctx context.Context, persistentVolume *c
 	result = &v1.PersistentVolume{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("persistentvolumes").
 		Name(*name).
 		SubResource("status").

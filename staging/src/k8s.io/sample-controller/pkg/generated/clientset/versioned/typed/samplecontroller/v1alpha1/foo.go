@@ -36,6 +36,10 @@ type FoosGetter interface {
 	Foos(namespace string) FooInterface
 }
 
+type ScopedFoosGetter interface {
+	ScopedFoos(scope rest.Scope, namespace string) FooInterface
+}
+
 // FooInterface has methods to work with Foo resources.
 type FooInterface interface {
 	Create(ctx context.Context, foo *v1alpha1.Foo, opts v1.CreateOptions) (*v1alpha1.Foo, error)
@@ -54,14 +58,16 @@ type FooInterface interface {
 type foos struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newFoos returns a Foos
-func newFoos(c *SamplecontrollerV1alpha1Client, namespace string) *foos {
+func newFoos(c *SamplecontrollerV1alpha1Client, scope rest.Scope, namespace string) *foos {
 	return &foos{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -71,6 +77,7 @@ func (c *foos) Get(ctx context.Context, name string, options v1.GetOptions) (res
 	result = &v1alpha1.Foo{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
 		Name(name).
@@ -89,6 +96,7 @@ func (c *foos) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.
 	result = &v1alpha1.FooList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -107,6 +115,7 @@ func (c *foos) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface,
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -119,6 +128,7 @@ func (c *foos) Create(ctx context.Context, foo *v1alpha1.Foo, opts v1.CreateOpti
 	result = &v1alpha1.Foo{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -133,6 +143,7 @@ func (c *foos) Update(ctx context.Context, foo *v1alpha1.Foo, opts v1.UpdateOpti
 	result = &v1alpha1.Foo{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
 		Name(foo.Name).
@@ -149,6 +160,7 @@ func (c *foos) UpdateStatus(ctx context.Context, foo *v1alpha1.Foo, opts v1.Upda
 	result = &v1alpha1.Foo{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
 		Name(foo.Name).
@@ -164,6 +176,7 @@ func (c *foos) UpdateStatus(ctx context.Context, foo *v1alpha1.Foo, opts v1.Upda
 func (c *foos) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
 		Name(name).
@@ -180,6 +193,7 @@ func (c *foos) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, list
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -194,6 +208,7 @@ func (c *foos) Patch(ctx context.Context, name string, pt types.PatchType, data 
 	result = &v1alpha1.Foo{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
 		Name(name).

@@ -57,9 +57,9 @@ var defaultScope = scope{name: ""}
 
 type defaultScoper struct{}
 
-func (ds *defaultScoper) ScopeFromContext(ctx context.Context) (rest.Scope, error) {
-	return &defaultScope, nil
-}
+// func (ds *defaultScoper) ScopeFromContext(ctx context.Context) (rest.Scope, error) {
+// 	return &defaultScope, nil
+// }
 
 func (ds *defaultScoper) ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
 	return &defaultScope, nil
@@ -73,8 +73,8 @@ type ControllerzConfig struct {
 	ObjectKeyFunc KeyFunc
 	DecodeKeyFunc func(key string) (QueueKey, error)
 
-	ListAllIndexFunc      IndexFunc
-	ListAllIndexValueFunc func(ctx context.Context) (string, error)
+	ListAllIndexFunc IndexFunc
+	// ListAllIndexValueFunc func(ctx context.Context) (string, error)
 
 	NamespaceIndexFunc IndexFunc
 	NamespaceKeyFunc   func(ctx context.Context, namespace string) (string, error)
@@ -82,8 +82,8 @@ type ControllerzConfig struct {
 	NameKeyFunc          func(ctx context.Context, name string) (string, error)
 	NamespaceNameKeyFunc func(ctx context.Context, namespace, name string) (string, error)
 
-	NewSyncContextFunc func(ctx context.Context, key QueueKey) context.Context
-	Scoper             rest.Scoper
+	// NewSyncContextFunc func(ctx context.Context, key QueueKey) context.Context
+	Scoper rest.Scoper
 }
 
 type completedConfig struct {
@@ -105,10 +105,10 @@ func init() {
 				// Give all objects the same index value
 				return []string{defaultListAllIndexValue}, nil
 			},
-			ListAllIndexValueFunc: func(ctx context.Context) (string, error) {
-				// Match the index value from ListAllIndexFunc
-				return defaultListAllIndexValue, nil
-			},
+			// ListAllIndexValueFunc: func(ctx context.Context) (string, error) {
+			// 	// Match the index value from ListAllIndexFunc
+			// 	return defaultListAllIndexValue, nil
+			// },
 			NamespaceIndexFunc: MetaNamespaceIndexFunc,
 			NamespaceKeyFunc: func(ctx context.Context, namespace string) (string, error) {
 				return namespace, nil
@@ -122,9 +122,9 @@ func init() {
 				}
 				return name, nil
 			},
-			NewSyncContextFunc: func(ctx context.Context, key QueueKey) context.Context {
-				return ctx
-			},
+			// NewSyncContextFunc: func(ctx context.Context, key QueueKey) context.Context {
+			// 	return ctx
+			// },
 			Scoper: &defaultScoper{},
 		},
 	}
@@ -163,13 +163,13 @@ func NamespaceNameKeyFunc(ctx context.Context, namespace, name string) (string, 
 	return cc.NamespaceNameKeyFunc(ctx, namespace, name)
 }
 
-func NewSyncContext(ctx context.Context, key QueueKey) context.Context {
-	return cc.NewSyncContextFunc(ctx, key)
-}
+// func NewSyncContext(ctx context.Context, key QueueKey) context.Context {
+// 	return cc.NewSyncContextFunc(ctx, key)
+// }
 
-func ScopeFromContext(ctx context.Context) (rest.Scope, error) {
-	return cc.Scoper.ScopeFromContext(ctx)
-}
+// func ScopeFromContext(ctx context.Context) (rest.Scope, error) {
+// 	return cc.Scoper.ScopeFromContext(ctx)
+// }
 
 func ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
 	return cc.Scoper.ScopeFromObject(obj)

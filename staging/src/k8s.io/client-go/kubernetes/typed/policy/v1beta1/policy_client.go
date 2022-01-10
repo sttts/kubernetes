@@ -27,8 +27,11 @@ import (
 type PolicyV1beta1Interface interface {
 	RESTClient() rest.Interface
 	EvictionsGetter
+	ScopedEvictionsGetter
 	PodDisruptionBudgetsGetter
+	ScopedPodDisruptionBudgetsGetter
 	PodSecurityPoliciesGetter
+	ScopedPodSecurityPoliciesGetter
 }
 
 // PolicyV1beta1Client is used to interact with features provided by the policy group.
@@ -38,15 +41,27 @@ type PolicyV1beta1Client struct {
 }
 
 func (c *PolicyV1beta1Client) Evictions(namespace string) EvictionInterface {
-	return newEvictions(c, namespace)
+	return newEvictions(c, nil, namespace)
+}
+
+func (c *PolicyV1beta1Client) ScopedEvictions(scope rest.Scope, namespace string) EvictionInterface {
+	return newEvictions(c, scope, namespace)
 }
 
 func (c *PolicyV1beta1Client) PodDisruptionBudgets(namespace string) PodDisruptionBudgetInterface {
-	return newPodDisruptionBudgets(c, namespace)
+	return newPodDisruptionBudgets(c, nil, namespace)
+}
+
+func (c *PolicyV1beta1Client) ScopedPodDisruptionBudgets(scope rest.Scope, namespace string) PodDisruptionBudgetInterface {
+	return newPodDisruptionBudgets(c, scope, namespace)
 }
 
 func (c *PolicyV1beta1Client) PodSecurityPolicies() PodSecurityPolicyInterface {
-	return newPodSecurityPolicies(c)
+	return newPodSecurityPolicies(c, nil)
+}
+
+func (c *PolicyV1beta1Client) ScopedPodSecurityPolicies(scope rest.Scope) PodSecurityPolicyInterface {
+	return newPodSecurityPolicies(c, scope)
 }
 
 // NewForConfig creates a new PolicyV1beta1Client for the given config.

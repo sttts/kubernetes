@@ -1050,10 +1050,15 @@ func decode(codec runtime.Codec, versioner storage.Versioner, value []byte, objP
 	if err != nil {
 		return err
 	}
+
+	// TODO PostDecode
+
 	// being unable to set the version does not prevent the object from being extracted
 	if err := versioner.UpdateObject(objPtr, uint64(rev)); err != nil {
 		klog.Errorf("failed to update object version: %v", err)
 	}
+
+	// TODO REMOVE
 	// HACK: in order to support CRD tenancy, the clusterName, which is extracted from the object etcd key,
 	// should be set on the decoded object.
 	// This is done here since we want to set the logical cluster the object is part of,
@@ -1082,11 +1087,15 @@ func appendListItem(v reflect.Value, data []byte, rev uint64, pred storage.Selec
 	if err != nil {
 		return err
 	}
+
+	// TODO PostDecode
+
 	// being unable to set the version does not prevent the object from being extracted
 	if err := versioner.UpdateObject(obj, rev); err != nil {
 		klog.Errorf("failed to update object version: %v", err)
 	}
 
+	// TODO REMOVE
 	// HACK: in order to support CRD tenancy, the clusterName, which is extracted from the object etcd key,
 	// should be set on the decoded object.
 	// This is done here since we want to set the logical cluster the object is part of,

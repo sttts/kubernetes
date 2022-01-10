@@ -19,10 +19,9 @@ limitations under the License.
 package internalversion
 
 import (
-	"context"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	example2 "k8s.io/code-generator/examples/apiserver/apis/example2"
 )
@@ -30,24 +29,20 @@ import (
 // TestTypeLister helps list TestTypes.
 // All objects returned here must be treated as read-only.
 type TestTypeLister interface {
+	Scoped(scope rest.Scope) TestTypeLister
 	// List lists all TestTypes in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*example2.TestType, err error)
-	// ListWithContext lists all TestTypes in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*example2.TestType, err error)
 	// Get retrieves the TestType from the index for a given name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*example2.TestType, error)
-	// GetWithContext retrieves the TestType from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*example2.TestType, error)
 	TestTypeListerExpansion
 }
 
 // testTypeLister implements the TestTypeLister interface.
 type testTypeLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewTestTypeLister returns a new TestTypeLister.
@@ -55,14 +50,20 @@ func NewTestTypeLister(indexer cache.Indexer) TestTypeLister {
 	return &testTypeLister{indexer: indexer}
 }
 
-// List lists all TestTypes in the indexer.
-func (s *testTypeLister) List(selector labels.Selector) (ret []*example2.TestType, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *testTypeLister) Scoped(scope rest.Scope) TestTypeLister {
+	return &testTypeLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all TestTypes in the indexer.
-func (s *testTypeLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*example2.TestType, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all TestTypes in the indexer.
+func (s *testTypeLister) List(selector labels.Selector) (ret []*example2.TestType, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*example2.TestType))
 	})
 	return ret, err
@@ -70,14 +71,9 @@ func (s *testTypeLister) ListWithContext(ctx context.Context, selector labels.Se
 
 // Get retrieves the TestType from the index for a given name.
 func (s *testTypeLister) Get(name string) (*example2.TestType, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the TestType from the index for a given name.
-func (s *testTypeLister) GetWithContext(ctx context.Context, name string) (*example2.TestType, error) {
-	key, err := cache.NameKeyFunc(ctx, name)
-	if err != nil {
-		return nil, err
+	key := name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

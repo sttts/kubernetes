@@ -39,6 +39,10 @@ type DaemonSetsGetter interface {
 	DaemonSets(namespace string) DaemonSetInterface
 }
 
+type ScopedDaemonSetsGetter interface {
+	ScopedDaemonSets(scope rest.Scope, namespace string) DaemonSetInterface
+}
+
 // DaemonSetInterface has methods to work with DaemonSet resources.
 type DaemonSetInterface interface {
 	Create(ctx context.Context, daemonSet *v1beta1.DaemonSet, opts v1.CreateOptions) (*v1beta1.DaemonSet, error)
@@ -59,14 +63,16 @@ type DaemonSetInterface interface {
 type daemonSets struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newDaemonSets returns a DaemonSets
-func newDaemonSets(c *ExtensionsV1beta1Client, namespace string) *daemonSets {
+func newDaemonSets(c *ExtensionsV1beta1Client, scope rest.Scope, namespace string) *daemonSets {
 	return &daemonSets{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -76,6 +82,7 @@ func (c *daemonSets) Get(ctx context.Context, name string, options v1.GetOptions
 	result = &v1beta1.DaemonSet{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		Name(name).
@@ -94,6 +101,7 @@ func (c *daemonSets) List(ctx context.Context, opts v1.ListOptions) (result *v1b
 	result = &v1beta1.DaemonSetList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -112,6 +120,7 @@ func (c *daemonSets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Inte
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -124,6 +133,7 @@ func (c *daemonSets) Create(ctx context.Context, daemonSet *v1beta1.DaemonSet, o
 	result = &v1beta1.DaemonSet{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -138,6 +148,7 @@ func (c *daemonSets) Update(ctx context.Context, daemonSet *v1beta1.DaemonSet, o
 	result = &v1beta1.DaemonSet{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		Name(daemonSet.Name).
@@ -154,6 +165,7 @@ func (c *daemonSets) UpdateStatus(ctx context.Context, daemonSet *v1beta1.Daemon
 	result = &v1beta1.DaemonSet{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		Name(daemonSet.Name).
@@ -169,6 +181,7 @@ func (c *daemonSets) UpdateStatus(ctx context.Context, daemonSet *v1beta1.Daemon
 func (c *daemonSets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		Name(name).
@@ -185,6 +198,7 @@ func (c *daemonSets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -199,6 +213,7 @@ func (c *daemonSets) Patch(ctx context.Context, name string, pt types.PatchType,
 	result = &v1beta1.DaemonSet{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		Name(name).
@@ -227,6 +242,7 @@ func (c *daemonSets) Apply(ctx context.Context, daemonSet *extensionsv1beta1.Dae
 	result = &v1beta1.DaemonSet{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		Name(*name).
@@ -257,6 +273,7 @@ func (c *daemonSets) ApplyStatus(ctx context.Context, daemonSet *extensionsv1bet
 	result = &v1beta1.DaemonSet{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("daemonsets").
 		Name(*name).

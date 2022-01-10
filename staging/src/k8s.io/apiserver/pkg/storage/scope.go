@@ -1,22 +1,14 @@
-package rest
+package storage
 
 import (
 	"context"
-	"net/http"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type Scope interface {
-	Name() string
-	CacheKey(in string) string
-	ScopeRequest(req *http.Request) error
-}
-
-type Scoper interface {
-	// ScopeFromContext(ctx context.Context) (Scope, error)
-	ScopeFromObject(obj metav1.Object) (Scope, error)
-	ScopeFromKey(key string) (Scope, error)
+	NoNamespaceKeyRootFunc(prefix string) string
+	PostDecode(obj runtime.Object) error
 }
 
 type scopeKeyType int

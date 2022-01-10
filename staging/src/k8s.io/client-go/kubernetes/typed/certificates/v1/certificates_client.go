@@ -27,6 +27,7 @@ import (
 type CertificatesV1Interface interface {
 	RESTClient() rest.Interface
 	CertificateSigningRequestsGetter
+	ScopedCertificateSigningRequestsGetter
 }
 
 // CertificatesV1Client is used to interact with features provided by the certificates.k8s.io group.
@@ -36,7 +37,11 @@ type CertificatesV1Client struct {
 }
 
 func (c *CertificatesV1Client) CertificateSigningRequests() CertificateSigningRequestInterface {
-	return newCertificateSigningRequests(c)
+	return newCertificateSigningRequests(c, nil)
+}
+
+func (c *CertificatesV1Client) ScopedCertificateSigningRequests(scope rest.Scope) CertificateSigningRequestInterface {
+	return newCertificateSigningRequests(c, scope)
 }
 
 // NewForConfig creates a new CertificatesV1Client for the given config.

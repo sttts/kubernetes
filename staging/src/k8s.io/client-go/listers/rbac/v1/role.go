@@ -19,23 +19,20 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // RoleLister helps list Roles.
 // All objects returned here must be treated as read-only.
 type RoleLister interface {
+	Scoped(scope rest.Scope) RoleLister
 	// List lists all Roles in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Role, err error)
-	// ListWithContext lists all Roles in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Role, err error)
 	// Roles returns an object that can list and get Roles.
 	Roles(namespace string) RoleNamespaceLister
 	RoleListerExpansion
@@ -44,6 +41,7 @@ type RoleLister interface {
 // roleLister implements the RoleLister interface.
 type roleLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewRoleLister returns a new RoleLister.
@@ -51,14 +49,20 @@ func NewRoleLister(indexer cache.Indexer) RoleLister {
 	return &roleLister{indexer: indexer}
 }
 
-// List lists all Roles in the indexer.
-func (s *roleLister) List(selector labels.Selector) (ret []*v1.Role, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *roleLister) Scoped(scope rest.Scope) RoleLister {
+	return &roleLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all Roles in the indexer.
-func (s *roleLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Role, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all Roles in the indexer.
+func (s *roleLister) List(selector labels.Selector) (ret []*v1.Role, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Role))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *roleLister) ListWithContext(ctx context.Context, selector labels.Select
 
 // Roles returns an object that can list and get Roles.
 func (s *roleLister) Roles(namespace string) RoleNamespaceLister {
-	return roleNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return roleNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // RoleNamespaceLister helps list and get Roles.
@@ -75,15 +79,9 @@ type RoleNamespaceLister interface {
 	// List lists all Roles in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Role, err error)
-	// ListWithContext lists all Roles in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Role, err error)
 	// Get retrieves the Role from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Role, error)
-	// GetWithContext retrieves the Role from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.Role, error)
 	RoleNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type RoleNamespaceLister interface {
 type roleNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all Roles in the indexer for a given namespace.
 func (s roleNamespaceLister) List(selector labels.Selector) (ret []*v1.Role, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all Roles in the indexer for a given namespace.
-func (s roleNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.Role, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Role))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s roleNamespaceLister) ListWithContext(ctx context.Context, selector label
 
 // Get retrieves the Role from the indexer for a given namespace and name.
 func (s roleNamespaceLister) Get(name string) (*v1.Role, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the Role from the indexer for a given namespace and name.
-func (s roleNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.Role, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

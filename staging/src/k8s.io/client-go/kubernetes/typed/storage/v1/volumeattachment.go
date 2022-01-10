@@ -39,6 +39,10 @@ type VolumeAttachmentsGetter interface {
 	VolumeAttachments() VolumeAttachmentInterface
 }
 
+type ScopedVolumeAttachmentsGetter interface {
+	ScopedVolumeAttachments(scope rest.Scope) VolumeAttachmentInterface
+}
+
 // VolumeAttachmentInterface has methods to work with VolumeAttachment resources.
 type VolumeAttachmentInterface interface {
 	Create(ctx context.Context, volumeAttachment *v1.VolumeAttachment, opts metav1.CreateOptions) (*v1.VolumeAttachment, error)
@@ -59,13 +63,15 @@ type VolumeAttachmentInterface interface {
 type volumeAttachments struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 }
 
 // newVolumeAttachments returns a VolumeAttachments
-func newVolumeAttachments(c *StorageV1Client) *volumeAttachments {
+func newVolumeAttachments(c *StorageV1Client, scope rest.Scope) *volumeAttachments {
 	return &volumeAttachments{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 	}
 }
 
@@ -74,6 +80,7 @@ func (c *volumeAttachments) Get(ctx context.Context, name string, options metav1
 	result = &v1.VolumeAttachment{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -91,6 +98,7 @@ func (c *volumeAttachments) List(ctx context.Context, opts metav1.ListOptions) (
 	result = &v1.VolumeAttachmentList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -108,6 +116,7 @@ func (c *volumeAttachments) Watch(ctx context.Context, opts metav1.ListOptions) 
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -119,6 +128,7 @@ func (c *volumeAttachments) Create(ctx context.Context, volumeAttachment *v1.Vol
 	result = &v1.VolumeAttachment{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(volumeAttachment).
@@ -132,6 +142,7 @@ func (c *volumeAttachments) Update(ctx context.Context, volumeAttachment *v1.Vol
 	result = &v1.VolumeAttachment{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		Name(volumeAttachment.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -147,6 +158,7 @@ func (c *volumeAttachments) UpdateStatus(ctx context.Context, volumeAttachment *
 	result = &v1.VolumeAttachment{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		Name(volumeAttachment.Name).
 		SubResource("status").
@@ -161,6 +173,7 @@ func (c *volumeAttachments) UpdateStatus(ctx context.Context, volumeAttachment *
 func (c *volumeAttachments) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		Name(name).
 		Body(&opts).
@@ -176,6 +189,7 @@ func (c *volumeAttachments) DeleteCollection(ctx context.Context, opts metav1.De
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -189,6 +203,7 @@ func (c *volumeAttachments) Patch(ctx context.Context, name string, pt types.Pat
 	result = &v1.VolumeAttachment{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		Name(name).
 		SubResource(subresources...).
@@ -216,6 +231,7 @@ func (c *volumeAttachments) Apply(ctx context.Context, volumeAttachment *storage
 	result = &v1.VolumeAttachment{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		Name(*name).
 		VersionedParams(&patchOpts, scheme.ParameterCodec).
@@ -245,6 +261,7 @@ func (c *volumeAttachments) ApplyStatus(ctx context.Context, volumeAttachment *s
 	result = &v1.VolumeAttachment{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Resource("volumeattachments").
 		Name(*name).
 		SubResource("status").

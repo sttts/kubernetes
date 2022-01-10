@@ -39,6 +39,10 @@ type HorizontalPodAutoscalersGetter interface {
 	HorizontalPodAutoscalers(namespace string) HorizontalPodAutoscalerInterface
 }
 
+type ScopedHorizontalPodAutoscalersGetter interface {
+	ScopedHorizontalPodAutoscalers(scope rest.Scope, namespace string) HorizontalPodAutoscalerInterface
+}
+
 // HorizontalPodAutoscalerInterface has methods to work with HorizontalPodAutoscaler resources.
 type HorizontalPodAutoscalerInterface interface {
 	Create(ctx context.Context, horizontalPodAutoscaler *v1.HorizontalPodAutoscaler, opts metav1.CreateOptions) (*v1.HorizontalPodAutoscaler, error)
@@ -59,14 +63,16 @@ type HorizontalPodAutoscalerInterface interface {
 type horizontalPodAutoscalers struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newHorizontalPodAutoscalers returns a HorizontalPodAutoscalers
-func newHorizontalPodAutoscalers(c *AutoscalingV1Client, namespace string) *horizontalPodAutoscalers {
+func newHorizontalPodAutoscalers(c *AutoscalingV1Client, scope rest.Scope, namespace string) *horizontalPodAutoscalers {
 	return &horizontalPodAutoscalers{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -76,6 +82,7 @@ func (c *horizontalPodAutoscalers) Get(ctx context.Context, name string, options
 	result = &v1.HorizontalPodAutoscaler{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		Name(name).
@@ -94,6 +101,7 @@ func (c *horizontalPodAutoscalers) List(ctx context.Context, opts metav1.ListOpt
 	result = &v1.HorizontalPodAutoscalerList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -112,6 +120,7 @@ func (c *horizontalPodAutoscalers) Watch(ctx context.Context, opts metav1.ListOp
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -124,6 +133,7 @@ func (c *horizontalPodAutoscalers) Create(ctx context.Context, horizontalPodAuto
 	result = &v1.HorizontalPodAutoscaler{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -138,6 +148,7 @@ func (c *horizontalPodAutoscalers) Update(ctx context.Context, horizontalPodAuto
 	result = &v1.HorizontalPodAutoscaler{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		Name(horizontalPodAutoscaler.Name).
@@ -154,6 +165,7 @@ func (c *horizontalPodAutoscalers) UpdateStatus(ctx context.Context, horizontalP
 	result = &v1.HorizontalPodAutoscaler{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		Name(horizontalPodAutoscaler.Name).
@@ -169,6 +181,7 @@ func (c *horizontalPodAutoscalers) UpdateStatus(ctx context.Context, horizontalP
 func (c *horizontalPodAutoscalers) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		Name(name).
@@ -185,6 +198,7 @@ func (c *horizontalPodAutoscalers) DeleteCollection(ctx context.Context, opts me
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -199,6 +213,7 @@ func (c *horizontalPodAutoscalers) Patch(ctx context.Context, name string, pt ty
 	result = &v1.HorizontalPodAutoscaler{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		Name(name).
@@ -227,6 +242,7 @@ func (c *horizontalPodAutoscalers) Apply(ctx context.Context, horizontalPodAutos
 	result = &v1.HorizontalPodAutoscaler{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		Name(*name).
@@ -257,6 +273,7 @@ func (c *horizontalPodAutoscalers) ApplyStatus(ctx context.Context, horizontalPo
 	result = &v1.HorizontalPodAutoscaler{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("horizontalpodautoscalers").
 		Name(*name).

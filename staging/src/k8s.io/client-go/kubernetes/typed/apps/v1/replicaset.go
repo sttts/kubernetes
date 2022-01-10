@@ -41,6 +41,10 @@ type ReplicaSetsGetter interface {
 	ReplicaSets(namespace string) ReplicaSetInterface
 }
 
+type ScopedReplicaSetsGetter interface {
+	ScopedReplicaSets(scope rest.Scope, namespace string) ReplicaSetInterface
+}
+
 // ReplicaSetInterface has methods to work with ReplicaSet resources.
 type ReplicaSetInterface interface {
 	Create(ctx context.Context, replicaSet *v1.ReplicaSet, opts metav1.CreateOptions) (*v1.ReplicaSet, error)
@@ -65,14 +69,16 @@ type ReplicaSetInterface interface {
 type replicaSets struct {
 	client  rest.Interface
 	cluster string
+	scope   rest.Scope
 	ns      string
 }
 
 // newReplicaSets returns a ReplicaSets
-func newReplicaSets(c *AppsV1Client, namespace string) *replicaSets {
+func newReplicaSets(c *AppsV1Client, scope rest.Scope, namespace string) *replicaSets {
 	return &replicaSets{
 		client:  c.RESTClient(),
 		cluster: c.cluster,
+		scope:   scope,
 		ns:      namespace,
 	}
 }
@@ -82,6 +88,7 @@ func (c *replicaSets) Get(ctx context.Context, name string, options metav1.GetOp
 	result = &v1.ReplicaSet{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(name).
@@ -100,6 +107,7 @@ func (c *replicaSets) List(ctx context.Context, opts metav1.ListOptions) (result
 	result = &v1.ReplicaSetList{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -118,6 +126,7 @@ func (c *replicaSets) Watch(ctx context.Context, opts metav1.ListOptions) (watch
 	opts.Watch = true
 	return c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -130,6 +139,7 @@ func (c *replicaSets) Create(ctx context.Context, replicaSet *v1.ReplicaSet, opt
 	result = &v1.ReplicaSet{}
 	err = c.client.Post().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -144,6 +154,7 @@ func (c *replicaSets) Update(ctx context.Context, replicaSet *v1.ReplicaSet, opt
 	result = &v1.ReplicaSet{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(replicaSet.Name).
@@ -160,6 +171,7 @@ func (c *replicaSets) UpdateStatus(ctx context.Context, replicaSet *v1.ReplicaSe
 	result = &v1.ReplicaSet{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(replicaSet.Name).
@@ -175,6 +187,7 @@ func (c *replicaSets) UpdateStatus(ctx context.Context, replicaSet *v1.ReplicaSe
 func (c *replicaSets) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(name).
@@ -191,6 +204,7 @@ func (c *replicaSets) DeleteCollection(ctx context.Context, opts metav1.DeleteOp
 	}
 	return c.client.Delete().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -205,6 +219,7 @@ func (c *replicaSets) Patch(ctx context.Context, name string, pt types.PatchType
 	result = &v1.ReplicaSet{}
 	err = c.client.Patch(pt).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(name).
@@ -233,6 +248,7 @@ func (c *replicaSets) Apply(ctx context.Context, replicaSet *appsv1.ReplicaSetAp
 	result = &v1.ReplicaSet{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(*name).
@@ -263,6 +279,7 @@ func (c *replicaSets) ApplyStatus(ctx context.Context, replicaSet *appsv1.Replic
 	result = &v1.ReplicaSet{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(*name).
@@ -279,6 +296,7 @@ func (c *replicaSets) GetScale(ctx context.Context, replicaSetName string, optio
 	result = &autoscalingv1.Scale{}
 	err = c.client.Get().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(replicaSetName).
@@ -294,6 +312,7 @@ func (c *replicaSets) UpdateScale(ctx context.Context, replicaSetName string, sc
 	result = &autoscalingv1.Scale{}
 	err = c.client.Put().
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(replicaSetName).
@@ -320,6 +339,7 @@ func (c *replicaSets) ApplyScale(ctx context.Context, replicaSetName string, sca
 	result = &autoscalingv1.Scale{}
 	err = c.client.Patch(types.ApplyPatchType).
 		Cluster(c.cluster).
+		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("replicasets").
 		Name(replicaSetName).

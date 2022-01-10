@@ -19,23 +19,20 @@ limitations under the License.
 package v1beta2
 
 import (
-	"context"
-
 	v1beta2 "k8s.io/api/apps/v1beta2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // StatefulSetLister helps list StatefulSets.
 // All objects returned here must be treated as read-only.
 type StatefulSetLister interface {
+	Scoped(scope rest.Scope) StatefulSetLister
 	// List lists all StatefulSets in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta2.StatefulSet, err error)
-	// ListWithContext lists all StatefulSets in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.StatefulSet, err error)
 	// StatefulSets returns an object that can list and get StatefulSets.
 	StatefulSets(namespace string) StatefulSetNamespaceLister
 	StatefulSetListerExpansion
@@ -44,6 +41,7 @@ type StatefulSetLister interface {
 // statefulSetLister implements the StatefulSetLister interface.
 type statefulSetLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewStatefulSetLister returns a new StatefulSetLister.
@@ -51,14 +49,20 @@ func NewStatefulSetLister(indexer cache.Indexer) StatefulSetLister {
 	return &statefulSetLister{indexer: indexer}
 }
 
-// List lists all StatefulSets in the indexer.
-func (s *statefulSetLister) List(selector labels.Selector) (ret []*v1beta2.StatefulSet, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *statefulSetLister) Scoped(scope rest.Scope) StatefulSetLister {
+	return &statefulSetLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all StatefulSets in the indexer.
-func (s *statefulSetLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.StatefulSet, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all StatefulSets in the indexer.
+func (s *statefulSetLister) List(selector labels.Selector) (ret []*v1beta2.StatefulSet, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.StatefulSet))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *statefulSetLister) ListWithContext(ctx context.Context, selector labels
 
 // StatefulSets returns an object that can list and get StatefulSets.
 func (s *statefulSetLister) StatefulSets(namespace string) StatefulSetNamespaceLister {
-	return statefulSetNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return statefulSetNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // StatefulSetNamespaceLister helps list and get StatefulSets.
@@ -75,15 +79,9 @@ type StatefulSetNamespaceLister interface {
 	// List lists all StatefulSets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta2.StatefulSet, err error)
-	// ListWithContext lists all StatefulSets in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.StatefulSet, err error)
 	// Get retrieves the StatefulSet from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta2.StatefulSet, error)
-	// GetWithContext retrieves the StatefulSet from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1beta2.StatefulSet, error)
 	StatefulSetNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type StatefulSetNamespaceLister interface {
 type statefulSetNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all StatefulSets in the indexer for a given namespace.
 func (s statefulSetNamespaceLister) List(selector labels.Selector) (ret []*v1beta2.StatefulSet, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all StatefulSets in the indexer for a given namespace.
-func (s statefulSetNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1beta2.StatefulSet, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.StatefulSet))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s statefulSetNamespaceLister) ListWithContext(ctx context.Context, selecto
 
 // Get retrieves the StatefulSet from the indexer for a given namespace and name.
 func (s statefulSetNamespaceLister) Get(name string) (*v1beta2.StatefulSet, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the StatefulSet from the indexer for a given namespace and name.
-func (s statefulSetNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1beta2.StatefulSet, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

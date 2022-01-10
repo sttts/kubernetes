@@ -19,23 +19,20 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // PersistentVolumeClaimLister helps list PersistentVolumeClaims.
 // All objects returned here must be treated as read-only.
 type PersistentVolumeClaimLister interface {
+	Scoped(scope rest.Scope) PersistentVolumeClaimLister
 	// List lists all PersistentVolumeClaims in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error)
-	// ListWithContext lists all PersistentVolumeClaims in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error)
 	// PersistentVolumeClaims returns an object that can list and get PersistentVolumeClaims.
 	PersistentVolumeClaims(namespace string) PersistentVolumeClaimNamespaceLister
 	PersistentVolumeClaimListerExpansion
@@ -44,6 +41,7 @@ type PersistentVolumeClaimLister interface {
 // persistentVolumeClaimLister implements the PersistentVolumeClaimLister interface.
 type persistentVolumeClaimLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewPersistentVolumeClaimLister returns a new PersistentVolumeClaimLister.
@@ -51,14 +49,20 @@ func NewPersistentVolumeClaimLister(indexer cache.Indexer) PersistentVolumeClaim
 	return &persistentVolumeClaimLister{indexer: indexer}
 }
 
-// List lists all PersistentVolumeClaims in the indexer.
-func (s *persistentVolumeClaimLister) List(selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *persistentVolumeClaimLister) Scoped(scope rest.Scope) PersistentVolumeClaimLister {
+	return &persistentVolumeClaimLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all PersistentVolumeClaims in the indexer.
-func (s *persistentVolumeClaimLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all PersistentVolumeClaims in the indexer.
+func (s *persistentVolumeClaimLister) List(selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.PersistentVolumeClaim))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *persistentVolumeClaimLister) ListWithContext(ctx context.Context, selec
 
 // PersistentVolumeClaims returns an object that can list and get PersistentVolumeClaims.
 func (s *persistentVolumeClaimLister) PersistentVolumeClaims(namespace string) PersistentVolumeClaimNamespaceLister {
-	return persistentVolumeClaimNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return persistentVolumeClaimNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // PersistentVolumeClaimNamespaceLister helps list and get PersistentVolumeClaims.
@@ -75,15 +79,9 @@ type PersistentVolumeClaimNamespaceLister interface {
 	// List lists all PersistentVolumeClaims in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error)
-	// ListWithContext lists all PersistentVolumeClaims in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error)
 	// Get retrieves the PersistentVolumeClaim from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.PersistentVolumeClaim, error)
-	// GetWithContext retrieves the PersistentVolumeClaim from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.PersistentVolumeClaim, error)
 	PersistentVolumeClaimNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type PersistentVolumeClaimNamespaceLister interface {
 type persistentVolumeClaimNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all PersistentVolumeClaims in the indexer for a given namespace.
 func (s persistentVolumeClaimNamespaceLister) List(selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all PersistentVolumeClaims in the indexer for a given namespace.
-func (s persistentVolumeClaimNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.PersistentVolumeClaim))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s persistentVolumeClaimNamespaceLister) ListWithContext(ctx context.Contex
 
 // Get retrieves the PersistentVolumeClaim from the indexer for a given namespace and name.
 func (s persistentVolumeClaimNamespaceLister) Get(name string) (*v1.PersistentVolumeClaim, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the PersistentVolumeClaim from the indexer for a given namespace and name.
-func (s persistentVolumeClaimNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.PersistentVolumeClaim, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

@@ -19,23 +19,20 @@ limitations under the License.
 package v1
 
 import (
-	"context"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 // LimitRangeLister helps list LimitRanges.
 // All objects returned here must be treated as read-only.
 type LimitRangeLister interface {
+	Scoped(scope rest.Scope) LimitRangeLister
 	// List lists all LimitRanges in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.LimitRange, err error)
-	// ListWithContext lists all LimitRanges in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.LimitRange, err error)
 	// LimitRanges returns an object that can list and get LimitRanges.
 	LimitRanges(namespace string) LimitRangeNamespaceLister
 	LimitRangeListerExpansion
@@ -44,6 +41,7 @@ type LimitRangeLister interface {
 // limitRangeLister implements the LimitRangeLister interface.
 type limitRangeLister struct {
 	indexer cache.Indexer
+	scope   rest.Scope
 }
 
 // NewLimitRangeLister returns a new LimitRangeLister.
@@ -51,14 +49,20 @@ func NewLimitRangeLister(indexer cache.Indexer) LimitRangeLister {
 	return &limitRangeLister{indexer: indexer}
 }
 
-// List lists all LimitRanges in the indexer.
-func (s *limitRangeLister) List(selector labels.Selector) (ret []*v1.LimitRange, err error) {
-	return s.ListWithContext(context.Background(), selector)
+func (s *limitRangeLister) Scoped(scope rest.Scope) LimitRangeLister {
+	return &limitRangeLister{
+		indexer: s.indexer,
+		scope:   scope,
+	}
 }
 
-// ListWithContext lists all LimitRanges in the indexer.
-func (s *limitRangeLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.LimitRange, err error) {
-	err = cache.IndexedListAll(ctx, s.indexer, selector, func(m interface{}) {
+// List lists all LimitRanges in the indexer.
+func (s *limitRangeLister) List(selector labels.Selector) (ret []*v1.LimitRange, err error) {
+	var indexValue string
+	if s.scope != nil {
+		indexValue = s.scope.Name()
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.LimitRange))
 	})
 	return ret, err
@@ -66,7 +70,7 @@ func (s *limitRangeLister) ListWithContext(ctx context.Context, selector labels.
 
 // LimitRanges returns an object that can list and get LimitRanges.
 func (s *limitRangeLister) LimitRanges(namespace string) LimitRangeNamespaceLister {
-	return limitRangeNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return limitRangeNamespaceLister{indexer: s.indexer, namespace: namespace, scope: s.scope}
 }
 
 // LimitRangeNamespaceLister helps list and get LimitRanges.
@@ -75,15 +79,9 @@ type LimitRangeNamespaceLister interface {
 	// List lists all LimitRanges in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.LimitRange, err error)
-	// ListWithContext lists all LimitRanges in the indexer.
-	// Objects returned here must be treated as read-only.
-	ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.LimitRange, err error)
 	// Get retrieves the LimitRange from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.LimitRange, error)
-	// GetWithContext retrieves the LimitRange from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	GetWithContext(ctx context.Context, name string) (*v1.LimitRange, error)
 	LimitRangeNamespaceListerExpansion
 }
 
@@ -92,16 +90,16 @@ type LimitRangeNamespaceLister interface {
 type limitRangeNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
+	scope     rest.Scope
 }
 
 // List lists all LimitRanges in the indexer for a given namespace.
 func (s limitRangeNamespaceLister) List(selector labels.Selector) (ret []*v1.LimitRange, err error) {
-	return s.ListWithContext(context.Background(), selector)
-}
-
-// ListWithContext lists all LimitRanges in the indexer for a given namespace.
-func (s limitRangeNamespaceLister) ListWithContext(ctx context.Context, selector labels.Selector) (ret []*v1.LimitRange, err error) {
-	err = cache.ListAllByNamespace2(ctx, s.indexer, s.namespace, selector, func(m interface{}) {
+	indexValue := s.namespace
+	if s.scope != nil {
+		indexValue = s.scope.CacheKey(s.namespace)
+	}
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.NamespaceIndex, indexValue, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.LimitRange))
 	})
 	return ret, err
@@ -109,14 +107,9 @@ func (s limitRangeNamespaceLister) ListWithContext(ctx context.Context, selector
 
 // Get retrieves the LimitRange from the indexer for a given namespace and name.
 func (s limitRangeNamespaceLister) Get(name string) (*v1.LimitRange, error) {
-	return s.GetWithContext(context.Background(), name)
-}
-
-// GetWithContext retrieves the LimitRange from the indexer for a given namespace and name.
-func (s limitRangeNamespaceLister) GetWithContext(ctx context.Context, name string) (*v1.LimitRange, error) {
-	key, err := cache.NamespaceNameKeyFunc(ctx, s.namespace, name)
-	if err != nil {
-		return nil, err
+	key := s.namespace + "/" + name
+	if s.scope != nil {
+		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)
 	if err != nil {

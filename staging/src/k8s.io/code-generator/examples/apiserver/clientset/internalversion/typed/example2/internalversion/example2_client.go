@@ -26,6 +26,7 @@ import (
 type SecondExampleInterface interface {
 	RESTClient() rest.Interface
 	TestTypesGetter
+	ScopedTestTypesGetter
 }
 
 // SecondExampleClient is used to interact with features provided by the example.test.apiserver.code-generator.k8s.io group.
@@ -35,7 +36,11 @@ type SecondExampleClient struct {
 }
 
 func (c *SecondExampleClient) TestTypes() TestTypeInterface {
-	return newTestTypes(c)
+	return newTestTypes(c, nil)
+}
+
+func (c *SecondExampleClient) ScopedTestTypes(scope rest.Scope) TestTypeInterface {
+	return newTestTypes(c, scope)
 }
 
 // NewForConfig creates a new SecondExampleClient for the given config.
