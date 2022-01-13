@@ -32,6 +32,10 @@ func (c *FakeThirdExample) TestTypes(namespace string) internalversion.TestTypeI
 	return &FakeTestTypes{c, namespace}
 }
 
+func (c *FakeThirdExample) ScopedTestTypes(scope rest.Scope) internalversion.TestTypesGetter {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeThirdExample) RESTClient() rest.Interface {

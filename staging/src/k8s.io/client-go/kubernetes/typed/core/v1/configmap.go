@@ -40,7 +40,7 @@ type ConfigMapsGetter interface {
 }
 
 type ScopedConfigMapsGetter interface {
-	ScopedConfigMaps(scope rest.Scope, namespace string) ConfigMapInterface
+	ScopedConfigMaps(scope rest.Scope) ConfigMapsGetter
 }
 
 // ConfigMapInterface has methods to work with ConfigMap resources.
@@ -57,21 +57,35 @@ type ConfigMapInterface interface {
 	ConfigMapExpansion
 }
 
+type configMapsScoper struct {
+	client *CoreV1Client
+	scope  rest.Scope
+}
+
+func newConfigMapsScoper(c *CoreV1Client, scope rest.Scope) *configMapsScoper {
+	return &configMapsScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *configMapsScoper) ConfigMaps(namespace string) ConfigMapInterface {
+	return newConfigMaps(s.client, s.scope, namespace)
+}
+
 // configMaps implements ConfigMapInterface
 type configMaps struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newConfigMaps returns a ConfigMaps
 func newConfigMaps(c *CoreV1Client, scope rest.Scope, namespace string) *configMaps {
 	return &configMaps{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -79,7 +93,6 @@ func newConfigMaps(c *CoreV1Client, scope rest.Scope, namespace string) *configM
 func (c *configMaps) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ConfigMap, err error) {
 	result = &v1.ConfigMap{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("configmaps").
@@ -98,7 +111,6 @@ func (c *configMaps) List(ctx context.Context, opts metav1.ListOptions) (result 
 	}
 	result = &v1.ConfigMapList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("configmaps").
@@ -117,7 +129,6 @@ func (c *configMaps) Watch(ctx context.Context, opts metav1.ListOptions) (watch.
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("configmaps").
@@ -130,7 +141,6 @@ func (c *configMaps) Watch(ctx context.Context, opts metav1.ListOptions) (watch.
 func (c *configMaps) Create(ctx context.Context, configMap *v1.ConfigMap, opts metav1.CreateOptions) (result *v1.ConfigMap, err error) {
 	result = &v1.ConfigMap{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("configmaps").
@@ -145,7 +155,6 @@ func (c *configMaps) Create(ctx context.Context, configMap *v1.ConfigMap, opts m
 func (c *configMaps) Update(ctx context.Context, configMap *v1.ConfigMap, opts metav1.UpdateOptions) (result *v1.ConfigMap, err error) {
 	result = &v1.ConfigMap{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("configmaps").
@@ -160,7 +169,6 @@ func (c *configMaps) Update(ctx context.Context, configMap *v1.ConfigMap, opts m
 // Delete takes name of the configMap and deletes it. Returns an error if one occurs.
 func (c *configMaps) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("configmaps").
@@ -177,7 +185,6 @@ func (c *configMaps) DeleteCollection(ctx context.Context, opts metav1.DeleteOpt
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("configmaps").
@@ -192,7 +199,6 @@ func (c *configMaps) DeleteCollection(ctx context.Context, opts metav1.DeleteOpt
 func (c *configMaps) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ConfigMap, err error) {
 	result = &v1.ConfigMap{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("configmaps").
@@ -221,7 +227,6 @@ func (c *configMaps) Apply(ctx context.Context, configMap *corev1.ConfigMapApply
 	}
 	result = &v1.ConfigMap{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("configmaps").

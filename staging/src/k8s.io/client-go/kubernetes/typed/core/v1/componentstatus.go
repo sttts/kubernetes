@@ -59,17 +59,15 @@ type ComponentStatusInterface interface {
 
 // componentStatuses implements ComponentStatusInterface
 type componentStatuses struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newComponentStatuses returns a ComponentStatuses
 func newComponentStatuses(c *CoreV1Client, scope rest.Scope) *componentStatuses {
 	return &componentStatuses{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -77,7 +75,6 @@ func newComponentStatuses(c *CoreV1Client, scope rest.Scope) *componentStatuses 
 func (c *componentStatuses) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ComponentStatus, err error) {
 	result = &v1.ComponentStatus{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("componentstatuses").
 		Name(name).
@@ -95,7 +92,6 @@ func (c *componentStatuses) List(ctx context.Context, opts metav1.ListOptions) (
 	}
 	result = &v1.ComponentStatusList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("componentstatuses").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -113,7 +109,6 @@ func (c *componentStatuses) Watch(ctx context.Context, opts metav1.ListOptions) 
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("componentstatuses").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -125,7 +120,6 @@ func (c *componentStatuses) Watch(ctx context.Context, opts metav1.ListOptions) 
 func (c *componentStatuses) Create(ctx context.Context, componentStatus *v1.ComponentStatus, opts metav1.CreateOptions) (result *v1.ComponentStatus, err error) {
 	result = &v1.ComponentStatus{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("componentstatuses").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -139,7 +133,6 @@ func (c *componentStatuses) Create(ctx context.Context, componentStatus *v1.Comp
 func (c *componentStatuses) Update(ctx context.Context, componentStatus *v1.ComponentStatus, opts metav1.UpdateOptions) (result *v1.ComponentStatus, err error) {
 	result = &v1.ComponentStatus{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("componentstatuses").
 		Name(componentStatus.Name).
@@ -153,7 +146,6 @@ func (c *componentStatuses) Update(ctx context.Context, componentStatus *v1.Comp
 // Delete takes name of the componentStatus and deletes it. Returns an error if one occurs.
 func (c *componentStatuses) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("componentstatuses").
 		Name(name).
@@ -169,7 +161,6 @@ func (c *componentStatuses) DeleteCollection(ctx context.Context, opts metav1.De
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("componentstatuses").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -183,7 +174,6 @@ func (c *componentStatuses) DeleteCollection(ctx context.Context, opts metav1.De
 func (c *componentStatuses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ComponentStatus, err error) {
 	result = &v1.ComponentStatus{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("componentstatuses").
 		Name(name).
@@ -211,7 +201,6 @@ func (c *componentStatuses) Apply(ctx context.Context, componentStatus *corev1.C
 	}
 	result = &v1.ComponentStatus{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("componentstatuses").
 		Name(*name).

@@ -32,6 +32,10 @@ func (c *FakeCrV1) Examples(namespace string) v1.ExampleInterface {
 	return &FakeExamples{c, namespace}
 }
 
+func (c *FakeCrV1) ScopedExamples(scope rest.Scope) v1.ExamplesGetter {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeCrV1) RESTClient() rest.Interface {

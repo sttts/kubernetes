@@ -59,17 +59,15 @@ type PodSecurityPolicyInterface interface {
 
 // podSecurityPolicies implements PodSecurityPolicyInterface
 type podSecurityPolicies struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newPodSecurityPolicies returns a PodSecurityPolicies
 func newPodSecurityPolicies(c *PolicyV1beta1Client, scope rest.Scope) *podSecurityPolicies {
 	return &podSecurityPolicies{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -77,7 +75,6 @@ func newPodSecurityPolicies(c *PolicyV1beta1Client, scope rest.Scope) *podSecuri
 func (c *podSecurityPolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.PodSecurityPolicy, err error) {
 	result = &v1beta1.PodSecurityPolicy{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("podsecuritypolicies").
 		Name(name).
@@ -95,7 +92,6 @@ func (c *podSecurityPolicies) List(ctx context.Context, opts v1.ListOptions) (re
 	}
 	result = &v1beta1.PodSecurityPolicyList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("podsecuritypolicies").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -113,7 +109,6 @@ func (c *podSecurityPolicies) Watch(ctx context.Context, opts v1.ListOptions) (w
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("podsecuritypolicies").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -125,7 +120,6 @@ func (c *podSecurityPolicies) Watch(ctx context.Context, opts v1.ListOptions) (w
 func (c *podSecurityPolicies) Create(ctx context.Context, podSecurityPolicy *v1beta1.PodSecurityPolicy, opts v1.CreateOptions) (result *v1beta1.PodSecurityPolicy, err error) {
 	result = &v1beta1.PodSecurityPolicy{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("podsecuritypolicies").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -139,7 +133,6 @@ func (c *podSecurityPolicies) Create(ctx context.Context, podSecurityPolicy *v1b
 func (c *podSecurityPolicies) Update(ctx context.Context, podSecurityPolicy *v1beta1.PodSecurityPolicy, opts v1.UpdateOptions) (result *v1beta1.PodSecurityPolicy, err error) {
 	result = &v1beta1.PodSecurityPolicy{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("podsecuritypolicies").
 		Name(podSecurityPolicy.Name).
@@ -153,7 +146,6 @@ func (c *podSecurityPolicies) Update(ctx context.Context, podSecurityPolicy *v1b
 // Delete takes name of the podSecurityPolicy and deletes it. Returns an error if one occurs.
 func (c *podSecurityPolicies) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("podsecuritypolicies").
 		Name(name).
@@ -169,7 +161,6 @@ func (c *podSecurityPolicies) DeleteCollection(ctx context.Context, opts v1.Dele
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("podsecuritypolicies").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -183,7 +174,6 @@ func (c *podSecurityPolicies) DeleteCollection(ctx context.Context, opts v1.Dele
 func (c *podSecurityPolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.PodSecurityPolicy, err error) {
 	result = &v1beta1.PodSecurityPolicy{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("podsecuritypolicies").
 		Name(name).
@@ -211,7 +201,6 @@ func (c *podSecurityPolicies) Apply(ctx context.Context, podSecurityPolicy *poli
 	}
 	result = &v1beta1.PodSecurityPolicy{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("podsecuritypolicies").
 		Name(*name).

@@ -32,6 +32,10 @@ func (c *FakeApiextensionsV1beta1) CustomResourceDefinitions() v1beta1.CustomRes
 	return &FakeCustomResourceDefinitions{c}
 }
 
+func (c *FakeApiextensionsV1beta1) ScopedCustomResourceDefinitions(scope rest.Scope) v1beta1.CustomResourceDefinitionInterface {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeApiextensionsV1beta1) RESTClient() rest.Interface {

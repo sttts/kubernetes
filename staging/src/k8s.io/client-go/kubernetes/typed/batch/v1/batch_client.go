@@ -35,23 +35,23 @@ type BatchV1Interface interface {
 // BatchV1Client is used to interact with features provided by the batch group.
 type BatchV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *BatchV1Client) CronJobs(namespace string) CronJobInterface {
-	return newCronJobs(c, nil, namespace)
+	return newCronJobs(c, c.scope, namespace)
 }
 
-func (c *BatchV1Client) ScopedCronJobs(scope rest.Scope, namespace string) CronJobInterface {
-	return newCronJobs(c, scope, namespace)
+func (c *BatchV1Client) ScopedCronJobs(scope rest.Scope) CronJobsGetter {
+	return newCronJobsScoper(c, scope)
 }
 
 func (c *BatchV1Client) Jobs(namespace string) JobInterface {
-	return newJobs(c, nil, namespace)
+	return newJobs(c, c.scope, namespace)
 }
 
-func (c *BatchV1Client) ScopedJobs(scope rest.Scope, namespace string) JobInterface {
-	return newJobs(c, scope, namespace)
+func (c *BatchV1Client) ScopedJobs(scope rest.Scope) JobsGetter {
+	return newJobsScoper(c, scope)
 }
 
 // NewForConfig creates a new BatchV1Client for the given config.
@@ -98,9 +98,9 @@ func New(c rest.Interface) *BatchV1Client {
 	return &BatchV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new BatchV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *BatchV1Client {
-	return &BatchV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new BatchV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *BatchV1Client {
+	return &BatchV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

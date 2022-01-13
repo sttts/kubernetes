@@ -38,7 +38,7 @@ import (
 
 // KubernetesAPIApprovalPolicyConformantConditionController is maintaining the KubernetesAPIApprovalPolicyConformant condition.
 type KubernetesAPIApprovalPolicyConformantConditionController struct {
-	crdClient client.CustomResourceDefinitionsGetter
+	crdClient client.ScopedCustomResourceDefinitionsGetter
 
 	crdLister listers.CustomResourceDefinitionLister
 	crdSynced cache.InformerSynced
@@ -57,7 +57,7 @@ type KubernetesAPIApprovalPolicyConformantConditionController struct {
 // NewKubernetesAPIApprovalPolicyConformantConditionController constructs a KubernetesAPIApprovalPolicyConformant schema condition controller.
 func NewKubernetesAPIApprovalPolicyConformantConditionController(
 	crdInformer informers.CustomResourceDefinitionInformer,
-	crdClient client.CustomResourceDefinitionsGetter,
+	crdClient client.ScopedCustomResourceDefinitionsGetter,
 ) *KubernetesAPIApprovalPolicyConformantConditionController {
 	c := &KubernetesAPIApprovalPolicyConformantConditionController{
 		crdClient:                   crdClient,
@@ -125,7 +125,12 @@ func calculateCondition(crd *apiextensionsv1.CustomResourceDefinition) *apiexten
 }
 
 func (c *KubernetesAPIApprovalPolicyConformantConditionController) sync(key string) error {
-	inCustomResourceDefinition, err := c.crdLister.Get(key)
+	scope, err := cache.ScopeFromKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("error getting scope from key %q: %w", key, err))
+		return nil
+	}
+	inCustomResourceDefinition, err := c.crdLister.Scoped(scope).Get(key)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -160,7 +165,7 @@ func (c *KubernetesAPIApprovalPolicyConformantConditionController) sync(key stri
 	crd := inCustomResourceDefinition.DeepCopy()
 	apihelpers.SetCRDCondition(crd, *cond)
 
-	_, err = c.crdClient.CustomResourceDefinitions().UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
+	_, err = c.crdClient.ScopedCustomResourceDefinitions(scope).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		// deleted or changed in the meantime, we'll get called again
 		return nil

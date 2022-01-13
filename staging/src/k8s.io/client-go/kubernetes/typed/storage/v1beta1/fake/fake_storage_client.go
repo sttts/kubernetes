@@ -32,20 +32,40 @@ func (c *FakeStorageV1beta1) CSIDrivers() v1beta1.CSIDriverInterface {
 	return &FakeCSIDrivers{c}
 }
 
+func (c *FakeStorageV1beta1) ScopedCSIDrivers(scope rest.Scope) v1beta1.CSIDriverInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeStorageV1beta1) CSINodes() v1beta1.CSINodeInterface {
 	return &FakeCSINodes{c}
+}
+
+func (c *FakeStorageV1beta1) ScopedCSINodes(scope rest.Scope) v1beta1.CSINodeInterface {
+	panic("not implemented yet!")
 }
 
 func (c *FakeStorageV1beta1) CSIStorageCapacities(namespace string) v1beta1.CSIStorageCapacityInterface {
 	return &FakeCSIStorageCapacities{c, namespace}
 }
 
+func (c *FakeStorageV1beta1) ScopedCSIStorageCapacities(scope rest.Scope) v1beta1.CSIStorageCapacitiesGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeStorageV1beta1) StorageClasses() v1beta1.StorageClassInterface {
 	return &FakeStorageClasses{c}
 }
 
+func (c *FakeStorageV1beta1) ScopedStorageClasses(scope rest.Scope) v1beta1.StorageClassInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeStorageV1beta1) VolumeAttachments() v1beta1.VolumeAttachmentInterface {
 	return &FakeVolumeAttachments{c}
+}
+
+func (c *FakeStorageV1beta1) ScopedVolumeAttachments(scope rest.Scope) v1beta1.VolumeAttachmentInterface {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

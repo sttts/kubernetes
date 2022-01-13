@@ -32,8 +32,16 @@ func (c *FakeAdmissionregistrationV1) MutatingWebhookConfigurations() v1.Mutatin
 	return &FakeMutatingWebhookConfigurations{c}
 }
 
+func (c *FakeAdmissionregistrationV1) ScopedMutatingWebhookConfigurations(scope rest.Scope) v1.MutatingWebhookConfigurationInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeAdmissionregistrationV1) ValidatingWebhookConfigurations() v1.ValidatingWebhookConfigurationInterface {
 	return &FakeValidatingWebhookConfigurations{c}
+}
+
+func (c *FakeAdmissionregistrationV1) ScopedValidatingWebhookConfigurations(scope rest.Scope) v1.ValidatingWebhookConfigurationInterface {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

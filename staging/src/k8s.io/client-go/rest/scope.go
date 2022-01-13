@@ -15,6 +15,7 @@ type Scope interface {
 
 type Scoper interface {
 	// ScopeFromContext(ctx context.Context) (Scope, error)
+	NewScope(name string) Scope
 	ScopeFromObject(obj metav1.Object) (Scope, error)
 	ScopeFromKey(key string) (Scope, error)
 }

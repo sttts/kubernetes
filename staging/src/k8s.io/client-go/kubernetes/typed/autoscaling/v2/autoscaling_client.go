@@ -33,15 +33,15 @@ type AutoscalingV2Interface interface {
 // AutoscalingV2Client is used to interact with features provided by the autoscaling group.
 type AutoscalingV2Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *AutoscalingV2Client) HorizontalPodAutoscalers(namespace string) HorizontalPodAutoscalerInterface {
-	return newHorizontalPodAutoscalers(c, nil, namespace)
+	return newHorizontalPodAutoscalers(c, c.scope, namespace)
 }
 
-func (c *AutoscalingV2Client) ScopedHorizontalPodAutoscalers(scope rest.Scope, namespace string) HorizontalPodAutoscalerInterface {
-	return newHorizontalPodAutoscalers(c, scope, namespace)
+func (c *AutoscalingV2Client) ScopedHorizontalPodAutoscalers(scope rest.Scope) HorizontalPodAutoscalersGetter {
+	return newHorizontalPodAutoscalersScoper(c, scope)
 }
 
 // NewForConfig creates a new AutoscalingV2Client for the given config.
@@ -88,9 +88,9 @@ func New(c rest.Interface) *AutoscalingV2Client {
 	return &AutoscalingV2Client{restClient: c}
 }
 
-// NewWithCluster creates a new AutoscalingV2Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *AutoscalingV2Client {
-	return &AutoscalingV2Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new AutoscalingV2Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *AutoscalingV2Client {
+	return &AutoscalingV2Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

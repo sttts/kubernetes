@@ -33,11 +33,11 @@ type SchedulingV1Interface interface {
 // SchedulingV1Client is used to interact with features provided by the scheduling.k8s.io group.
 type SchedulingV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *SchedulingV1Client) PriorityClasses() PriorityClassInterface {
-	return newPriorityClasses(c, nil)
+	return newPriorityClasses(c, c.scope)
 }
 
 func (c *SchedulingV1Client) ScopedPriorityClasses(scope rest.Scope) PriorityClassInterface {
@@ -88,9 +88,9 @@ func New(c rest.Interface) *SchedulingV1Client {
 	return &SchedulingV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new SchedulingV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *SchedulingV1Client {
-	return &SchedulingV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new SchedulingV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *SchedulingV1Client {
+	return &SchedulingV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

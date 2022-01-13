@@ -59,13 +59,17 @@ func (s *imageReviewLister) Scoped(scope rest.Scope) ImageReviewLister {
 
 // List lists all ImageReviews in the indexer.
 func (s *imageReviewLister) List(selector labels.Selector) (ret []*v1alpha1.ImageReview, err error) {
-	var indexValue string
-	if s.scope != nil {
-		indexValue = s.scope.Name()
-	}
-	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
+	appendFunc := func(m interface{}) {
 		ret = append(ret, m.(*v1alpha1.ImageReview))
-	})
+	}
+
+	if s.scope == nil {
+		err = cache.ListAll(s.indexer, selector, appendFunc)
+		return ret, err
+	}
+
+	indexValue := s.scope.Name()
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, appendFunc)
 	return ret, err
 }
 

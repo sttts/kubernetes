@@ -54,7 +54,6 @@ import (
 	generatedopenapi "k8s.io/kubernetes/pkg/generated/openapi"
 	"k8s.io/kubernetes/pkg/genericcontrolplane/aggregator"
 	"k8s.io/kubernetes/pkg/genericcontrolplane/apis"
-	"k8s.io/kubernetes/pkg/genericcontrolplane/clientutils"
 	"k8s.io/kubernetes/pkg/genericcontrolplane/options"
 	"k8s.io/kubernetes/pkg/kubeapiserver"
 	"k8s.io/kubernetes/pkg/serviceaccount"
@@ -337,7 +336,7 @@ func BuildGenericConfig(
 
 	kubeClientConfig := genericConfig.LoopbackClientConfig
 
-	clientutils.EnableMultiCluster(genericConfig.LoopbackClientConfig, genericConfig, true, "namespaces", "apiservices", "customresourcedefinitions")
+	// clientutils.EnableMultiCluster(genericConfig.LoopbackClientConfig, genericConfig, true, "namespaces", "apiservices", "customresourcedefinitions")
 
 	clientgoExternalClient, err := clientgoclientset.NewForConfig(kubeClientConfig)
 	if err != nil {

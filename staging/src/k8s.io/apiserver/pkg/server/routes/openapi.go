@@ -20,9 +20,9 @@ import (
 	"net/http"
 
 	restful "github.com/emicklei/go-restful"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/server/mux"
 	builder2 "k8s.io/kube-openapi/pkg/builder"
 	"k8s.io/kube-openapi/pkg/builder3"
@@ -39,35 +39,35 @@ type OpenAPI struct {
 
 // OpenAPIServiceProvider is a hacky way to
 // replace a single OpenAPIService by a provider which will
-// provide an distinct openAPIService per logical cluster.
+// provide an distinct openAPIService per scope.
 // This is required to implement CRD tenancy and have the openAPI
-// models be conistent with the current logical cluster.
+// models be conistent with the current scope.
 //
 // However this is just a first step, since a better way
 // would be to completly avoid the need of registering a OpenAPIService
-// for each logical cluster. See the addition comments below.
+// for each scope. See the addition comments below.
 type OpenAPIServiceProvider interface {
-	ForCluster(clusterName string) *handler.OpenAPIService
-	AddCuster(clusterName string)
-	RemoveCuster(clusterName string)
+	ForScope(scopeName string) *handler.OpenAPIService
+	AddScope(scopeName string)
+	RemoveScope(scopeName string)
 	UpdateSpec(openapiSpec *spec.Swagger) error
 }
 
-type clusterAwarePathHandler struct {
-	clusterName          string
-	addHandlerForCluster func(clusterName string, handler http.Handler)
+type scopeAwarePathHandler struct {
+	scopeName          string
+	addHandlerForScope func(scopeName string, handler http.Handler)
 }
 
-func (c *clusterAwarePathHandler) Handle(path string, handler http.Handler) {
-	c.addHandlerForCluster(c.clusterName, handler)
+func (c *scopeAwarePathHandler) Handle(path string, handler http.Handler) {
+	c.addHandlerForScope(c.scopeName, handler)
 }
 
 // HACK: This is the implementation of OpenAPIServiceProvider
-// that allows supporting several logical clusters for CRD tenancy.
+// that allows supporting several scopes for CRD tenancy.
 //
 // However this should be conisdered a temporary step, to cope with the
-// current design of OpenAPI publishing. But having to register every logical
-// cluster creates more cost on creating logical clusters.
+// current design of OpenAPI publishing. But having to register every scope
+// creates more cost on creating scopes.
 // Instead, we'd expect us to slowly refactor the openapi generation code so
 // that it can be used dynamically, and time limited or size limited openapi caches
 // would be used to serve the calculated version.
@@ -86,41 +86,41 @@ type openAPIServiceProvider struct {
 
 var _ OpenAPIServiceProvider = (*openAPIServiceProvider)(nil)
 
-func (p *openAPIServiceProvider) ForCluster(clusterName string) *handler.OpenAPIService {
-	return p.openAPIServices[clusterName]
+func (p *openAPIServiceProvider) ForScope(scopeName string) *handler.OpenAPIService {
+	return p.openAPIServices[scopeName]
 }
 
-func (p *openAPIServiceProvider) AddCuster(clusterName string) {
-	if _, found := p.openAPIServices[clusterName]; !found {
+func (p *openAPIServiceProvider) AddScope(scopeName string) {
+	if _, found := p.openAPIServices[scopeName]; !found {
 		openAPIVersionedService, err := handler.NewOpenAPIService(p.staticSpec)
 		if err != nil {
 			klog.Fatalf("Failed to create OpenAPIService: %v", err)
 		}
 
-		if err = openAPIVersionedService.RegisterOpenAPIVersionedService(p.path, &clusterAwarePathHandler{
-			clusterName: clusterName,
-			addHandlerForCluster: func(clusterName string, handler http.Handler) {
-				p.handlers[clusterName] = handler
+		if err = openAPIVersionedService.RegisterOpenAPIVersionedService(p.path, &scopeAwarePathHandler{
+			scopeName: scopeName,
+			addHandlerForScope: func(scopeName string, handler http.Handler) {
+				p.handlers[scopeName] = handler
 			},
 		}); err != nil {
 			klog.Fatalf("Failed to register versioned open api spec for root: %v", err)
 		}
-		p.openAPIServices[clusterName] = openAPIVersionedService
+		p.openAPIServices[scopeName] = openAPIVersionedService
 	}
 }
 
-func (p *openAPIServiceProvider) RemoveCuster(clusterName string) {
-	delete(p.openAPIServices, clusterName)
-	delete(p.handlers, clusterName)
+func (p *openAPIServiceProvider) RemoveScope(scopeName string) {
+	delete(p.openAPIServices, scopeName)
+	delete(p.handlers, scopeName)
 }
 
 func (p *openAPIServiceProvider) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	cluster := genericapirequest.ClusterFrom(req.Context())
-	if cluster == nil {
+	scope := rest.ScopeFrom(req.Context())
+	if scope == nil {
 		p.defaultOpenAPIServiceHandler.ServeHTTP(resp, req)
 		return
 	}
-	handler, found := p.handlers[cluster.Name]
+	handler, found := p.handlers[scope.Name()]
 	if !found {
 		resp.WriteHeader(404)
 		return
@@ -138,9 +138,9 @@ func (p *openAPIServiceProvider) Register() {
 		klog.Fatalf("Failed to create OpenAPIService: %v", err)
 	}
 
-	err = defaultOpenAPIService.RegisterOpenAPIVersionedService(p.path, &clusterAwarePathHandler{
-		clusterName: "",
-		addHandlerForCluster: func(clusterName string, handler http.Handler) {
+	err = defaultOpenAPIService.RegisterOpenAPIVersionedService(p.path, &scopeAwarePathHandler{
+		scopeName: "",
+		addHandlerForScope: func(scopeName string, handler http.Handler) {
 			p.defaultOpenAPIServiceHandler = handler
 		},
 	})

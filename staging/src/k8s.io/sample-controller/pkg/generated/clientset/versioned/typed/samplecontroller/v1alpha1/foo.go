@@ -37,7 +37,7 @@ type FoosGetter interface {
 }
 
 type ScopedFoosGetter interface {
-	ScopedFoos(scope rest.Scope, namespace string) FooInterface
+	ScopedFoos(scope rest.Scope) FoosGetter
 }
 
 // FooInterface has methods to work with Foo resources.
@@ -54,21 +54,35 @@ type FooInterface interface {
 	FooExpansion
 }
 
+type foosScoper struct {
+	client *SamplecontrollerV1alpha1Client
+	scope  rest.Scope
+}
+
+func newFoosScoper(c *SamplecontrollerV1alpha1Client, scope rest.Scope) *foosScoper {
+	return &foosScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *foosScoper) Foos(namespace string) FooInterface {
+	return newFoos(s.client, s.scope, namespace)
+}
+
 // foos implements FooInterface
 type foos struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newFoos returns a Foos
 func newFoos(c *SamplecontrollerV1alpha1Client, scope rest.Scope, namespace string) *foos {
 	return &foos{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -76,7 +90,6 @@ func newFoos(c *SamplecontrollerV1alpha1Client, scope rest.Scope, namespace stri
 func (c *foos) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Foo, err error) {
 	result = &v1alpha1.Foo{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
@@ -95,7 +108,6 @@ func (c *foos) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.
 	}
 	result = &v1alpha1.FooList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
@@ -114,7 +126,6 @@ func (c *foos) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface,
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
@@ -127,7 +138,6 @@ func (c *foos) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface,
 func (c *foos) Create(ctx context.Context, foo *v1alpha1.Foo, opts v1.CreateOptions) (result *v1alpha1.Foo, err error) {
 	result = &v1alpha1.Foo{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
@@ -142,7 +152,6 @@ func (c *foos) Create(ctx context.Context, foo *v1alpha1.Foo, opts v1.CreateOpti
 func (c *foos) Update(ctx context.Context, foo *v1alpha1.Foo, opts v1.UpdateOptions) (result *v1alpha1.Foo, err error) {
 	result = &v1alpha1.Foo{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
@@ -159,7 +168,6 @@ func (c *foos) Update(ctx context.Context, foo *v1alpha1.Foo, opts v1.UpdateOpti
 func (c *foos) UpdateStatus(ctx context.Context, foo *v1alpha1.Foo, opts v1.UpdateOptions) (result *v1alpha1.Foo, err error) {
 	result = &v1alpha1.Foo{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
@@ -175,7 +183,6 @@ func (c *foos) UpdateStatus(ctx context.Context, foo *v1alpha1.Foo, opts v1.Upda
 // Delete takes name of the foo and deletes it. Returns an error if one occurs.
 func (c *foos) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
@@ -192,7 +199,6 @@ func (c *foos) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, list
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").
@@ -207,7 +213,6 @@ func (c *foos) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, list
 func (c *foos) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Foo, err error) {
 	result = &v1alpha1.Foo{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("foos").

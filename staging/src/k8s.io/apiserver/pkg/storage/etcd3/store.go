@@ -39,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/features"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/etcd3/metrics"
@@ -118,11 +117,6 @@ func (s *store) Versioner() storage.Versioner {
 
 // Get implements storage.Interface.Get.
 func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, out runtime.Object) error {
-	clusterName, err := genericapirequest.ClusterNameFrom(ctx)
-	if err != nil {
-		klog.Errorf("No cluster defined in Get action for key %s : %s", key, err.Error())
-	}
-
 	key = path.Join(s.pathPrefix, key)
 	startTime := time.Now()
 	getResp, err := s.client.KV.Get(ctx, key)
@@ -147,16 +141,11 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ou
 		return storage.NewInternalError(err.Error())
 	}
 
-	return decode(s.codec, s.versioner, data, out, kv.ModRevision, clusterName)
+	return decode(s.codec, s.versioner, data, out, kv.ModRevision, storage.ScopeFrom(ctx))
 }
 
 // Create implements storage.Interface.Create.
 func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
-	clusterName, err := genericapirequest.ClusterNameFrom(ctx)
-	if err != nil {
-		klog.Errorf("No cluster defined in Create action for key %s : %s", key, err.Error())
-	}
-
 	if version, err := s.versioner.ObjectResourceVersion(obj); err == nil && version != 0 {
 		return errors.New("resourceVersion should not be set on objects to be created")
 	}
@@ -195,7 +184,7 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 
 	if out != nil {
 		putResp := txnResp.Responses[0].GetResponsePut()
-		return decode(s.codec, s.versioner, data, out, putResp.Header.Revision, clusterName)
+		return decode(s.codec, s.versioner, data, out, putResp.Header.Revision, storage.ScopeFrom(ctx))
 	}
 	return nil
 }
@@ -216,11 +205,8 @@ func (s *store) conditionalDelete(
 	ctx context.Context, key string, out runtime.Object, v reflect.Value, preconditions *storage.Preconditions,
 	validateDeletion storage.ValidateObjectFunc, cachedExistingObject runtime.Object) error {
 	var err error
-	var clusterName string
-	clusterName, err = genericapirequest.ClusterNameFrom(ctx)
-	if err != nil {
-		klog.Errorf("No cluster defined in conditionalDelete action for key %s : %s", key, err.Error())
-	}
+
+	scope := storage.ScopeFrom(ctx)
 
 	getCurrentState := func() (*objState, error) {
 		startTime := time.Now()
@@ -229,7 +215,7 @@ func (s *store) conditionalDelete(
 		if err != nil {
 			return nil, err
 		}
-		return s.getState(getResp, key, v, false, clusterName)
+		return s.getState(getResp, key, v, false, scope)
 	}
 
 	var origState *objState
@@ -313,14 +299,14 @@ func (s *store) conditionalDelete(
 		if !txnResp.Succeeded {
 			getResp := (*clientv3.GetResponse)(txnResp.Responses[0].GetResponseRange())
 			klog.V(4).Infof("deletion of %s failed because of a conflict, going to retry", key)
-			origState, err = s.getState(getResp, key, v, false, clusterName)
+			origState, err = s.getState(getResp, key, v, false, scope)
 			if err != nil {
 				return err
 			}
 			origStateIsCurrent = true
 			continue
 		}
-		return decode(s.codec, s.versioner, origState.data, out, origState.rev, clusterName)
+		return decode(s.codec, s.versioner, origState.data, out, origState.rev, scope)
 	}
 }
 
@@ -331,16 +317,13 @@ func (s *store) GuaranteedUpdate(
 	trace := utiltrace.New("GuaranteedUpdate etcd3", utiltrace.Field{"type", getTypeName(out)})
 	defer trace.LogIfLong(500 * time.Millisecond)
 
-	clusterName, err := genericapirequest.ClusterNameFrom(ctx)
-	if err != nil {
-		klog.Errorf("No cluster defined in GuaranteedUpdate action for key %s : %s", key, err.Error())
-	}
-
 	v, err := conversion.EnforcePtr(out)
 	if err != nil {
 		return fmt.Errorf("unable to convert output object to pointer: %v", err)
 	}
 	key = path.Join(s.pathPrefix, key)
+
+	scope := storage.ScopeFrom(ctx)
 
 	getCurrentState := func() (*objState, error) {
 		startTime := time.Now()
@@ -349,7 +332,7 @@ func (s *store) GuaranteedUpdate(
 		if err != nil {
 			return nil, err
 		}
-		return s.getState(getResp, key, v, ignoreNotFound, clusterName)
+		return s.getState(getResp, key, v, ignoreNotFound, scope)
 	}
 
 	var origState *objState
@@ -433,7 +416,7 @@ func (s *store) GuaranteedUpdate(
 			}
 			// recheck that the data from etcd is not stale before short-circuiting a write
 			if !origState.stale {
-				return decode(s.codec, s.versioner, origState.data, out, origState.rev, clusterName)
+				return decode(s.codec, s.versioner, origState.data, out, origState.rev, scope)
 			}
 		}
 
@@ -464,7 +447,7 @@ func (s *store) GuaranteedUpdate(
 		if !txnResp.Succeeded {
 			getResp := (*clientv3.GetResponse)(txnResp.Responses[0].GetResponseRange())
 			klog.V(4).Infof("GuaranteedUpdate of %s failed because of a conflict, going to retry", key)
-			origState, err = s.getState(getResp, key, v, ignoreNotFound, clusterName)
+			origState, err = s.getState(getResp, key, v, ignoreNotFound, scope)
 			if err != nil {
 				return err
 			}
@@ -474,7 +457,7 @@ func (s *store) GuaranteedUpdate(
 		}
 		putResp := txnResp.Responses[0].GetResponsePut()
 
-		return decode(s.codec, s.versioner, data, out, putResp.Header.Revision, clusterName)
+		return decode(s.codec, s.versioner, data, out, putResp.Header.Revision, scope)
 	}
 }
 
@@ -490,11 +473,6 @@ func (s *store) GetToList(ctx context.Context, key string, listOpts storage.List
 		utiltrace.Field{"limit", pred.Limit},
 		utiltrace.Field{"continue", pred.Continue})
 	defer trace.LogIfLong(500 * time.Millisecond)
-
-	clusterName, err := genericapirequest.ClusterNameFrom(ctx)
-	if err != nil {
-		klog.Errorf("No cluster defined in GetToList action for key %s : %s", key, err.Error())
-	}
 
 	listPtr, err := meta.GetItemsPtr(listObj)
 	if err != nil {
@@ -532,7 +510,7 @@ func (s *store) GetToList(ctx context.Context, key string, listOpts storage.List
 		if err != nil {
 			return storage.NewInternalError(err.Error())
 		}
-		if err := appendListItem(v, data, uint64(getResp.Kvs[0].ModRevision), pred, s.codec, s.versioner, newItemFunc, clusterName); err != nil {
+		if err := appendListItem(v, data, uint64(getResp.Kvs[0].ModRevision), pred, s.codec, s.versioner, newItemFunc, storage.ScopeFrom(ctx)); err != nil {
 			return err
 		}
 	}
@@ -638,6 +616,7 @@ func EncodeContinue(key, keyPrefix string, resourceVersion int64) (string, error
 
 // List implements storage.Interface.List.
 func (s *store) List(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object) error {
+	// klog.Errorf("ANDY etcd3 listing, key=%q", key)
 	resourceVersion := opts.ResourceVersion
 	match := opts.ResourceVersionMatch
 	pred := opts.Predicate
@@ -667,6 +646,8 @@ func (s *store) List(ctx context.Context, key string, opts storage.ListOptions, 
 		key += "/"
 	}
 	keyPrefix := key
+
+	scope := storage.ScopeFrom(ctx)
 
 	// set the appropriate clientv3 options to filter the returned data set
 	var paging bool
@@ -791,6 +772,7 @@ func (s *store) List(ctx context.Context, key string, opts storage.ListOptions, 
 		}
 
 		// take items from the response until the bucket is full, filtering as we go
+		// klog.Errorf("ANDY keyPrefix=%q", keyPrefix)
 		for i, kv := range getResp.Kvs {
 			if paging && int64(v.Len()) >= pred.Limit {
 				hasMore = true
@@ -803,20 +785,8 @@ func (s *store) List(ctx context.Context, key string, opts storage.ListOptions, 
 				return storage.NewInternalErrorf("unable to transform key %q: %v", kv.Key, err)
 			}
 
-			cluster, err := genericapirequest.ValidClusterFrom(ctx)
-			if err != nil {
-				return storage.NewInternalErrorf("unable to get cluster for key %q: %v", kv.Key, err)
-			}
-			clusterName := cluster.Name
-			if cluster.Wildcard {
-				sub := strings.TrimPrefix(string(kv.Key), keyPrefix)
-				if i := strings.Index(sub, "/"); i != -1 {
-					clusterName = sub[:i]
-				} else {
-					panic(fmt.Errorf("missing cluster name for key %q", kv.Key))
-				}
-			}
-			if err := appendListItem(v, data, uint64(kv.ModRevision), pred, s.codec, s.versioner, newItemFunc, clusterName); err != nil {
+			keyScope := scope.FromPrefixAndKey(keyPrefix, string(kv.Key))
+			if err := appendListItem(v, data, uint64(kv.ModRevision), pred, s.codec, s.versioner, newItemFunc, keyScope); err != nil {
 				return err
 			}
 			numEvald++
@@ -918,20 +888,12 @@ func (s *store) watch(ctx context.Context, key string, opts storage.ListOptions,
 	}
 	key = path.Join(s.pathPrefix, key)
 
-	// HACK: would need to be an argument to storage (or a change to how decoding works for key structure)
-	cluster, err := genericapirequest.ValidClusterFrom(ctx)
-	if err != nil {
-		return nil, storage.NewInternalError(fmt.Sprintf("Invalid cluster for key %s : %v", key, err))
-	}
-	clusterName := cluster.Name
-	if cluster.Wildcard {
-		clusterName = "*"
-	}
+	scope := storage.ScopeFrom(ctx)
 
-	return s.watcher.Watch(ctx, key, int64(rev), recursive, clusterName, opts.ProgressNotify, opts.Predicate)
+	return s.watcher.Watch(ctx, key, int64(rev), recursive, scope, opts.ProgressNotify, opts.Predicate)
 }
 
-func (s *store) getState(getResp *clientv3.GetResponse, key string, v reflect.Value, ignoreNotFound bool, clusterName string) (*objState, error) {
+func (s *store) getState(getResp *clientv3.GetResponse, key string, v reflect.Value, ignoreNotFound bool, scope storage.Scope) (*objState, error) {
 	state := &objState{
 		meta: &storage.ResponseMeta{},
 	}
@@ -958,7 +920,7 @@ func (s *store) getState(getResp *clientv3.GetResponse, key string, v reflect.Va
 		state.meta.ResourceVersion = uint64(state.rev)
 		state.data = data
 		state.stale = stale
-		if err := decode(s.codec, s.versioner, state.data, state.obj, state.rev, clusterName); err != nil {
+		if err := decode(s.codec, s.versioner, state.data, state.obj, state.rev, scope); err != nil {
 			return nil, err
 		}
 	}
@@ -1042,7 +1004,7 @@ func (s *store) validateMinimumResourceVersion(minimumResourceVersion string, ac
 
 // decode decodes value of bytes into object. It will also set the object resource version to rev.
 // On success, objPtr would be set to the object.
-func decode(codec runtime.Codec, versioner storage.Versioner, value []byte, objPtr runtime.Object, rev int64, clusterName string) error {
+func decode(codec runtime.Codec, versioner storage.Versioner, value []byte, objPtr runtime.Object, rev int64, scope storage.Scope) error {
 	if _, err := conversion.EnforcePtr(objPtr); err != nil {
 		return fmt.Errorf("unable to convert output object to pointer: %v", err)
 	}
@@ -1051,68 +1013,36 @@ func decode(codec runtime.Codec, versioner storage.Versioner, value []byte, objP
 		return err
 	}
 
-	// TODO PostDecode
+	if scope == nil {
+		klog.Errorf("missing storage scope for decode")
+	} else {
+		if err := scope.PostDecode(objPtr); err != nil {
+			return err
+		}
+	}
 
 	// being unable to set the version does not prevent the object from being extracted
 	if err := versioner.UpdateObject(objPtr, uint64(rev)); err != nil {
 		klog.Errorf("failed to update object version: %v", err)
 	}
 
-	// TODO REMOVE
-	// HACK: in order to support CRD tenancy, the clusterName, which is extracted from the object etcd key,
-	// should be set on the decoded object.
-	// This is done here since we want to set the logical cluster the object is part of,
-	// without storing the clusterName inside the etcd object itself (as it has been until now).
-	// The etcd key is ultimately the only thing that links us to a cluster
-	if clusterName != "" {
-		if s, ok := objPtr.(metav1.ObjectMetaAccessor); ok {
-			s.GetObjectMeta().SetClusterName(clusterName)
-		} else if s, ok := objPtr.(metav1.Object); ok {
-			s.SetClusterName(clusterName)
-		} else if s, ok := objPtr.(*unstructured.Unstructured); ok {
-			s.SetClusterName(clusterName)
-		} else {
-			klog.Warningf("Could not set ClusterName %s in appendListItem on object: %T", clusterName, objPtr)
-		}
-	} else {
-		klog.Errorf("Cluster should not be unknown")
-	}
-
 	return nil
 }
 
 // appendListItem decodes and appends the object (if it passes filter) to v, which must be a slice.
-func appendListItem(v reflect.Value, data []byte, rev uint64, pred storage.SelectionPredicate, codec runtime.Codec, versioner storage.Versioner, newItemFunc func() runtime.Object, clusterName string) error {
+func appendListItem(v reflect.Value, data []byte, rev uint64, pred storage.SelectionPredicate, codec runtime.Codec, versioner storage.Versioner, newItemFunc func() runtime.Object, scope storage.Scope) error {
 	obj, _, err := codec.Decode(data, nil, newItemFunc())
 	if err != nil {
 		return err
 	}
 
-	// TODO PostDecode
+	if err := scope.PostDecode(obj); err != nil {
+		return err
+	}
 
 	// being unable to set the version does not prevent the object from being extracted
 	if err := versioner.UpdateObject(obj, rev); err != nil {
 		klog.Errorf("failed to update object version: %v", err)
-	}
-
-	// TODO REMOVE
-	// HACK: in order to support CRD tenancy, the clusterName, which is extracted from the object etcd key,
-	// should be set on the decoded object.
-	// This is done here since we want to set the logical cluster the object is part of,
-	// without storing the clusterName inside the etcd object itself (as it has been until now).
-	// The etcd key is ultimately the only thing that links us to a cluster
-	if clusterName != "" {
-		if s, ok := obj.(metav1.ObjectMetaAccessor); ok {
-			s.GetObjectMeta().SetClusterName(clusterName)
-		} else if s, ok := obj.(metav1.Object); ok {
-			s.SetClusterName(clusterName)
-		} else if s, ok := obj.(*unstructured.Unstructured); ok {
-			s.SetClusterName(clusterName)
-		} else {
-			klog.Warningf("Could not set ClusterName %s in appendListItem on object: %T", clusterName, obj)
-		}
-	} else {
-		klog.Errorf("Cluster should not be unknown")
 	}
 
 	if matched, err := pred.Matches(obj); err == nil && matched {

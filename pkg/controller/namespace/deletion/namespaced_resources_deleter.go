@@ -32,7 +32,6 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/client-go/discovery"
 	v1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/metadata"
@@ -40,21 +39,25 @@ import (
 
 // NamespacedResourcesDeleterInterface is the interface to delete a namespace with all resources in it.
 type NamespacedResourcesDeleterInterface interface {
-	Delete(clusterName, nsName string) error
+	Delete(nsName string) error
 }
 
 // NewNamespacedResourcesDeleter returns a new NamespacedResourcesDeleter.
-func NewNamespacedResourcesDeleter(nsClient v1clientset.NamespaceInterface,
-	metadataClient metadata.Interface, podsGetter v1clientset.PodsGetter,
-	discoverResourcesFn func(clusterName string) ([]*metav1.APIResourceList, error),
-	finalizerToken v1.FinalizerName) NamespacedResourcesDeleterInterface {
+func NewNamespacedResourcesDeleter(
+	nsClient v1clientset.NamespaceInterface,
+	metadataClient metadata.Interface,
+	discoveryClient discovery.DiscoveryInterface,
+	podsGetter v1clientset.PodsGetter,
+	finalizerToken v1.FinalizerName,
+) NamespacedResourcesDeleterInterface {
 	d := &namespacedResourcesDeleter{
-		nsClient:            nsClient,
-		metadataClient:      metadataClient,
-		podsGetter:          podsGetter,
-		opCaches:            map[string]*operationNotSupportedCache{},
-		discoverResourcesFn: discoverResourcesFn,
-		finalizerToken:      finalizerToken,
+		nsClient:       nsClient,
+		metadataClient: metadataClient,
+		podsGetter:     podsGetter,
+		opCache: &operationNotSupportedCache{
+			m: make(map[operationKey]bool),
+		},
+		finalizerToken: finalizerToken,
 	}
 	return d
 }
@@ -70,10 +73,10 @@ type namespacedResourcesDeleter struct {
 	// Interface to get PodInterface.
 	podsGetter v1clientset.PodsGetter
 	// Cache of what operations are not supported on each group version resource.
-	opCaches      map[string]*operationNotSupportedCache
-	opCachesMutex sync.RWMutex
+	opCache *operationNotSupportedCache
 
-	discoverResourcesFn func(clusterName string) ([]*metav1.APIResourceList, error)
+	discoveryClient discovery.DiscoveryInterface
+
 	// The finalizer token that should be removed from the namespace
 	// when all resources in that namespace have been deleted.
 	finalizerToken v1.FinalizerName
@@ -92,11 +95,11 @@ type namespacedResourcesDeleter struct {
 // Returns ResourcesRemainingError if it deleted some resources but needs
 // to wait for them to go away.
 // Caller is expected to keep calling this until it succeeds.
-func (d *namespacedResourcesDeleter) Delete(clusterName, nsName string) error {
+func (d *namespacedResourcesDeleter) Delete(nsName string) error {
 	// Multiple controllers may edit a namespace during termination
 	// first get the latest state of the namespace before proceeding
 	// if the namespace was deleted already, don't do anything
-	namespace, err := d.nsClient.Get(genericapirequest.WithCluster(context.TODO(), genericapirequest.Cluster{Name: clusterName}), nsName, metav1.GetOptions{})
+	namespace, err := d.nsClient.Get(context.TODO(), nsName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
@@ -156,7 +159,7 @@ func (d *namespacedResourcesDeleter) initOpCache(clusterName string) {
 	// pre-fill opCache with the discovery info
 	//
 	// TODO(sttts): get rid of opCache and http 405 logic around it and trust discovery info
-	resources, err := d.discoverResourcesFn(clusterName)
+	resources, err := d.discoveryClient.ServerPreferredNamespacedResources()
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("unable to get all supported resources from server: %v", err))
 	}
@@ -181,7 +184,7 @@ func (d *namespacedResourcesDeleter) initOpCache(clusterName string) {
 
 			for _, op := range []operation{operationList, operationDeleteCollection} {
 				if !verbs.Has(string(op)) {
-					d.opCaches[clusterName].setNotSupported(operationKey{operation: op, gvr: gvr})
+					d.opCache.setNotSupported(operationKey{operation: op, gvr: gvr})
 				}
 			}
 		}
@@ -233,22 +236,6 @@ func (o *operationNotSupportedCache) setNotSupported(key operationKey) {
 	o.m[key] = true
 }
 
-// isSupported returns true if the operation is supported
-func (d *namespacedResourcesDeleter) isSupported(clusterName string, key operationKey) bool {
-	d.opCachesMutex.RLock()
-	defer d.opCachesMutex.RUnlock()
-	cache, exists := d.opCaches[clusterName]
-	if !exists {
-		cache = &operationNotSupportedCache{
-			m: make(map[operationKey]bool),
-		}
-		d.opCaches[clusterName] = cache
-		d.initOpCache(clusterName)
-	}
-
-	return cache.isSupported(key)
-}
-
 // updateNamespaceFunc is a function that makes an update to a namespace
 type updateNamespaceFunc func(namespace *v1.Namespace) (*v1.Namespace, error)
 
@@ -266,7 +253,7 @@ func (d *namespacedResourcesDeleter) retryOnConflictError(namespace *v1.Namespac
 			return nil, err
 		}
 		prevNamespace := latestNamespace
-		latestNamespace, err = d.nsClient.Get(genericapirequest.WithCluster(context.TODO(), genericapirequest.Cluster{Name: latestNamespace.ClusterName}), latestNamespace.Name, metav1.GetOptions{})
+		latestNamespace, err = d.nsClient.Get(context.TODO(), latestNamespace.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -283,7 +270,7 @@ func (d *namespacedResourcesDeleter) updateNamespaceStatusFunc(namespace *v1.Nam
 	}
 	newNamespace := namespace.DeepCopy()
 	newNamespace.Status.Phase = v1.NamespaceTerminating
-	return d.nsClient.UpdateStatus(genericapirequest.WithCluster(context.TODO(), genericapirequest.Cluster{Name: newNamespace.ClusterName}), newNamespace, metav1.UpdateOptions{})
+	return d.nsClient.UpdateStatus(context.TODO(), newNamespace, metav1.UpdateOptions{})
 }
 
 // finalized returns true if the namespace.Spec.Finalizers is an empty list
@@ -323,7 +310,7 @@ func (d *namespacedResourcesDeleter) deleteCollection(clusterName string, gvr sc
 	klog.V(5).Infof("namespace controller - deleteCollection - namespace: %s, gvr: %v", namespace, gvr)
 
 	key := operationKey{operation: operationDeleteCollection, gvr: gvr}
-	if !d.isSupported(clusterName, key) {
+	if !d.opCache.isSupported(key) {
 		klog.V(5).Infof("namespace controller - deleteCollection ignored since not supported - namespace: %s, gvr: %v", namespace, gvr)
 		return false, nil
 	}
@@ -333,7 +320,7 @@ func (d *namespacedResourcesDeleter) deleteCollection(clusterName string, gvr sc
 	// namespace itself.
 	background := metav1.DeletePropagationBackground
 	opts := metav1.DeleteOptions{PropagationPolicy: &background}
-	err := d.metadataClient.Resource(gvr).Namespace(namespace).DeleteCollection(genericapirequest.WithCluster(context.TODO(), genericapirequest.Cluster{Name: clusterName}), opts, metav1.ListOptions{})
+	err := d.metadataClient.Resource(gvr).Namespace(namespace).DeleteCollection(context.TODO(), opts, metav1.ListOptions{})
 
 	if err == nil {
 		return true, nil
@@ -362,12 +349,12 @@ func (d *namespacedResourcesDeleter) listCollection(clusterName string, gvr sche
 	klog.V(5).Infof("namespace controller - listCollection - namespace: %s, gvr: %v", namespace, gvr)
 
 	key := operationKey{operation: operationList, gvr: gvr}
-	if !d.isSupported(clusterName, key) {
+	if !d.opCache.isSupported(key) {
 		klog.V(5).Infof("namespace controller - listCollection ignored since not supported - namespace: %s, gvr: %v", namespace, gvr)
 		return nil, false, nil
 	}
 
-	partialList, err := d.metadataClient.Resource(gvr).Namespace(namespace).List(genericapirequest.WithCluster(context.TODO(), genericapirequest.Cluster{Name: clusterName}), metav1.ListOptions{})
+	partialList, err := d.metadataClient.Resource(gvr).Namespace(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err == nil {
 		return partialList, true, nil
 	}
@@ -399,7 +386,7 @@ func (d *namespacedResourcesDeleter) deleteEachItem(clusterName string, gvr sche
 	for _, item := range unstructuredList.Items {
 		background := metav1.DeletePropagationBackground
 		opts := metav1.DeleteOptions{PropagationPolicy: &background}
-		if err = d.metadataClient.Resource(gvr).Namespace(namespace).Delete(genericapirequest.WithCluster(context.TODO(), genericapirequest.Cluster{Name: clusterName}), item.GetName(), opts); err != nil && !errors.IsNotFound(err) && !errors.IsMethodNotSupported(err) {
+		if err = d.metadataClient.Resource(gvr).Namespace(namespace).Delete(context.TODO(), item.GetName(), opts); err != nil && !errors.IsNotFound(err) && !errors.IsMethodNotSupported(err) {
 			return err
 		}
 	}
@@ -516,7 +503,7 @@ func (d *namespacedResourcesDeleter) deleteAllContent(ns *v1.Namespace) (int64, 
 	estimate := int64(0)
 	klog.V(4).Infof("namespace controller - deleteAllContent - namespace: %s", namespace)
 
-	resources, err := d.discoverResourcesFn(ns.ClusterName)
+	resources, err := d.discoveryClient.ServerPreferredNamespacedResources()
 	if err != nil {
 		// discovery errors are not fatal.  We often have some set of resources we can operate against even if we don't have a complete list
 		errs = append(errs, err)
@@ -562,7 +549,7 @@ func (d *namespacedResourcesDeleter) deleteAllContent(ns *v1.Namespace) (int64, 
 	// we need to reflect that information.  Recall that additional finalizers can be set on namespaces, so this finalizer may clear itself and
 	// NOT remove the resource instance.
 	if hasChanged := conditionUpdater.Update(ns); hasChanged {
-		if _, err = d.nsClient.UpdateStatus(genericapirequest.WithCluster(context.TODO(), genericapirequest.Cluster{Name: ns.ClusterName}), ns, metav1.UpdateOptions{}); err != nil {
+		if _, err = d.nsClient.UpdateStatus(context.TODO(), ns, metav1.UpdateOptions{}); err != nil {
 			utilruntime.HandleError(fmt.Errorf("couldn't update status condition for namespace %q: %v", namespace, err))
 		}
 	}
@@ -602,7 +589,7 @@ func (d *namespacedResourcesDeleter) estimateGracefulTerminationForPods(clusterN
 	if podsGetter == nil || reflect.ValueOf(podsGetter).IsNil() {
 		return 0, fmt.Errorf("unexpected: podsGetter is nil. Cannot estimate grace period seconds for pods")
 	}
-	items, err := podsGetter.Pods(ns).List(genericapirequest.WithCluster(context.TODO(), genericapirequest.Cluster{Name: clusterName}), metav1.ListOptions{})
+	items, err := podsGetter.Pods(ns).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return 0, err
 	}

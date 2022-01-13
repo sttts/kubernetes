@@ -63,11 +63,11 @@ type CoreV1Interface interface {
 // CoreV1Client is used to interact with features provided by the  group.
 type CoreV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *CoreV1Client) ComponentStatuses() ComponentStatusInterface {
-	return newComponentStatuses(c, nil)
+	return newComponentStatuses(c, c.scope)
 }
 
 func (c *CoreV1Client) ScopedComponentStatuses(scope rest.Scope) ComponentStatusInterface {
@@ -75,39 +75,39 @@ func (c *CoreV1Client) ScopedComponentStatuses(scope rest.Scope) ComponentStatus
 }
 
 func (c *CoreV1Client) ConfigMaps(namespace string) ConfigMapInterface {
-	return newConfigMaps(c, nil, namespace)
+	return newConfigMaps(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedConfigMaps(scope rest.Scope, namespace string) ConfigMapInterface {
-	return newConfigMaps(c, scope, namespace)
+func (c *CoreV1Client) ScopedConfigMaps(scope rest.Scope) ConfigMapsGetter {
+	return newConfigMapsScoper(c, scope)
 }
 
 func (c *CoreV1Client) Endpoints(namespace string) EndpointsInterface {
-	return newEndpoints(c, nil, namespace)
+	return newEndpoints(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedEndpoints(scope rest.Scope, namespace string) EndpointsInterface {
-	return newEndpoints(c, scope, namespace)
+func (c *CoreV1Client) ScopedEndpoints(scope rest.Scope) EndpointsGetter {
+	return newEndpointsScoper(c, scope)
 }
 
 func (c *CoreV1Client) Events(namespace string) EventInterface {
-	return newEvents(c, nil, namespace)
+	return newEvents(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedEvents(scope rest.Scope, namespace string) EventInterface {
-	return newEvents(c, scope, namespace)
+func (c *CoreV1Client) ScopedEvents(scope rest.Scope) EventsGetter {
+	return newEventsScoper(c, scope)
 }
 
 func (c *CoreV1Client) LimitRanges(namespace string) LimitRangeInterface {
-	return newLimitRanges(c, nil, namespace)
+	return newLimitRanges(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedLimitRanges(scope rest.Scope, namespace string) LimitRangeInterface {
-	return newLimitRanges(c, scope, namespace)
+func (c *CoreV1Client) ScopedLimitRanges(scope rest.Scope) LimitRangesGetter {
+	return newLimitRangesScoper(c, scope)
 }
 
 func (c *CoreV1Client) Namespaces() NamespaceInterface {
-	return newNamespaces(c, nil)
+	return newNamespaces(c, c.scope)
 }
 
 func (c *CoreV1Client) ScopedNamespaces(scope rest.Scope) NamespaceInterface {
@@ -115,7 +115,7 @@ func (c *CoreV1Client) ScopedNamespaces(scope rest.Scope) NamespaceInterface {
 }
 
 func (c *CoreV1Client) Nodes() NodeInterface {
-	return newNodes(c, nil)
+	return newNodes(c, c.scope)
 }
 
 func (c *CoreV1Client) ScopedNodes(scope rest.Scope) NodeInterface {
@@ -123,7 +123,7 @@ func (c *CoreV1Client) ScopedNodes(scope rest.Scope) NodeInterface {
 }
 
 func (c *CoreV1Client) PersistentVolumes() PersistentVolumeInterface {
-	return newPersistentVolumes(c, nil)
+	return newPersistentVolumes(c, c.scope)
 }
 
 func (c *CoreV1Client) ScopedPersistentVolumes(scope rest.Scope) PersistentVolumeInterface {
@@ -131,67 +131,67 @@ func (c *CoreV1Client) ScopedPersistentVolumes(scope rest.Scope) PersistentVolum
 }
 
 func (c *CoreV1Client) PersistentVolumeClaims(namespace string) PersistentVolumeClaimInterface {
-	return newPersistentVolumeClaims(c, nil, namespace)
+	return newPersistentVolumeClaims(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedPersistentVolumeClaims(scope rest.Scope, namespace string) PersistentVolumeClaimInterface {
-	return newPersistentVolumeClaims(c, scope, namespace)
+func (c *CoreV1Client) ScopedPersistentVolumeClaims(scope rest.Scope) PersistentVolumeClaimsGetter {
+	return newPersistentVolumeClaimsScoper(c, scope)
 }
 
 func (c *CoreV1Client) Pods(namespace string) PodInterface {
-	return newPods(c, nil, namespace)
+	return newPods(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedPods(scope rest.Scope, namespace string) PodInterface {
-	return newPods(c, scope, namespace)
+func (c *CoreV1Client) ScopedPods(scope rest.Scope) PodsGetter {
+	return newPodsScoper(c, scope)
 }
 
 func (c *CoreV1Client) PodTemplates(namespace string) PodTemplateInterface {
-	return newPodTemplates(c, nil, namespace)
+	return newPodTemplates(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedPodTemplates(scope rest.Scope, namespace string) PodTemplateInterface {
-	return newPodTemplates(c, scope, namespace)
+func (c *CoreV1Client) ScopedPodTemplates(scope rest.Scope) PodTemplatesGetter {
+	return newPodTemplatesScoper(c, scope)
 }
 
 func (c *CoreV1Client) ReplicationControllers(namespace string) ReplicationControllerInterface {
-	return newReplicationControllers(c, nil, namespace)
+	return newReplicationControllers(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedReplicationControllers(scope rest.Scope, namespace string) ReplicationControllerInterface {
-	return newReplicationControllers(c, scope, namespace)
+func (c *CoreV1Client) ScopedReplicationControllers(scope rest.Scope) ReplicationControllersGetter {
+	return newReplicationControllersScoper(c, scope)
 }
 
 func (c *CoreV1Client) ResourceQuotas(namespace string) ResourceQuotaInterface {
-	return newResourceQuotas(c, nil, namespace)
+	return newResourceQuotas(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedResourceQuotas(scope rest.Scope, namespace string) ResourceQuotaInterface {
-	return newResourceQuotas(c, scope, namespace)
+func (c *CoreV1Client) ScopedResourceQuotas(scope rest.Scope) ResourceQuotasGetter {
+	return newResourceQuotasScoper(c, scope)
 }
 
 func (c *CoreV1Client) Secrets(namespace string) SecretInterface {
-	return newSecrets(c, nil, namespace)
+	return newSecrets(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedSecrets(scope rest.Scope, namespace string) SecretInterface {
-	return newSecrets(c, scope, namespace)
+func (c *CoreV1Client) ScopedSecrets(scope rest.Scope) SecretsGetter {
+	return newSecretsScoper(c, scope)
 }
 
 func (c *CoreV1Client) Services(namespace string) ServiceInterface {
-	return newServices(c, nil, namespace)
+	return newServices(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedServices(scope rest.Scope, namespace string) ServiceInterface {
-	return newServices(c, scope, namespace)
+func (c *CoreV1Client) ScopedServices(scope rest.Scope) ServicesGetter {
+	return newServicesScoper(c, scope)
 }
 
 func (c *CoreV1Client) ServiceAccounts(namespace string) ServiceAccountInterface {
-	return newServiceAccounts(c, nil, namespace)
+	return newServiceAccounts(c, c.scope, namespace)
 }
 
-func (c *CoreV1Client) ScopedServiceAccounts(scope rest.Scope, namespace string) ServiceAccountInterface {
-	return newServiceAccounts(c, scope, namespace)
+func (c *CoreV1Client) ScopedServiceAccounts(scope rest.Scope) ServiceAccountsGetter {
+	return newServiceAccountsScoper(c, scope)
 }
 
 // NewForConfig creates a new CoreV1Client for the given config.
@@ -238,9 +238,9 @@ func New(c rest.Interface) *CoreV1Client {
 	return &CoreV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new CoreV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *CoreV1Client {
-	return &CoreV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new CoreV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *CoreV1Client {
+	return &CoreV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

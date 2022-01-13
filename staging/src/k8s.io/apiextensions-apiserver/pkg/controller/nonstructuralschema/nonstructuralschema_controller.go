@@ -42,7 +42,7 @@ import (
 
 // ConditionController is maintaining the NonStructuralSchema condition.
 type ConditionController struct {
-	crdClient client.CustomResourceDefinitionsGetter
+	crdClient client.ScopedCustomResourceDefinitionsGetter
 
 	crdLister listers.CustomResourceDefinitionLister
 	crdSynced cache.InformerSynced
@@ -61,7 +61,7 @@ type ConditionController struct {
 // NewConditionController constructs a non-structural schema condition controller.
 func NewConditionController(
 	crdInformer informers.CustomResourceDefinitionInformer,
-	crdClient client.CustomResourceDefinitionsGetter,
+	crdClient client.ScopedCustomResourceDefinitionsGetter,
 ) *ConditionController {
 	c := &ConditionController{
 		crdClient:          crdClient,
@@ -130,7 +130,13 @@ func calculateCondition(in *apiextensionsv1.CustomResourceDefinition) *apiextens
 }
 
 func (c *ConditionController) sync(key string) error {
-	inCustomResourceDefinition, err := c.crdLister.Get(key)
+	scope, err := cache.ScopeFromKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("error getting scope from key %q: %w", key, err))
+		return nil
+	}
+
+	inCustomResourceDefinition, err := c.crdLister.Scoped(scope).Get(key)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -166,7 +172,7 @@ func (c *ConditionController) sync(key string) error {
 		apiextensionshelpers.SetCRDCondition(crd, *cond)
 	}
 
-	_, err = c.crdClient.CustomResourceDefinitions().UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
+	_, err = c.crdClient.ScopedCustomResourceDefinitions(scope).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		// deleted or changed in the meantime, we'll get called again
 		return nil

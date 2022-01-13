@@ -37,7 +37,7 @@ type TestTypesGetter interface {
 }
 
 type ScopedTestTypesGetter interface {
-	ScopedTestTypes(scope rest.Scope, namespace string) TestTypeInterface
+	ScopedTestTypes(scope rest.Scope) TestTypesGetter
 }
 
 // TestTypeInterface has methods to work with TestType resources.
@@ -54,21 +54,35 @@ type TestTypeInterface interface {
 	TestTypeExpansion
 }
 
+type testTypesScoper struct {
+	client *ExampleClient
+	scope  rest.Scope
+}
+
+func newTestTypesScoper(c *ExampleClient, scope rest.Scope) *testTypesScoper {
+	return &testTypesScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *testTypesScoper) TestTypes(namespace string) TestTypeInterface {
+	return newTestTypes(s.client, s.scope, namespace)
+}
+
 // testTypes implements TestTypeInterface
 type testTypes struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newTestTypes returns a TestTypes
 func newTestTypes(c *ExampleClient, scope rest.Scope, namespace string) *testTypes {
 	return &testTypes{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -76,7 +90,6 @@ func newTestTypes(c *ExampleClient, scope rest.Scope, namespace string) *testTyp
 func (c *testTypes) Get(ctx context.Context, name string, options v1.GetOptions) (result *example.TestType, err error) {
 	result = &example.TestType{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("testtypes").
@@ -95,7 +108,6 @@ func (c *testTypes) List(ctx context.Context, opts v1.ListOptions) (result *exam
 	}
 	result = &example.TestTypeList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("testtypes").
@@ -114,7 +126,6 @@ func (c *testTypes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Inter
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("testtypes").
@@ -127,7 +138,6 @@ func (c *testTypes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Inter
 func (c *testTypes) Create(ctx context.Context, testType *example.TestType, opts v1.CreateOptions) (result *example.TestType, err error) {
 	result = &example.TestType{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("testtypes").
@@ -142,7 +152,6 @@ func (c *testTypes) Create(ctx context.Context, testType *example.TestType, opts
 func (c *testTypes) Update(ctx context.Context, testType *example.TestType, opts v1.UpdateOptions) (result *example.TestType, err error) {
 	result = &example.TestType{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("testtypes").
@@ -159,7 +168,6 @@ func (c *testTypes) Update(ctx context.Context, testType *example.TestType, opts
 func (c *testTypes) UpdateStatus(ctx context.Context, testType *example.TestType, opts v1.UpdateOptions) (result *example.TestType, err error) {
 	result = &example.TestType{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("testtypes").
@@ -175,7 +183,6 @@ func (c *testTypes) UpdateStatus(ctx context.Context, testType *example.TestType
 // Delete takes name of the testType and deletes it. Returns an error if one occurs.
 func (c *testTypes) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("testtypes").
@@ -192,7 +199,6 @@ func (c *testTypes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions,
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("testtypes").
@@ -207,7 +213,6 @@ func (c *testTypes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions,
 func (c *testTypes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *example.TestType, err error) {
 	result = &example.TestType{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("testtypes").

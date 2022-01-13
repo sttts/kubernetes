@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/client-go/tools/clusters"
 )
 
 // Store is a generic object storage and processing interface.  A
@@ -111,11 +110,11 @@ func MetaNamespaceKeyFunc(obj interface{}) (string, error) {
 		return "", fmt.Errorf("object has no meta: %v", err)
 	}
 
-	name := clusters.ToClusterAwareKey(metaObj.GetClusterName(), metaObj.GetName())
+	// name := clusters.ToClusterAwareKey(metaObj.GetClusterName(), metaObj.GetName())
 	if len(metaObj.GetNamespace()) > 0 {
-		return metaObj.GetNamespace() + "/" + name, nil
+		return metaObj.GetNamespace() + "/" + metaObj.GetName(), nil
 	}
-	return name, nil
+	return metaObj.GetName(), nil
 }
 
 // SplitMetaNamespaceKey returns the namespace and name that

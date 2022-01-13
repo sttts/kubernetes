@@ -23,7 +23,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/rest"
 )
+
+type ScopedInterface interface {
+	Scoped(scope rest.Scope) Interface
+}
 
 // Interface allows a caller to get the metadata (in the form of PartialObjectMetadata objects)
 // from any Kubernetes compatible resource API.

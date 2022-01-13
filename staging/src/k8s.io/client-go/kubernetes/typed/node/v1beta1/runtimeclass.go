@@ -59,17 +59,15 @@ type RuntimeClassInterface interface {
 
 // runtimeClasses implements RuntimeClassInterface
 type runtimeClasses struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newRuntimeClasses returns a RuntimeClasses
 func newRuntimeClasses(c *NodeV1beta1Client, scope rest.Scope) *runtimeClasses {
 	return &runtimeClasses{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -77,7 +75,6 @@ func newRuntimeClasses(c *NodeV1beta1Client, scope rest.Scope) *runtimeClasses {
 func (c *runtimeClasses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.RuntimeClass, err error) {
 	result = &v1beta1.RuntimeClass{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(name).
@@ -95,7 +92,6 @@ func (c *runtimeClasses) List(ctx context.Context, opts v1.ListOptions) (result 
 	}
 	result = &v1beta1.RuntimeClassList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("runtimeclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -113,7 +109,6 @@ func (c *runtimeClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch.
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("runtimeclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -125,7 +120,6 @@ func (c *runtimeClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch.
 func (c *runtimeClasses) Create(ctx context.Context, runtimeClass *v1beta1.RuntimeClass, opts v1.CreateOptions) (result *v1beta1.RuntimeClass, err error) {
 	result = &v1beta1.RuntimeClass{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("runtimeclasses").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -139,7 +133,6 @@ func (c *runtimeClasses) Create(ctx context.Context, runtimeClass *v1beta1.Runti
 func (c *runtimeClasses) Update(ctx context.Context, runtimeClass *v1beta1.RuntimeClass, opts v1.UpdateOptions) (result *v1beta1.RuntimeClass, err error) {
 	result = &v1beta1.RuntimeClass{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(runtimeClass.Name).
@@ -153,7 +146,6 @@ func (c *runtimeClasses) Update(ctx context.Context, runtimeClass *v1beta1.Runti
 // Delete takes name of the runtimeClass and deletes it. Returns an error if one occurs.
 func (c *runtimeClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(name).
@@ -169,7 +161,6 @@ func (c *runtimeClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("runtimeclasses").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -183,7 +174,6 @@ func (c *runtimeClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 func (c *runtimeClasses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.RuntimeClass, err error) {
 	result = &v1beta1.RuntimeClass{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(name).
@@ -211,7 +201,6 @@ func (c *runtimeClasses) Apply(ctx context.Context, runtimeClass *nodev1beta1.Ru
 	}
 	result = &v1beta1.RuntimeClass{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("runtimeclasses").
 		Name(*name).

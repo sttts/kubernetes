@@ -40,7 +40,7 @@ type LimitRangesGetter interface {
 }
 
 type ScopedLimitRangesGetter interface {
-	ScopedLimitRanges(scope rest.Scope, namespace string) LimitRangeInterface
+	ScopedLimitRanges(scope rest.Scope) LimitRangesGetter
 }
 
 // LimitRangeInterface has methods to work with LimitRange resources.
@@ -57,21 +57,35 @@ type LimitRangeInterface interface {
 	LimitRangeExpansion
 }
 
+type limitRangesScoper struct {
+	client *CoreV1Client
+	scope  rest.Scope
+}
+
+func newLimitRangesScoper(c *CoreV1Client, scope rest.Scope) *limitRangesScoper {
+	return &limitRangesScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *limitRangesScoper) LimitRanges(namespace string) LimitRangeInterface {
+	return newLimitRanges(s.client, s.scope, namespace)
+}
+
 // limitRanges implements LimitRangeInterface
 type limitRanges struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newLimitRanges returns a LimitRanges
 func newLimitRanges(c *CoreV1Client, scope rest.Scope, namespace string) *limitRanges {
 	return &limitRanges{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -79,7 +93,6 @@ func newLimitRanges(c *CoreV1Client, scope rest.Scope, namespace string) *limitR
 func (c *limitRanges) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.LimitRange, err error) {
 	result = &v1.LimitRange{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("limitranges").
@@ -98,7 +111,6 @@ func (c *limitRanges) List(ctx context.Context, opts metav1.ListOptions) (result
 	}
 	result = &v1.LimitRangeList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("limitranges").
@@ -117,7 +129,6 @@ func (c *limitRanges) Watch(ctx context.Context, opts metav1.ListOptions) (watch
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("limitranges").
@@ -130,7 +141,6 @@ func (c *limitRanges) Watch(ctx context.Context, opts metav1.ListOptions) (watch
 func (c *limitRanges) Create(ctx context.Context, limitRange *v1.LimitRange, opts metav1.CreateOptions) (result *v1.LimitRange, err error) {
 	result = &v1.LimitRange{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("limitranges").
@@ -145,7 +155,6 @@ func (c *limitRanges) Create(ctx context.Context, limitRange *v1.LimitRange, opt
 func (c *limitRanges) Update(ctx context.Context, limitRange *v1.LimitRange, opts metav1.UpdateOptions) (result *v1.LimitRange, err error) {
 	result = &v1.LimitRange{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("limitranges").
@@ -160,7 +169,6 @@ func (c *limitRanges) Update(ctx context.Context, limitRange *v1.LimitRange, opt
 // Delete takes name of the limitRange and deletes it. Returns an error if one occurs.
 func (c *limitRanges) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("limitranges").
@@ -177,7 +185,6 @@ func (c *limitRanges) DeleteCollection(ctx context.Context, opts metav1.DeleteOp
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("limitranges").
@@ -192,7 +199,6 @@ func (c *limitRanges) DeleteCollection(ctx context.Context, opts metav1.DeleteOp
 func (c *limitRanges) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.LimitRange, err error) {
 	result = &v1.LimitRange{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("limitranges").
@@ -221,7 +227,6 @@ func (c *limitRanges) Apply(ctx context.Context, limitRange *corev1.LimitRangeAp
 	}
 	result = &v1.LimitRange{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("limitranges").

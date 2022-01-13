@@ -56,31 +56,19 @@ func (s *deploymentLister) Scoped(scope rest.Scope) DeploymentLister {
 	}
 }
 
-/*
-// scope1: lcluster
-  Name(): lcluster
-  Index(): cache.ListAllIndex
-  Separator(): "$"
-// scope2: -> namespace
-  Index(): cache.NamespaceIndex
-  Name(): parent.Name() + parent.Separator() + this.name // lcluster$namespace
-
-  kcp: cluster scope: hardcode: indexName = cache.ListAllIndex, sep=$
-
-  cs := newClusterScope("mycluster")
-  deploymentsLister.Scoped(newNamespaceScope(cs, "myns")).List/Get
-  Get("mydep") -> scope.Name() "lcluster$namespace" + scope.Sep() / + "mydep"
-*/
-
 // List lists all Deployments in the indexer.
 func (s *deploymentLister) List(selector labels.Selector) (ret []*v1.Deployment, err error) {
-	var indexValue string
-	if s.scope != nil {
-		indexValue = s.scope.Name()
-	}
-	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
+	appendFunc := func(m interface{}) {
 		ret = append(ret, m.(*v1.Deployment))
-	})
+	}
+
+	if s.scope == nil {
+		err = cache.ListAll(s.indexer, selector, appendFunc)
+		return ret, err
+	}
+
+	indexValue := s.scope.Name()
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, appendFunc)
 	return ret, err
 }
 
@@ -125,8 +113,6 @@ func (s deploymentNamespaceLister) List(selector labels.Selector) (ret []*v1.Dep
 func (s deploymentNamespaceLister) Get(name string) (*v1.Deployment, error) {
 	key := s.namespace + "/" + name
 	if s.scope != nil {
-		// in: default/mydep
-		// out (kcp): cluster$default/mydep
 		key = s.scope.CacheKey(key)
 	}
 	obj, exists, err := s.indexer.GetByKey(key)

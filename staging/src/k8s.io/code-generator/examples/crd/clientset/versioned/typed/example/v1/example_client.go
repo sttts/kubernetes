@@ -35,11 +35,11 @@ type ExampleV1Interface interface {
 // ExampleV1Client is used to interact with features provided by the example.crd.code-generator.k8s.io group.
 type ExampleV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *ExampleV1Client) ClusterTestTypes() ClusterTestTypeInterface {
-	return newClusterTestTypes(c, nil)
+	return newClusterTestTypes(c, c.scope)
 }
 
 func (c *ExampleV1Client) ScopedClusterTestTypes(scope rest.Scope) ClusterTestTypeInterface {
@@ -47,11 +47,11 @@ func (c *ExampleV1Client) ScopedClusterTestTypes(scope rest.Scope) ClusterTestTy
 }
 
 func (c *ExampleV1Client) TestTypes(namespace string) TestTypeInterface {
-	return newTestTypes(c, nil, namespace)
+	return newTestTypes(c, c.scope, namespace)
 }
 
-func (c *ExampleV1Client) ScopedTestTypes(scope rest.Scope, namespace string) TestTypeInterface {
-	return newTestTypes(c, scope, namespace)
+func (c *ExampleV1Client) ScopedTestTypes(scope rest.Scope) TestTypesGetter {
+	return newTestTypesScoper(c, scope)
 }
 
 // NewForConfig creates a new ExampleV1Client for the given config.
@@ -98,9 +98,9 @@ func New(c rest.Interface) *ExampleV1Client {
 	return &ExampleV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new ExampleV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *ExampleV1Client {
-	return &ExampleV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new ExampleV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *ExampleV1Client {
+	return &ExampleV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

@@ -37,7 +37,7 @@ type FlundersGetter interface {
 }
 
 type ScopedFlundersGetter interface {
-	ScopedFlunders(scope rest.Scope, namespace string) FlunderInterface
+	ScopedFlunders(scope rest.Scope) FlundersGetter
 }
 
 // FlunderInterface has methods to work with Flunder resources.
@@ -54,21 +54,35 @@ type FlunderInterface interface {
 	FlunderExpansion
 }
 
+type flundersScoper struct {
+	client *WardleV1alpha1Client
+	scope  rest.Scope
+}
+
+func newFlundersScoper(c *WardleV1alpha1Client, scope rest.Scope) *flundersScoper {
+	return &flundersScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *flundersScoper) Flunders(namespace string) FlunderInterface {
+	return newFlunders(s.client, s.scope, namespace)
+}
+
 // flunders implements FlunderInterface
 type flunders struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newFlunders returns a Flunders
 func newFlunders(c *WardleV1alpha1Client, scope rest.Scope, namespace string) *flunders {
 	return &flunders{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -76,7 +90,6 @@ func newFlunders(c *WardleV1alpha1Client, scope rest.Scope, namespace string) *f
 func (c *flunders) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Flunder, err error) {
 	result = &v1alpha1.Flunder{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
@@ -95,7 +108,6 @@ func (c *flunders) List(ctx context.Context, opts v1.ListOptions) (result *v1alp
 	}
 	result = &v1alpha1.FlunderList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
@@ -114,7 +126,6 @@ func (c *flunders) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interf
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
@@ -127,7 +138,6 @@ func (c *flunders) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interf
 func (c *flunders) Create(ctx context.Context, flunder *v1alpha1.Flunder, opts v1.CreateOptions) (result *v1alpha1.Flunder, err error) {
 	result = &v1alpha1.Flunder{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
@@ -142,7 +152,6 @@ func (c *flunders) Create(ctx context.Context, flunder *v1alpha1.Flunder, opts v
 func (c *flunders) Update(ctx context.Context, flunder *v1alpha1.Flunder, opts v1.UpdateOptions) (result *v1alpha1.Flunder, err error) {
 	result = &v1alpha1.Flunder{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
@@ -159,7 +168,6 @@ func (c *flunders) Update(ctx context.Context, flunder *v1alpha1.Flunder, opts v
 func (c *flunders) UpdateStatus(ctx context.Context, flunder *v1alpha1.Flunder, opts v1.UpdateOptions) (result *v1alpha1.Flunder, err error) {
 	result = &v1alpha1.Flunder{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
@@ -175,7 +183,6 @@ func (c *flunders) UpdateStatus(ctx context.Context, flunder *v1alpha1.Flunder, 
 // Delete takes name of the flunder and deletes it. Returns an error if one occurs.
 func (c *flunders) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
@@ -192,7 +199,6 @@ func (c *flunders) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, 
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").
@@ -207,7 +213,6 @@ func (c *flunders) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, 
 func (c *flunders) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Flunder, err error) {
 	result = &v1alpha1.Flunder{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("flunders").

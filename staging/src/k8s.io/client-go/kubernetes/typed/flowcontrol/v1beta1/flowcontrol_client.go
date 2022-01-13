@@ -35,11 +35,11 @@ type FlowcontrolV1beta1Interface interface {
 // FlowcontrolV1beta1Client is used to interact with features provided by the flowcontrol.apiserver.k8s.io group.
 type FlowcontrolV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *FlowcontrolV1beta1Client) FlowSchemas() FlowSchemaInterface {
-	return newFlowSchemas(c, nil)
+	return newFlowSchemas(c, c.scope)
 }
 
 func (c *FlowcontrolV1beta1Client) ScopedFlowSchemas(scope rest.Scope) FlowSchemaInterface {
@@ -47,7 +47,7 @@ func (c *FlowcontrolV1beta1Client) ScopedFlowSchemas(scope rest.Scope) FlowSchem
 }
 
 func (c *FlowcontrolV1beta1Client) PriorityLevelConfigurations() PriorityLevelConfigurationInterface {
-	return newPriorityLevelConfigurations(c, nil)
+	return newPriorityLevelConfigurations(c, c.scope)
 }
 
 func (c *FlowcontrolV1beta1Client) ScopedPriorityLevelConfigurations(scope rest.Scope) PriorityLevelConfigurationInterface {
@@ -98,9 +98,9 @@ func New(c rest.Interface) *FlowcontrolV1beta1Client {
 	return &FlowcontrolV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new FlowcontrolV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *FlowcontrolV1beta1Client {
-	return &FlowcontrolV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new FlowcontrolV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *FlowcontrolV1beta1Client {
+	return &FlowcontrolV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

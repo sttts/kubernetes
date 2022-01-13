@@ -114,6 +114,7 @@ import (
 	fakestoragev1alpha1 "k8s.io/client-go/kubernetes/typed/storage/v1alpha1/fake"
 	storagev1beta1 "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
 	fakestoragev1beta1 "k8s.io/client-go/kubernetes/typed/storage/v1beta1/fake"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/testing"
 )
 
@@ -156,6 +157,10 @@ type Clientset struct {
 
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
+}
+
+func (c *Clientset) ScopedDiscovery(scope rest.Scope) discovery.DiscoveryInterface {
+	panic("not implemented yet!")
 }
 
 func (c *Clientset) Tracker() testing.ObjectTracker {

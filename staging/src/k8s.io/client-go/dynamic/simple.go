@@ -33,33 +33,33 @@ import (
 // NewClusterForConfig creates a new Cluster for the given config.
 // If config's RateLimiter is not set and QPS and Burst are acceptable,
 // NewClusterForConfig will generate a rate-limiter in configShallowCopy.
-func NewClusterForConfig(c *rest.Config) (*Cluster, error) {
+func NewScopingForConfig(c *rest.Config) (*scoper, error) {
 	cs, err := NewForConfig(c)
 	if err != nil {
 		return nil, err
 	}
-	return &Cluster{scopedClient: cs.scopedClient}, nil
+	return &scoper{scopedClient: cs.scopedClient}, nil
 }
 
-type ClusterInterface interface {
-	Cluster(name string) Interface
+type ScopingInterface interface {
+	Scope(scope rest.Scope) Interface
 }
 
-type Cluster struct {
+type scoper struct {
 	*scopedClient
 }
 
-// Cluster sets the cluster for a Clientset.
-func (c *Cluster) Cluster(name string) Interface {
+// Scope returns a scoped Interface
+func (s *scoper) Scope(scope rest.Scope) Interface {
 	return &DynamicClient{
-		scopedClient: c.scopedClient,
-		cluster:      name,
+		scopedClient: s.scopedClient,
+		scope:        scope,
 	}
 }
 
 type DynamicClient struct {
 	*scopedClient
-	cluster string
+	scope rest.Scope
 }
 
 type scopedClient struct {
@@ -155,7 +155,7 @@ func (c *dynamicResourceClient) Create(ctx context.Context, obj *unstructured.Un
 
 	result := c.client.client.
 		Post().
-		Cluster(c.client.cluster).
+		Scope(c.client.scope).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		SetHeader("Content-Type", runtime.ContentTypeJSON).
 		Body(outBytes).
@@ -192,7 +192,7 @@ func (c *dynamicResourceClient) Update(ctx context.Context, obj *unstructured.Un
 
 	result := c.client.client.
 		Put().
-		Cluster(c.client.cluster).
+		Scope(c.client.scope).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		SetHeader("Content-Type", runtime.ContentTypeJSON).
 		Body(outBytes).
@@ -230,7 +230,7 @@ func (c *dynamicResourceClient) UpdateStatus(ctx context.Context, obj *unstructu
 
 	result := c.client.client.
 		Put().
-		Cluster(c.client.cluster).
+		Scope(c.client.scope).
 		AbsPath(append(c.makeURLSegments(name), "status")...).
 		SetHeader("Content-Type", runtime.ContentTypeJSON).
 		Body(outBytes).
@@ -262,7 +262,7 @@ func (c *dynamicResourceClient) Delete(ctx context.Context, name string, opts me
 
 	result := c.client.client.
 		Delete().
-		Cluster(c.client.cluster).
+		Scope(c.client.scope).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		SetHeader("Content-Type", runtime.ContentTypeJSON).
 		Body(deleteOptionsByte).
@@ -278,7 +278,7 @@ func (c *dynamicResourceClient) DeleteCollection(ctx context.Context, opts metav
 
 	result := c.client.client.
 		Delete().
-		Cluster(c.client.cluster).
+		Scope(c.client.scope).
 		AbsPath(c.makeURLSegments("")...).
 		SetHeader("Content-Type", runtime.ContentTypeJSON).
 		Body(deleteOptionsByte).
@@ -291,7 +291,7 @@ func (c *dynamicResourceClient) Get(ctx context.Context, name string, opts metav
 	if len(name) == 0 {
 		return nil, fmt.Errorf("name is required")
 	}
-	result := c.client.client.Get().Cluster(c.client.cluster).AbsPath(append(c.makeURLSegments(name), subresources...)...).SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).Do(ctx)
+	result := c.client.client.Get().Scope(c.client.scope).AbsPath(append(c.makeURLSegments(name), subresources...)...).SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).Do(ctx)
 	if err := result.Error(); err != nil {
 		return nil, err
 	}
@@ -307,7 +307,7 @@ func (c *dynamicResourceClient) Get(ctx context.Context, name string, opts metav
 }
 
 func (c *dynamicResourceClient) List(ctx context.Context, opts metav1.ListOptions) (*unstructured.UnstructuredList, error) {
-	result := c.client.client.Get().Cluster(c.client.cluster).AbsPath(c.makeURLSegments("")...).SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).Do(ctx)
+	result := c.client.client.Get().Scope(c.client.scope).AbsPath(c.makeURLSegments("")...).SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).Do(ctx)
 	if err := result.Error(); err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ func (c *dynamicResourceClient) List(ctx context.Context, opts metav1.ListOption
 
 func (c *dynamicResourceClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
-	return c.client.client.Get().Cluster(c.client.cluster).AbsPath(c.makeURLSegments("")...).
+	return c.client.client.Get().Scope(c.client.scope).AbsPath(c.makeURLSegments("")...).
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).
 		Watch(ctx)
 }
@@ -343,7 +343,7 @@ func (c *dynamicResourceClient) Patch(ctx context.Context, name string, pt types
 	}
 	result := c.client.client.
 		Patch(pt).
-		Cluster(c.client.cluster).
+		Scope(c.client.scope).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		Body(data).
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).

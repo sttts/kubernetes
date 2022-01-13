@@ -32,8 +32,16 @@ func (c *FakeWardleV1alpha1) Fischers() v1alpha1.FischerInterface {
 	return &FakeFischers{c}
 }
 
+func (c *FakeWardleV1alpha1) ScopedFischers(scope rest.Scope) v1alpha1.FischerInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeWardleV1alpha1) Flunders(namespace string) v1alpha1.FlunderInterface {
 	return &FakeFlunders{c, namespace}
+}
+
+func (c *FakeWardleV1alpha1) ScopedFlunders(scope rest.Scope) v1alpha1.FlundersGetter {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

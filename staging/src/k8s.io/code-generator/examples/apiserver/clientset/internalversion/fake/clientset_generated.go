@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/testing"
 	clientset "k8s.io/code-generator/examples/apiserver/clientset/internalversion"
 	exampleinternalversion "k8s.io/code-generator/examples/apiserver/clientset/internalversion/typed/example/internalversion"
@@ -72,6 +73,10 @@ type Clientset struct {
 
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
+}
+
+func (c *Clientset) ScopedDiscovery(scope rest.Scope) discovery.DiscoveryInterface {
+	panic("not implemented yet!")
 }
 
 func (c *Clientset) Tracker() testing.ObjectTracker {

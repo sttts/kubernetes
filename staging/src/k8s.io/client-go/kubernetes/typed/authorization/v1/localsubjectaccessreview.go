@@ -34,7 +34,7 @@ type LocalSubjectAccessReviewsGetter interface {
 }
 
 type ScopedLocalSubjectAccessReviewsGetter interface {
-	ScopedLocalSubjectAccessReviews(scope rest.Scope, namespace string) LocalSubjectAccessReviewInterface
+	ScopedLocalSubjectAccessReviews(scope rest.Scope) LocalSubjectAccessReviewsGetter
 }
 
 // LocalSubjectAccessReviewInterface has methods to work with LocalSubjectAccessReview resources.
@@ -43,21 +43,35 @@ type LocalSubjectAccessReviewInterface interface {
 	LocalSubjectAccessReviewExpansion
 }
 
+type localSubjectAccessReviewsScoper struct {
+	client *AuthorizationV1Client
+	scope  rest.Scope
+}
+
+func newLocalSubjectAccessReviewsScoper(c *AuthorizationV1Client, scope rest.Scope) *localSubjectAccessReviewsScoper {
+	return &localSubjectAccessReviewsScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *localSubjectAccessReviewsScoper) LocalSubjectAccessReviews(namespace string) LocalSubjectAccessReviewInterface {
+	return newLocalSubjectAccessReviews(s.client, s.scope, namespace)
+}
+
 // localSubjectAccessReviews implements LocalSubjectAccessReviewInterface
 type localSubjectAccessReviews struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newLocalSubjectAccessReviews returns a LocalSubjectAccessReviews
 func newLocalSubjectAccessReviews(c *AuthorizationV1Client, scope rest.Scope, namespace string) *localSubjectAccessReviews {
 	return &localSubjectAccessReviews{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -65,7 +79,6 @@ func newLocalSubjectAccessReviews(c *AuthorizationV1Client, scope rest.Scope, na
 func (c *localSubjectAccessReviews) Create(ctx context.Context, localSubjectAccessReview *v1.LocalSubjectAccessReview, opts metav1.CreateOptions) (result *v1.LocalSubjectAccessReview, err error) {
 	result = &v1.LocalSubjectAccessReview{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("localsubjectaccessreviews").

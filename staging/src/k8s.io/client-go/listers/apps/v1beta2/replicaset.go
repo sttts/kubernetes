@@ -58,13 +58,17 @@ func (s *replicaSetLister) Scoped(scope rest.Scope) ReplicaSetLister {
 
 // List lists all ReplicaSets in the indexer.
 func (s *replicaSetLister) List(selector labels.Selector) (ret []*v1beta2.ReplicaSet, err error) {
-	var indexValue string
-	if s.scope != nil {
-		indexValue = s.scope.Name()
-	}
-	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
+	appendFunc := func(m interface{}) {
 		ret = append(ret, m.(*v1beta2.ReplicaSet))
-	})
+	}
+
+	if s.scope == nil {
+		err = cache.ListAll(s.indexer, selector, appendFunc)
+		return ret, err
+	}
+
+	indexValue := s.scope.Name()
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, appendFunc)
 	return ret, err
 }
 

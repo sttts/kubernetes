@@ -32,12 +32,24 @@ func (c *FakeNetworkingV1) Ingresses(namespace string) v1.IngressInterface {
 	return &FakeIngresses{c, namespace}
 }
 
+func (c *FakeNetworkingV1) ScopedIngresses(scope rest.Scope) v1.IngressesGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeNetworkingV1) IngressClasses() v1.IngressClassInterface {
 	return &FakeIngressClasses{c}
 }
 
+func (c *FakeNetworkingV1) ScopedIngressClasses(scope rest.Scope) v1.IngressClassInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeNetworkingV1) NetworkPolicies(namespace string) v1.NetworkPolicyInterface {
 	return &FakeNetworkPolicies{c, namespace}
+}
+
+func (c *FakeNetworkingV1) ScopedNetworkPolicies(scope rest.Scope) v1.NetworkPoliciesGetter {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -58,13 +58,17 @@ func (s *eventLister) Scoped(scope rest.Scope) EventLister {
 
 // List lists all Events in the indexer.
 func (s *eventLister) List(selector labels.Selector) (ret []*v1.Event, err error) {
-	var indexValue string
-	if s.scope != nil {
-		indexValue = s.scope.Name()
-	}
-	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
+	appendFunc := func(m interface{}) {
 		ret = append(ret, m.(*v1.Event))
-	})
+	}
+
+	if s.scope == nil {
+		err = cache.ListAll(s.indexer, selector, appendFunc)
+		return ret, err
+	}
+
+	indexValue := s.scope.Name()
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, appendFunc)
 	return ret, err
 }
 

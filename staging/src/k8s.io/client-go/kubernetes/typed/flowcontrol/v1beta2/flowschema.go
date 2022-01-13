@@ -61,17 +61,15 @@ type FlowSchemaInterface interface {
 
 // flowSchemas implements FlowSchemaInterface
 type flowSchemas struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newFlowSchemas returns a FlowSchemas
 func newFlowSchemas(c *FlowcontrolV1beta2Client, scope rest.Scope) *flowSchemas {
 	return &flowSchemas{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -79,7 +77,6 @@ func newFlowSchemas(c *FlowcontrolV1beta2Client, scope rest.Scope) *flowSchemas 
 func (c *flowSchemas) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta2.FlowSchema, err error) {
 	result = &v1beta2.FlowSchema{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		Name(name).
@@ -97,7 +94,6 @@ func (c *flowSchemas) List(ctx context.Context, opts v1.ListOptions) (result *v1
 	}
 	result = &v1beta2.FlowSchemaList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -115,7 +111,6 @@ func (c *flowSchemas) Watch(ctx context.Context, opts v1.ListOptions) (watch.Int
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -127,7 +122,6 @@ func (c *flowSchemas) Watch(ctx context.Context, opts v1.ListOptions) (watch.Int
 func (c *flowSchemas) Create(ctx context.Context, flowSchema *v1beta2.FlowSchema, opts v1.CreateOptions) (result *v1beta2.FlowSchema, err error) {
 	result = &v1beta2.FlowSchema{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -141,7 +135,6 @@ func (c *flowSchemas) Create(ctx context.Context, flowSchema *v1beta2.FlowSchema
 func (c *flowSchemas) Update(ctx context.Context, flowSchema *v1beta2.FlowSchema, opts v1.UpdateOptions) (result *v1beta2.FlowSchema, err error) {
 	result = &v1beta2.FlowSchema{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		Name(flowSchema.Name).
@@ -157,7 +150,6 @@ func (c *flowSchemas) Update(ctx context.Context, flowSchema *v1beta2.FlowSchema
 func (c *flowSchemas) UpdateStatus(ctx context.Context, flowSchema *v1beta2.FlowSchema, opts v1.UpdateOptions) (result *v1beta2.FlowSchema, err error) {
 	result = &v1beta2.FlowSchema{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		Name(flowSchema.Name).
@@ -172,7 +164,6 @@ func (c *flowSchemas) UpdateStatus(ctx context.Context, flowSchema *v1beta2.Flow
 // Delete takes name of the flowSchema and deletes it. Returns an error if one occurs.
 func (c *flowSchemas) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		Name(name).
@@ -188,7 +179,6 @@ func (c *flowSchemas) DeleteCollection(ctx context.Context, opts v1.DeleteOption
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -202,7 +192,6 @@ func (c *flowSchemas) DeleteCollection(ctx context.Context, opts v1.DeleteOption
 func (c *flowSchemas) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta2.FlowSchema, err error) {
 	result = &v1beta2.FlowSchema{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		Name(name).
@@ -230,7 +219,6 @@ func (c *flowSchemas) Apply(ctx context.Context, flowSchema *flowcontrolv1beta2.
 	}
 	result = &v1beta2.FlowSchema{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		Name(*name).
@@ -260,7 +248,6 @@ func (c *flowSchemas) ApplyStatus(ctx context.Context, flowSchema *flowcontrolv1
 
 	result = &v1beta2.FlowSchema{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("flowschemas").
 		Name(*name).

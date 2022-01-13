@@ -32,24 +32,48 @@ func (c *FakeExtensionsV1beta1) DaemonSets(namespace string) v1beta1.DaemonSetIn
 	return &FakeDaemonSets{c, namespace}
 }
 
+func (c *FakeExtensionsV1beta1) ScopedDaemonSets(scope rest.Scope) v1beta1.DaemonSetsGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeExtensionsV1beta1) Deployments(namespace string) v1beta1.DeploymentInterface {
 	return &FakeDeployments{c, namespace}
+}
+
+func (c *FakeExtensionsV1beta1) ScopedDeployments(scope rest.Scope) v1beta1.DeploymentsGetter {
+	panic("not implemented yet!")
 }
 
 func (c *FakeExtensionsV1beta1) Ingresses(namespace string) v1beta1.IngressInterface {
 	return &FakeIngresses{c, namespace}
 }
 
+func (c *FakeExtensionsV1beta1) ScopedIngresses(scope rest.Scope) v1beta1.IngressesGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeExtensionsV1beta1) NetworkPolicies(namespace string) v1beta1.NetworkPolicyInterface {
 	return &FakeNetworkPolicies{c, namespace}
+}
+
+func (c *FakeExtensionsV1beta1) ScopedNetworkPolicies(scope rest.Scope) v1beta1.NetworkPoliciesGetter {
+	panic("not implemented yet!")
 }
 
 func (c *FakeExtensionsV1beta1) PodSecurityPolicies() v1beta1.PodSecurityPolicyInterface {
 	return &FakePodSecurityPolicies{c}
 }
 
+func (c *FakeExtensionsV1beta1) ScopedPodSecurityPolicies(scope rest.Scope) v1beta1.PodSecurityPolicyInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeExtensionsV1beta1) ReplicaSets(namespace string) v1beta1.ReplicaSetInterface {
 	return &FakeReplicaSets{c, namespace}
+}
+
+func (c *FakeExtensionsV1beta1) ScopedReplicaSets(scope rest.Scope) v1beta1.ReplicaSetsGetter {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -32,6 +32,10 @@ func (c *FakeNodeV1beta1) RuntimeClasses() v1beta1.RuntimeClassInterface {
 	return &FakeRuntimeClasses{c}
 }
 
+func (c *FakeNodeV1beta1) ScopedRuntimeClasses(scope rest.Scope) v1beta1.RuntimeClassInterface {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeNodeV1beta1) RESTClient() rest.Interface {

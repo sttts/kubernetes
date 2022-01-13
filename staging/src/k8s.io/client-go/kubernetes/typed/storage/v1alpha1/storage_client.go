@@ -35,19 +35,19 @@ type StorageV1alpha1Interface interface {
 // StorageV1alpha1Client is used to interact with features provided by the storage.k8s.io group.
 type StorageV1alpha1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *StorageV1alpha1Client) CSIStorageCapacities(namespace string) CSIStorageCapacityInterface {
-	return newCSIStorageCapacities(c, nil, namespace)
+	return newCSIStorageCapacities(c, c.scope, namespace)
 }
 
-func (c *StorageV1alpha1Client) ScopedCSIStorageCapacities(scope rest.Scope, namespace string) CSIStorageCapacityInterface {
-	return newCSIStorageCapacities(c, scope, namespace)
+func (c *StorageV1alpha1Client) ScopedCSIStorageCapacities(scope rest.Scope) CSIStorageCapacitiesGetter {
+	return newCSIStorageCapacitiesScoper(c, scope)
 }
 
 func (c *StorageV1alpha1Client) VolumeAttachments() VolumeAttachmentInterface {
-	return newVolumeAttachments(c, nil)
+	return newVolumeAttachments(c, c.scope)
 }
 
 func (c *StorageV1alpha1Client) ScopedVolumeAttachments(scope rest.Scope) VolumeAttachmentInterface {
@@ -98,9 +98,9 @@ func New(c rest.Interface) *StorageV1alpha1Client {
 	return &StorageV1alpha1Client{restClient: c}
 }
 
-// NewWithCluster creates a new StorageV1alpha1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *StorageV1alpha1Client {
-	return &StorageV1alpha1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new StorageV1alpha1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *StorageV1alpha1Client {
+	return &StorageV1alpha1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

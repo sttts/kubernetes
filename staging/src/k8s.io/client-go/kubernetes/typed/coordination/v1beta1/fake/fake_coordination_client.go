@@ -32,6 +32,10 @@ func (c *FakeCoordinationV1beta1) Leases(namespace string) v1beta1.LeaseInterfac
 	return &FakeLeases{c, namespace}
 }
 
+func (c *FakeCoordinationV1beta1) ScopedLeases(scope rest.Scope) v1beta1.LeasesGetter {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeCoordinationV1beta1) RESTClient() rest.Interface {

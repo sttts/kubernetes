@@ -32,6 +32,10 @@ func (c *FakeApiregistrationV1) APIServices() v1.APIServiceInterface {
 	return &FakeAPIServices{c}
 }
 
+func (c *FakeApiregistrationV1) ScopedAPIServices(scope rest.Scope) v1.APIServiceInterface {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeApiregistrationV1) RESTClient() rest.Interface {

@@ -33,11 +33,11 @@ type ApiregistrationV1Interface interface {
 // ApiregistrationV1Client is used to interact with features provided by the apiregistration.k8s.io group.
 type ApiregistrationV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *ApiregistrationV1Client) APIServices() APIServiceInterface {
-	return newAPIServices(c, nil)
+	return newAPIServices(c, c.scope)
 }
 
 func (c *ApiregistrationV1Client) ScopedAPIServices(scope rest.Scope) APIServiceInterface {
@@ -88,9 +88,9 @@ func New(c rest.Interface) *ApiregistrationV1Client {
 	return &ApiregistrationV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new ApiregistrationV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *ApiregistrationV1Client {
-	return &ApiregistrationV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new ApiregistrationV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *ApiregistrationV1Client {
+	return &ApiregistrationV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

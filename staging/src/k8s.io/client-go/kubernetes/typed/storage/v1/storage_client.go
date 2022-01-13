@@ -39,11 +39,11 @@ type StorageV1Interface interface {
 // StorageV1Client is used to interact with features provided by the storage.k8s.io group.
 type StorageV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *StorageV1Client) CSIDrivers() CSIDriverInterface {
-	return newCSIDrivers(c, nil)
+	return newCSIDrivers(c, c.scope)
 }
 
 func (c *StorageV1Client) ScopedCSIDrivers(scope rest.Scope) CSIDriverInterface {
@@ -51,7 +51,7 @@ func (c *StorageV1Client) ScopedCSIDrivers(scope rest.Scope) CSIDriverInterface 
 }
 
 func (c *StorageV1Client) CSINodes() CSINodeInterface {
-	return newCSINodes(c, nil)
+	return newCSINodes(c, c.scope)
 }
 
 func (c *StorageV1Client) ScopedCSINodes(scope rest.Scope) CSINodeInterface {
@@ -59,7 +59,7 @@ func (c *StorageV1Client) ScopedCSINodes(scope rest.Scope) CSINodeInterface {
 }
 
 func (c *StorageV1Client) StorageClasses() StorageClassInterface {
-	return newStorageClasses(c, nil)
+	return newStorageClasses(c, c.scope)
 }
 
 func (c *StorageV1Client) ScopedStorageClasses(scope rest.Scope) StorageClassInterface {
@@ -67,7 +67,7 @@ func (c *StorageV1Client) ScopedStorageClasses(scope rest.Scope) StorageClassInt
 }
 
 func (c *StorageV1Client) VolumeAttachments() VolumeAttachmentInterface {
-	return newVolumeAttachments(c, nil)
+	return newVolumeAttachments(c, c.scope)
 }
 
 func (c *StorageV1Client) ScopedVolumeAttachments(scope rest.Scope) VolumeAttachmentInterface {
@@ -118,9 +118,9 @@ func New(c rest.Interface) *StorageV1Client {
 	return &StorageV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new StorageV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *StorageV1Client {
-	return &StorageV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new StorageV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *StorageV1Client {
+	return &StorageV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

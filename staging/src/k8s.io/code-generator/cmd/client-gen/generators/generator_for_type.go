@@ -210,6 +210,9 @@ func (g *genClientForType) GenerateType(c *generator.Context, t *types.Type, w i
 		sw.Do(structNonNamespaced, m)
 		sw.Do(newStructNonNamespaced, m)
 	} else {
+		sw.Do(scoperNamespaced, m)
+		sw.Do(newScoperNamespaced, m)
+		sw.Do(scoperNamespacedGetterImpl, m)
 		sw.Do(structNamespaced, m)
 		sw.Do(newStructNamespaced, m)
 	}
@@ -413,7 +416,7 @@ type $.type|publicPlural$Getter interface {
 
 var scopedGetterNamespaced = `
 type Scoped$.type|publicPlural$Getter interface {
-	Scoped$.type|publicPlural$(scope $.restScope|raw$, namespace string) $.type|public$Interface
+	Scoped$.type|publicPlural$(scope $.restScope|raw$) $.type|publicPlural$Getter
 }
 `
 
@@ -433,12 +436,33 @@ var interfaceTemplate4 = `
 }
 `
 
+var scoperNamespaced = `
+type $.type|privatePlural$Scoper struct {
+	client *$.GroupGoName$$.Version$Client
+	scope $.restScope|raw$
+}
+`
+
+var newScoperNamespaced = `
+func new$.type|publicPlural$Scoper(c *$.GroupGoName$$.Version$Client, scope $.restScope|raw$) *$.type|privatePlural$Scoper {
+	return &$.type|privatePlural$Scoper{
+		client: c,
+		scope: scope,
+	}
+}
+`
+
+var scoperNamespacedGetterImpl = `
+func (s *$.type|privatePlural$Scoper) $.type|publicPlural$(namespace string) $.type|public$Interface {
+	return new$.type|publicPlural$(s.client, s.scope, namespace)
+}
+`
+
 // template for the struct that implements the type's interface
 var structNamespaced = `
 // $.type|privatePlural$ implements $.type|public$Interface
 type $.type|privatePlural$ struct {
 	client  $.RESTClientInterface|raw$
-	cluster string
 	scope   $.restScope|raw$
 	ns      string
 }
@@ -449,7 +473,6 @@ var structNonNamespaced = `
 // $.type|privatePlural$ implements $.type|public$Interface
 type $.type|privatePlural$ struct {
 	client  $.RESTClientInterface|raw$
-	cluster string
 	scope   $.restScope|raw$
 }
 `
@@ -459,7 +482,6 @@ var newStructNamespaced = `
 func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client, scope $.restScope|raw$, namespace string) *$.type|privatePlural$ {
 	return &$.type|privatePlural${
 		client:  c.RESTClient(),
-		cluster: c.cluster,
 		scope:   scope,
 		ns:      namespace,
 	}
@@ -471,7 +493,6 @@ var newStructNonNamespaced = `
 func new$.type|publicPlural$(c *$.GroupGoName$$.Version$Client, scope $.restScope|raw$) *$.type|privatePlural$ {
 	return &$.type|privatePlural${
 		client:  c.RESTClient(),
-		cluster: c.cluster,
 		scope:   scope,
 	}
 }
@@ -485,7 +506,6 @@ func (c *$.type|privatePlural$) List(ctx context.Context, opts $.ListOptions|raw
 	}
 	result = &$.resultType|raw$List{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -506,7 +526,6 @@ func (c *$.type|privatePlural$) List(ctx context.Context, $.type|private$Name st
 	}
 	result = &$.resultType|raw$List{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -525,7 +544,6 @@ var getTemplate = `
 func (c *$.type|privatePlural$) Get(ctx context.Context, name string, options $.GetOptions|raw$) (result *$.resultType|raw$, err error) {
 	result = &$.resultType|raw${}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -542,7 +560,6 @@ var getSubresourceTemplate = `
 func (c *$.type|privatePlural$) Get(ctx context.Context, $.type|private$Name string, options $.GetOptions|raw$) (result *$.resultType|raw$, err error) {
 	result = &$.resultType|raw${}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -559,7 +576,6 @@ var deleteTemplate = `
 // Delete takes name of the $.type|private$ and deletes it. Returns an error if one occurs.
 func (c *$.type|privatePlural$) Delete(ctx context.Context, name string, opts $.DeleteOptions|raw$) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -578,7 +594,6 @@ func (c *$.type|privatePlural$) DeleteCollection(ctx context.Context, opts $.Del
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -595,7 +610,6 @@ var createSubresourceTemplate = `
 func (c *$.type|privatePlural$) Create(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputType|raw$, opts $.CreateOptions|raw$) (result *$.resultType|raw$, err error) {
 	result = &$.resultType|raw${}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -614,7 +628,6 @@ var createTemplate = `
 func (c *$.type|privatePlural$) Create(ctx context.Context, $.inputType|private$ *$.inputType|raw$, opts $.CreateOptions|raw$) (result *$.resultType|raw$, err error) {
 	result = &$.resultType|raw${}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -631,7 +644,6 @@ var updateSubresourceTemplate = `
 func (c *$.type|privatePlural$) Update(ctx context.Context, $.type|private$Name string, $.inputType|private$ *$.inputType|raw$, opts $.UpdateOptions|raw$) (result *$.resultType|raw$, err error) {
 	result = &$.resultType|raw${}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -650,7 +662,6 @@ var updateTemplate = `
 func (c *$.type|privatePlural$) Update(ctx context.Context, $.inputType|private$ *$.inputType|raw$, opts $.UpdateOptions|raw$) (result *$.resultType|raw$, err error) {
 	result = &$.resultType|raw${}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -669,7 +680,6 @@ var updateStatusTemplate = `
 func (c *$.type|privatePlural$) UpdateStatus(ctx context.Context, $.type|private$ *$.type|raw$, opts $.UpdateOptions|raw$) (result *$.type|raw$, err error) {
 	result = &$.type|raw${}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -692,7 +702,6 @@ func (c *$.type|privatePlural$) Watch(ctx context.Context, opts $.ListOptions|ra
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -707,7 +716,6 @@ var patchTemplate = `
 func (c *$.type|privatePlural$) Patch(ctx context.Context, name string, pt $.PatchType|raw$, data []byte, opts $.PatchOptions|raw$, subresources ...string) (result *$.resultType|raw$, err error) {
 	result = &$.resultType|raw${}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -738,7 +746,6 @@ func (c *$.type|privatePlural$) Apply(ctx context.Context, $.inputType|private$ 
 	}
 	result = &$.resultType|raw${}
 	err = c.client.Patch($.ApplyPatchType|raw$).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -771,7 +778,6 @@ func (c *$.type|privatePlural$) ApplyStatus(ctx context.Context, $.inputType|pri
 
 	result = &$.resultType|raw${}
 	err = c.client.Patch($.ApplyPatchType|raw$).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").
@@ -800,7 +806,6 @@ func (c *$.type|privatePlural$) Apply(ctx context.Context, $.type|private$Name s
 
 	result = &$.resultType|raw${}
 	err = c.client.Patch($.ApplyPatchType|raw$).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		$if .namespaced$Namespace(c.ns).$end$
 		Resource("$.type|resource$").

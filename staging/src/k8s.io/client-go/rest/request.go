@@ -791,6 +791,12 @@ func (r *Request) Watch(ctx context.Context) (watch.Interface, error) {
 			retryAfter = nil
 		}
 
+		if r.scopeSet && r.scope != nil {
+			if err := r.scope.ScopeRequest(req); err != nil {
+				return nil, err
+			}
+		}
+
 		resp, err := client.Do(req)
 		updateURLMetrics(ctx, r, resp, err)
 		if r.c.base != nil {
@@ -920,6 +926,12 @@ func (r *Request) Stream(ctx context.Context) (io.ReadCloser, error) {
 				return nil, err
 			}
 			retryAfter = nil
+		}
+
+		if r.scopeSet && r.scope != nil {
+			if err := r.scope.ScopeRequest(req); err != nil {
+				return nil, err
+			}
 		}
 
 		resp, err := client.Do(req)

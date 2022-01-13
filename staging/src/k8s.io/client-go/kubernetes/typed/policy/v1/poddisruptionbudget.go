@@ -40,7 +40,7 @@ type PodDisruptionBudgetsGetter interface {
 }
 
 type ScopedPodDisruptionBudgetsGetter interface {
-	ScopedPodDisruptionBudgets(scope rest.Scope, namespace string) PodDisruptionBudgetInterface
+	ScopedPodDisruptionBudgets(scope rest.Scope) PodDisruptionBudgetsGetter
 }
 
 // PodDisruptionBudgetInterface has methods to work with PodDisruptionBudget resources.
@@ -59,21 +59,35 @@ type PodDisruptionBudgetInterface interface {
 	PodDisruptionBudgetExpansion
 }
 
+type podDisruptionBudgetsScoper struct {
+	client *PolicyV1Client
+	scope  rest.Scope
+}
+
+func newPodDisruptionBudgetsScoper(c *PolicyV1Client, scope rest.Scope) *podDisruptionBudgetsScoper {
+	return &podDisruptionBudgetsScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *podDisruptionBudgetsScoper) PodDisruptionBudgets(namespace string) PodDisruptionBudgetInterface {
+	return newPodDisruptionBudgets(s.client, s.scope, namespace)
+}
+
 // podDisruptionBudgets implements PodDisruptionBudgetInterface
 type podDisruptionBudgets struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newPodDisruptionBudgets returns a PodDisruptionBudgets
 func newPodDisruptionBudgets(c *PolicyV1Client, scope rest.Scope, namespace string) *podDisruptionBudgets {
 	return &podDisruptionBudgets{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -81,7 +95,6 @@ func newPodDisruptionBudgets(c *PolicyV1Client, scope rest.Scope, namespace stri
 func (c *podDisruptionBudgets) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.PodDisruptionBudget, err error) {
 	result = &v1.PodDisruptionBudget{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -100,7 +113,6 @@ func (c *podDisruptionBudgets) List(ctx context.Context, opts metav1.ListOptions
 	}
 	result = &v1.PodDisruptionBudgetList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -119,7 +131,6 @@ func (c *podDisruptionBudgets) Watch(ctx context.Context, opts metav1.ListOption
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -132,7 +143,6 @@ func (c *podDisruptionBudgets) Watch(ctx context.Context, opts metav1.ListOption
 func (c *podDisruptionBudgets) Create(ctx context.Context, podDisruptionBudget *v1.PodDisruptionBudget, opts metav1.CreateOptions) (result *v1.PodDisruptionBudget, err error) {
 	result = &v1.PodDisruptionBudget{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -147,7 +157,6 @@ func (c *podDisruptionBudgets) Create(ctx context.Context, podDisruptionBudget *
 func (c *podDisruptionBudgets) Update(ctx context.Context, podDisruptionBudget *v1.PodDisruptionBudget, opts metav1.UpdateOptions) (result *v1.PodDisruptionBudget, err error) {
 	result = &v1.PodDisruptionBudget{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -164,7 +173,6 @@ func (c *podDisruptionBudgets) Update(ctx context.Context, podDisruptionBudget *
 func (c *podDisruptionBudgets) UpdateStatus(ctx context.Context, podDisruptionBudget *v1.PodDisruptionBudget, opts metav1.UpdateOptions) (result *v1.PodDisruptionBudget, err error) {
 	result = &v1.PodDisruptionBudget{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -180,7 +188,6 @@ func (c *podDisruptionBudgets) UpdateStatus(ctx context.Context, podDisruptionBu
 // Delete takes name of the podDisruptionBudget and deletes it. Returns an error if one occurs.
 func (c *podDisruptionBudgets) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -197,7 +204,6 @@ func (c *podDisruptionBudgets) DeleteCollection(ctx context.Context, opts metav1
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -212,7 +218,6 @@ func (c *podDisruptionBudgets) DeleteCollection(ctx context.Context, opts metav1
 func (c *podDisruptionBudgets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PodDisruptionBudget, err error) {
 	result = &v1.PodDisruptionBudget{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -241,7 +246,6 @@ func (c *podDisruptionBudgets) Apply(ctx context.Context, podDisruptionBudget *p
 	}
 	result = &v1.PodDisruptionBudget{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").
@@ -272,7 +276,6 @@ func (c *podDisruptionBudgets) ApplyStatus(ctx context.Context, podDisruptionBud
 
 	result = &v1.PodDisruptionBudget{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("poddisruptionbudgets").

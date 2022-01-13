@@ -32,6 +32,10 @@ func (c *FakeEventsV1) Events(namespace string) v1.EventInterface {
 	return &FakeEvents{c, namespace}
 }
 
+func (c *FakeEventsV1) ScopedEvents(scope rest.Scope) v1.EventsGetter {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeEventsV1) RESTClient() rest.Interface {

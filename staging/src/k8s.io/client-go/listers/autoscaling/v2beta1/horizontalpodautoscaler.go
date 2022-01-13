@@ -58,13 +58,17 @@ func (s *horizontalPodAutoscalerLister) Scoped(scope rest.Scope) HorizontalPodAu
 
 // List lists all HorizontalPodAutoscalers in the indexer.
 func (s *horizontalPodAutoscalerLister) List(selector labels.Selector) (ret []*v2beta1.HorizontalPodAutoscaler, err error) {
-	var indexValue string
-	if s.scope != nil {
-		indexValue = s.scope.Name()
-	}
-	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
+	appendFunc := func(m interface{}) {
 		ret = append(ret, m.(*v2beta1.HorizontalPodAutoscaler))
-	})
+	}
+
+	if s.scope == nil {
+		err = cache.ListAll(s.indexer, selector, appendFunc)
+		return ret, err
+	}
+
+	indexValue := s.scope.Name()
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, appendFunc)
 	return ret, err
 }
 

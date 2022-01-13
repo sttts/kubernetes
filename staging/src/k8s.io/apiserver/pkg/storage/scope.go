@@ -8,6 +8,7 @@ import (
 
 type Scope interface {
 	NoNamespaceKeyRootFunc(prefix string) string
+	FromPrefixAndKey(prefix, key string) Scope
 	PostDecode(obj runtime.Object) error
 }
 
@@ -24,4 +25,8 @@ func ScopeFrom(ctx context.Context) Scope {
 		return v
 	}
 	return nil
+}
+
+type ScopeFactory interface {
+	NewStorageScope(ctx context.Context) (Scope, error)
 }

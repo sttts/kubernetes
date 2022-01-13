@@ -33,15 +33,15 @@ type WardleV1beta1Interface interface {
 // WardleV1beta1Client is used to interact with features provided by the wardle.example.com group.
 type WardleV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *WardleV1beta1Client) Flunders(namespace string) FlunderInterface {
-	return newFlunders(c, nil, namespace)
+	return newFlunders(c, c.scope, namespace)
 }
 
-func (c *WardleV1beta1Client) ScopedFlunders(scope rest.Scope, namespace string) FlunderInterface {
-	return newFlunders(c, scope, namespace)
+func (c *WardleV1beta1Client) ScopedFlunders(scope rest.Scope) FlundersGetter {
+	return newFlundersScoper(c, scope)
 }
 
 // NewForConfig creates a new WardleV1beta1Client for the given config.
@@ -88,9 +88,9 @@ func New(c rest.Interface) *WardleV1beta1Client {
 	return &WardleV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new WardleV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *WardleV1beta1Client {
-	return &WardleV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new WardleV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *WardleV1beta1Client {
+	return &WardleV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

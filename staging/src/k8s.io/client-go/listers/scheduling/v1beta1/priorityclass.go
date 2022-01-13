@@ -59,13 +59,17 @@ func (s *priorityClassLister) Scoped(scope rest.Scope) PriorityClassLister {
 
 // List lists all PriorityClasses in the indexer.
 func (s *priorityClassLister) List(selector labels.Selector) (ret []*v1beta1.PriorityClass, err error) {
-	var indexValue string
-	if s.scope != nil {
-		indexValue = s.scope.Name()
-	}
-	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
+	appendFunc := func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.PriorityClass))
-	})
+	}
+
+	if s.scope == nil {
+		err = cache.ListAll(s.indexer, selector, appendFunc)
+		return ret, err
+	}
+
+	indexValue := s.scope.Name()
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, appendFunc)
 	return ret, err
 }
 

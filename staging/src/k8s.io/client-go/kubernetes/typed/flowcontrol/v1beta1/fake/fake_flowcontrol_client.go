@@ -32,8 +32,16 @@ func (c *FakeFlowcontrolV1beta1) FlowSchemas() v1beta1.FlowSchemaInterface {
 	return &FakeFlowSchemas{c}
 }
 
+func (c *FakeFlowcontrolV1beta1) ScopedFlowSchemas(scope rest.Scope) v1beta1.FlowSchemaInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeFlowcontrolV1beta1) PriorityLevelConfigurations() v1beta1.PriorityLevelConfigurationInterface {
 	return &FakePriorityLevelConfigurations{c}
+}
+
+func (c *FakeFlowcontrolV1beta1) ScopedPriorityLevelConfigurations(scope rest.Scope) v1beta1.PriorityLevelConfigurationInterface {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

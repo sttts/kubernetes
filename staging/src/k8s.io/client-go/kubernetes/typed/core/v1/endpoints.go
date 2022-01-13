@@ -40,7 +40,7 @@ type EndpointsGetter interface {
 }
 
 type ScopedEndpointsGetter interface {
-	ScopedEndpoints(scope rest.Scope, namespace string) EndpointsInterface
+	ScopedEndpoints(scope rest.Scope) EndpointsGetter
 }
 
 // EndpointsInterface has methods to work with Endpoints resources.
@@ -57,21 +57,35 @@ type EndpointsInterface interface {
 	EndpointsExpansion
 }
 
+type endpointsScoper struct {
+	client *CoreV1Client
+	scope  rest.Scope
+}
+
+func newEndpointsScoper(c *CoreV1Client, scope rest.Scope) *endpointsScoper {
+	return &endpointsScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *endpointsScoper) Endpoints(namespace string) EndpointsInterface {
+	return newEndpoints(s.client, s.scope, namespace)
+}
+
 // endpoints implements EndpointsInterface
 type endpoints struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newEndpoints returns a Endpoints
 func newEndpoints(c *CoreV1Client, scope rest.Scope, namespace string) *endpoints {
 	return &endpoints{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -79,7 +93,6 @@ func newEndpoints(c *CoreV1Client, scope rest.Scope, namespace string) *endpoint
 func (c *endpoints) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Endpoints, err error) {
 	result = &v1.Endpoints{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("endpoints").
@@ -98,7 +111,6 @@ func (c *endpoints) List(ctx context.Context, opts metav1.ListOptions) (result *
 	}
 	result = &v1.EndpointsList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("endpoints").
@@ -117,7 +129,6 @@ func (c *endpoints) Watch(ctx context.Context, opts metav1.ListOptions) (watch.I
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("endpoints").
@@ -130,7 +141,6 @@ func (c *endpoints) Watch(ctx context.Context, opts metav1.ListOptions) (watch.I
 func (c *endpoints) Create(ctx context.Context, endpoints *v1.Endpoints, opts metav1.CreateOptions) (result *v1.Endpoints, err error) {
 	result = &v1.Endpoints{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("endpoints").
@@ -145,7 +155,6 @@ func (c *endpoints) Create(ctx context.Context, endpoints *v1.Endpoints, opts me
 func (c *endpoints) Update(ctx context.Context, endpoints *v1.Endpoints, opts metav1.UpdateOptions) (result *v1.Endpoints, err error) {
 	result = &v1.Endpoints{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("endpoints").
@@ -160,7 +169,6 @@ func (c *endpoints) Update(ctx context.Context, endpoints *v1.Endpoints, opts me
 // Delete takes name of the endpoints and deletes it. Returns an error if one occurs.
 func (c *endpoints) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("endpoints").
@@ -177,7 +185,6 @@ func (c *endpoints) DeleteCollection(ctx context.Context, opts metav1.DeleteOpti
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("endpoints").
@@ -192,7 +199,6 @@ func (c *endpoints) DeleteCollection(ctx context.Context, opts metav1.DeleteOpti
 func (c *endpoints) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Endpoints, err error) {
 	result = &v1.Endpoints{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("endpoints").
@@ -221,7 +227,6 @@ func (c *endpoints) Apply(ctx context.Context, endpoints *corev1.EndpointsApplyC
 	}
 	result = &v1.Endpoints{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("endpoints").

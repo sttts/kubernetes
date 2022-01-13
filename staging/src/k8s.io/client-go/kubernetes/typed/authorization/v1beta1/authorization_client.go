@@ -39,19 +39,19 @@ type AuthorizationV1beta1Interface interface {
 // AuthorizationV1beta1Client is used to interact with features provided by the authorization.k8s.io group.
 type AuthorizationV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *AuthorizationV1beta1Client) LocalSubjectAccessReviews(namespace string) LocalSubjectAccessReviewInterface {
-	return newLocalSubjectAccessReviews(c, nil, namespace)
+	return newLocalSubjectAccessReviews(c, c.scope, namespace)
 }
 
-func (c *AuthorizationV1beta1Client) ScopedLocalSubjectAccessReviews(scope rest.Scope, namespace string) LocalSubjectAccessReviewInterface {
-	return newLocalSubjectAccessReviews(c, scope, namespace)
+func (c *AuthorizationV1beta1Client) ScopedLocalSubjectAccessReviews(scope rest.Scope) LocalSubjectAccessReviewsGetter {
+	return newLocalSubjectAccessReviewsScoper(c, scope)
 }
 
 func (c *AuthorizationV1beta1Client) SelfSubjectAccessReviews() SelfSubjectAccessReviewInterface {
-	return newSelfSubjectAccessReviews(c, nil)
+	return newSelfSubjectAccessReviews(c, c.scope)
 }
 
 func (c *AuthorizationV1beta1Client) ScopedSelfSubjectAccessReviews(scope rest.Scope) SelfSubjectAccessReviewInterface {
@@ -59,7 +59,7 @@ func (c *AuthorizationV1beta1Client) ScopedSelfSubjectAccessReviews(scope rest.S
 }
 
 func (c *AuthorizationV1beta1Client) SelfSubjectRulesReviews() SelfSubjectRulesReviewInterface {
-	return newSelfSubjectRulesReviews(c, nil)
+	return newSelfSubjectRulesReviews(c, c.scope)
 }
 
 func (c *AuthorizationV1beta1Client) ScopedSelfSubjectRulesReviews(scope rest.Scope) SelfSubjectRulesReviewInterface {
@@ -67,7 +67,7 @@ func (c *AuthorizationV1beta1Client) ScopedSelfSubjectRulesReviews(scope rest.Sc
 }
 
 func (c *AuthorizationV1beta1Client) SubjectAccessReviews() SubjectAccessReviewInterface {
-	return newSubjectAccessReviews(c, nil)
+	return newSubjectAccessReviews(c, c.scope)
 }
 
 func (c *AuthorizationV1beta1Client) ScopedSubjectAccessReviews(scope rest.Scope) SubjectAccessReviewInterface {
@@ -118,9 +118,9 @@ func New(c rest.Interface) *AuthorizationV1beta1Client {
 	return &AuthorizationV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new AuthorizationV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *AuthorizationV1beta1Client {
-	return &AuthorizationV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new AuthorizationV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *AuthorizationV1beta1Client {
+	return &AuthorizationV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

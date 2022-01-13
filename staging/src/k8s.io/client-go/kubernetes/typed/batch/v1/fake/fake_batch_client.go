@@ -32,8 +32,16 @@ func (c *FakeBatchV1) CronJobs(namespace string) v1.CronJobInterface {
 	return &FakeCronJobs{c, namespace}
 }
 
+func (c *FakeBatchV1) ScopedCronJobs(scope rest.Scope) v1.CronJobsGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeBatchV1) Jobs(namespace string) v1.JobInterface {
 	return &FakeJobs{c, namespace}
+}
+
+func (c *FakeBatchV1) ScopedJobs(scope rest.Scope) v1.JobsGetter {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

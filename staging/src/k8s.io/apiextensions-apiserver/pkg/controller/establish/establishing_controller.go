@@ -38,7 +38,7 @@ import (
 
 // EstablishingController controls how and when CRD is established.
 type EstablishingController struct {
-	crdClient client.CustomResourceDefinitionsGetter
+	crdClient client.ScopedCustomResourceDefinitionsGetter
 	crdLister listers.CustomResourceDefinitionLister
 	crdSynced cache.InformerSynced
 
@@ -50,7 +50,7 @@ type EstablishingController struct {
 
 // NewEstablishingController creates new EstablishingController.
 func NewEstablishingController(crdInformer informers.CustomResourceDefinitionInformer,
-	crdClient client.CustomResourceDefinitionsGetter) *EstablishingController {
+	crdClient client.ScopedCustomResourceDefinitionsGetter) *EstablishingController {
 	ec := &EstablishingController{
 		crdClient: crdClient,
 		crdLister: crdInformer.Lister(),
@@ -120,7 +120,12 @@ func (ec *EstablishingController) processNextWorkItem() bool {
 
 // sync is used to turn CRDs into the Established state.
 func (ec *EstablishingController) sync(key string) error {
-	cachedCRD, err := ec.crdLister.Get(key)
+	scope, err := cache.ScopeFromKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("error getting scope from key %q: %w", key, err))
+		return nil
+	}
+	cachedCRD, err := ec.crdLister.Scoped(scope).Get(key)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -143,7 +148,7 @@ func (ec *EstablishingController) sync(key string) error {
 	apiextensionshelpers.SetCRDCondition(crd, establishedCondition)
 
 	// Update server with new CRD condition.
-	_, err = ec.crdClient.CustomResourceDefinitions().UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
+	_, err = ec.crdClient.ScopedCustomResourceDefinitions(scope).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		// deleted or changed in the meantime, we'll get called again
 		return nil

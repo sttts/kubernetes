@@ -54,6 +54,7 @@ func init() {
 // convert the metadata.
 type Client struct {
 	client *rest.RESTClient
+	scope  rest.Scope
 }
 
 var _ Interface = &Client{}
@@ -79,6 +80,29 @@ func NewForConfigOrDie(c *rest.Config) Interface {
 		panic(err)
 	}
 	return ret
+}
+
+func NewScopingForConfig(inConfig *rest.Config) (ScopedInterface, error) {
+	i, err := NewForConfig(inConfig)
+	if err != nil {
+		return nil, err
+	}
+	c := i.(*Client)
+	return &scopingClient{
+		client: c,
+	}, nil
+
+}
+
+type scopingClient struct {
+	client *Client
+}
+
+func (s *scopingClient) Scoped(scope rest.Scope) Interface {
+	return &Client{
+		client: s.client.client,
+		scope:  scope,
+	}
 }
 
 // NewForConfig creates a new metadata client that can retrieve object
@@ -115,6 +139,7 @@ func NewForConfigAndClient(inConfig *rest.Config, h rest.HTTPClient) (Interface,
 
 type client struct {
 	client    *Client
+	scope     rest.Scope
 	namespace string
 	resource  schema.GroupVersionResource
 }
@@ -151,6 +176,7 @@ func (c *client) Delete(ctx context.Context, name string, opts metav1.DeleteOpti
 
 	result := c.client.client.
 		Delete().
+		Scope(c.scope).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		SetHeader("Content-Type", runtime.ContentTypeJSON).
 		Body(deleteOptionsByte).
@@ -168,6 +194,7 @@ func (c *client) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions
 
 	result := c.client.client.
 		Delete().
+		Scope(c.scope).
 		AbsPath(c.makeURLSegments("")...).
 		SetHeader("Content-Type", runtime.ContentTypeJSON).
 		Body(deleteOptionsByte).
@@ -181,7 +208,7 @@ func (c *client) Get(ctx context.Context, name string, opts metav1.GetOptions, s
 	if len(name) == 0 {
 		return nil, fmt.Errorf("name is required")
 	}
-	result := c.client.client.Get().AbsPath(append(c.makeURLSegments(name), subresources...)...).
+	result := c.client.client.Get().Scope(c.scope).AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		SetHeader("Accept", "application/vnd.kubernetes.protobuf;as=PartialObjectMetadata;g=meta.k8s.io;v=v1,application/json;as=PartialObjectMetadata;g=meta.k8s.io;v=v1,application/json").
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).
 		Do(ctx)
@@ -217,7 +244,7 @@ func (c *client) Get(ctx context.Context, name string, opts metav1.GetOptions, s
 
 // List returns all resources within the specified scope (namespace or cluster).
 func (c *client) List(ctx context.Context, opts metav1.ListOptions) (*metav1.PartialObjectMetadataList, error) {
-	result := c.client.client.Get().AbsPath(c.makeURLSegments("")...).
+	result := c.client.client.Get().Scope(c.scope).AbsPath(c.makeURLSegments("")...).
 		SetHeader("Accept", "application/vnd.kubernetes.protobuf;as=PartialObjectMetadataList;g=meta.k8s.io;v=v1,application/json;as=PartialObjectMetadataList;g=meta.k8s.io;v=v1,application/json").
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).
 		Do(ctx)
@@ -256,6 +283,7 @@ func (c *client) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Inte
 	}
 	opts.Watch = true
 	return c.client.client.Get().
+		Scope(c.scope).
 		AbsPath(c.makeURLSegments("")...).
 		SetHeader("Accept", "application/vnd.kubernetes.protobuf;as=PartialObjectMetadata;g=meta.k8s.io;v=v1,application/json;as=PartialObjectMetadata;g=meta.k8s.io;v=v1,application/json").
 		SpecificallyVersionedParams(&opts, dynamicParameterCodec, versionV1).
@@ -270,6 +298,7 @@ func (c *client) Patch(ctx context.Context, name string, pt types.PatchType, dat
 	}
 	result := c.client.client.
 		Patch(pt).
+		Scope(c.scope).
 		AbsPath(append(c.makeURLSegments(name), subresources...)...).
 		Body(data).
 		SetHeader("Accept", "application/vnd.kubernetes.protobuf;as=PartialObjectMetadata;g=meta.k8s.io;v=v1,application/json;as=PartialObjectMetadata;g=meta.k8s.io;v=v1,application/json").

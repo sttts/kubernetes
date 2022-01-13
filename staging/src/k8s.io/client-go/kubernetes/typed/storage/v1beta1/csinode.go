@@ -59,17 +59,15 @@ type CSINodeInterface interface {
 
 // cSINodes implements CSINodeInterface
 type cSINodes struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newCSINodes returns a CSINodes
 func newCSINodes(c *StorageV1beta1Client, scope rest.Scope) *cSINodes {
 	return &cSINodes{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -77,7 +75,6 @@ func newCSINodes(c *StorageV1beta1Client, scope rest.Scope) *cSINodes {
 func (c *cSINodes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.CSINode, err error) {
 	result = &v1beta1.CSINode{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csinodes").
 		Name(name).
@@ -95,7 +92,6 @@ func (c *cSINodes) List(ctx context.Context, opts v1.ListOptions) (result *v1bet
 	}
 	result = &v1beta1.CSINodeList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csinodes").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -113,7 +109,6 @@ func (c *cSINodes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interf
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csinodes").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -125,7 +120,6 @@ func (c *cSINodes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interf
 func (c *cSINodes) Create(ctx context.Context, cSINode *v1beta1.CSINode, opts v1.CreateOptions) (result *v1beta1.CSINode, err error) {
 	result = &v1beta1.CSINode{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csinodes").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -139,7 +133,6 @@ func (c *cSINodes) Create(ctx context.Context, cSINode *v1beta1.CSINode, opts v1
 func (c *cSINodes) Update(ctx context.Context, cSINode *v1beta1.CSINode, opts v1.UpdateOptions) (result *v1beta1.CSINode, err error) {
 	result = &v1beta1.CSINode{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csinodes").
 		Name(cSINode.Name).
@@ -153,7 +146,6 @@ func (c *cSINodes) Update(ctx context.Context, cSINode *v1beta1.CSINode, opts v1
 // Delete takes name of the cSINode and deletes it. Returns an error if one occurs.
 func (c *cSINodes) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csinodes").
 		Name(name).
@@ -169,7 +161,6 @@ func (c *cSINodes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, 
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csinodes").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -183,7 +174,6 @@ func (c *cSINodes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, 
 func (c *cSINodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CSINode, err error) {
 	result = &v1beta1.CSINode{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csinodes").
 		Name(name).
@@ -211,7 +201,6 @@ func (c *cSINodes) Apply(ctx context.Context, cSINode *storagev1beta1.CSINodeApp
 	}
 	result = &v1beta1.CSINode{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csinodes").
 		Name(*name).

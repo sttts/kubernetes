@@ -59,13 +59,17 @@ func (s *customResourceDefinitionLister) Scoped(scope rest.Scope) CustomResource
 
 // List lists all CustomResourceDefinitions in the indexer.
 func (s *customResourceDefinitionLister) List(selector labels.Selector) (ret []*v1beta1.CustomResourceDefinition, err error) {
-	var indexValue string
-	if s.scope != nil {
-		indexValue = s.scope.Name()
-	}
-	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, func(m interface{}) {
+	appendFunc := func(m interface{}) {
 		ret = append(ret, m.(*v1beta1.CustomResourceDefinition))
-	})
+	}
+
+	if s.scope == nil {
+		err = cache.ListAll(s.indexer, selector, appendFunc)
+		return ret, err
+	}
+
+	indexValue := s.scope.Name()
+	err = cache.ListAllByIndexAndValue(s.indexer, cache.ListAllIndex, indexValue, selector, appendFunc)
 	return ret, err
 }
 

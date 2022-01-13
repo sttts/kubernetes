@@ -40,7 +40,7 @@ type LeasesGetter interface {
 }
 
 type ScopedLeasesGetter interface {
-	ScopedLeases(scope rest.Scope, namespace string) LeaseInterface
+	ScopedLeases(scope rest.Scope) LeasesGetter
 }
 
 // LeaseInterface has methods to work with Lease resources.
@@ -57,21 +57,35 @@ type LeaseInterface interface {
 	LeaseExpansion
 }
 
+type leasesScoper struct {
+	client *CoordinationV1beta1Client
+	scope  rest.Scope
+}
+
+func newLeasesScoper(c *CoordinationV1beta1Client, scope rest.Scope) *leasesScoper {
+	return &leasesScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *leasesScoper) Leases(namespace string) LeaseInterface {
+	return newLeases(s.client, s.scope, namespace)
+}
+
 // leases implements LeaseInterface
 type leases struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newLeases returns a Leases
 func newLeases(c *CoordinationV1beta1Client, scope rest.Scope, namespace string) *leases {
 	return &leases{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -79,7 +93,6 @@ func newLeases(c *CoordinationV1beta1Client, scope rest.Scope, namespace string)
 func (c *leases) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Lease, err error) {
 	result = &v1beta1.Lease{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
@@ -98,7 +111,6 @@ func (c *leases) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1
 	}
 	result = &v1beta1.LeaseList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
@@ -117,7 +129,6 @@ func (c *leases) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interfac
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
@@ -130,7 +141,6 @@ func (c *leases) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interfac
 func (c *leases) Create(ctx context.Context, lease *v1beta1.Lease, opts v1.CreateOptions) (result *v1beta1.Lease, err error) {
 	result = &v1beta1.Lease{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
@@ -145,7 +155,6 @@ func (c *leases) Create(ctx context.Context, lease *v1beta1.Lease, opts v1.Creat
 func (c *leases) Update(ctx context.Context, lease *v1beta1.Lease, opts v1.UpdateOptions) (result *v1beta1.Lease, err error) {
 	result = &v1beta1.Lease{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
@@ -160,7 +169,6 @@ func (c *leases) Update(ctx context.Context, lease *v1beta1.Lease, opts v1.Updat
 // Delete takes name of the lease and deletes it. Returns an error if one occurs.
 func (c *leases) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
@@ -177,7 +185,6 @@ func (c *leases) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, li
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
@@ -192,7 +199,6 @@ func (c *leases) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, li
 func (c *leases) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Lease, err error) {
 	result = &v1beta1.Lease{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").
@@ -221,7 +227,6 @@ func (c *leases) Apply(ctx context.Context, lease *coordinationv1beta1.LeaseAppl
 	}
 	result = &v1beta1.Lease{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("leases").

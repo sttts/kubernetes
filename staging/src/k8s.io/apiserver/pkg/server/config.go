@@ -61,6 +61,7 @@ import (
 	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/apiserver/pkg/server/routes"
 	serverstore "k8s.io/apiserver/pkg/server/storage"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storageversion"
 	"k8s.io/apiserver/pkg/util/feature"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -257,6 +258,8 @@ type Config struct {
 
 	// StorageVersionManager holds the storage versions of the API resources installed by this server.
 	StorageVersionManager storageversion.Manager
+
+	StorageScopeFactory storage.ScopeFactory
 }
 
 type RecommendedConfig struct {

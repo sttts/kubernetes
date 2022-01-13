@@ -32,64 +32,128 @@ func (c *FakeCoreV1) ComponentStatuses() v1.ComponentStatusInterface {
 	return &FakeComponentStatuses{c}
 }
 
+func (c *FakeCoreV1) ScopedComponentStatuses(scope rest.Scope) v1.ComponentStatusInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeCoreV1) ConfigMaps(namespace string) v1.ConfigMapInterface {
 	return &FakeConfigMaps{c, namespace}
+}
+
+func (c *FakeCoreV1) ScopedConfigMaps(scope rest.Scope) v1.ConfigMapsGetter {
+	panic("not implemented yet!")
 }
 
 func (c *FakeCoreV1) Endpoints(namespace string) v1.EndpointsInterface {
 	return &FakeEndpoints{c, namespace}
 }
 
+func (c *FakeCoreV1) ScopedEndpoints(scope rest.Scope) v1.EndpointsGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeCoreV1) Events(namespace string) v1.EventInterface {
 	return &FakeEvents{c, namespace}
+}
+
+func (c *FakeCoreV1) ScopedEvents(scope rest.Scope) v1.EventsGetter {
+	panic("not implemented yet!")
 }
 
 func (c *FakeCoreV1) LimitRanges(namespace string) v1.LimitRangeInterface {
 	return &FakeLimitRanges{c, namespace}
 }
 
+func (c *FakeCoreV1) ScopedLimitRanges(scope rest.Scope) v1.LimitRangesGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeCoreV1) Namespaces() v1.NamespaceInterface {
 	return &FakeNamespaces{c}
+}
+
+func (c *FakeCoreV1) ScopedNamespaces(scope rest.Scope) v1.NamespaceInterface {
+	panic("not implemented yet!")
 }
 
 func (c *FakeCoreV1) Nodes() v1.NodeInterface {
 	return &FakeNodes{c}
 }
 
+func (c *FakeCoreV1) ScopedNodes(scope rest.Scope) v1.NodeInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeCoreV1) PersistentVolumes() v1.PersistentVolumeInterface {
 	return &FakePersistentVolumes{c}
+}
+
+func (c *FakeCoreV1) ScopedPersistentVolumes(scope rest.Scope) v1.PersistentVolumeInterface {
+	panic("not implemented yet!")
 }
 
 func (c *FakeCoreV1) PersistentVolumeClaims(namespace string) v1.PersistentVolumeClaimInterface {
 	return &FakePersistentVolumeClaims{c, namespace}
 }
 
+func (c *FakeCoreV1) ScopedPersistentVolumeClaims(scope rest.Scope) v1.PersistentVolumeClaimsGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeCoreV1) Pods(namespace string) v1.PodInterface {
 	return &FakePods{c, namespace}
+}
+
+func (c *FakeCoreV1) ScopedPods(scope rest.Scope) v1.PodsGetter {
+	panic("not implemented yet!")
 }
 
 func (c *FakeCoreV1) PodTemplates(namespace string) v1.PodTemplateInterface {
 	return &FakePodTemplates{c, namespace}
 }
 
+func (c *FakeCoreV1) ScopedPodTemplates(scope rest.Scope) v1.PodTemplatesGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeCoreV1) ReplicationControllers(namespace string) v1.ReplicationControllerInterface {
 	return &FakeReplicationControllers{c, namespace}
+}
+
+func (c *FakeCoreV1) ScopedReplicationControllers(scope rest.Scope) v1.ReplicationControllersGetter {
+	panic("not implemented yet!")
 }
 
 func (c *FakeCoreV1) ResourceQuotas(namespace string) v1.ResourceQuotaInterface {
 	return &FakeResourceQuotas{c, namespace}
 }
 
+func (c *FakeCoreV1) ScopedResourceQuotas(scope rest.Scope) v1.ResourceQuotasGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeCoreV1) Secrets(namespace string) v1.SecretInterface {
 	return &FakeSecrets{c, namespace}
+}
+
+func (c *FakeCoreV1) ScopedSecrets(scope rest.Scope) v1.SecretsGetter {
+	panic("not implemented yet!")
 }
 
 func (c *FakeCoreV1) Services(namespace string) v1.ServiceInterface {
 	return &FakeServices{c, namespace}
 }
 
+func (c *FakeCoreV1) ScopedServices(scope rest.Scope) v1.ServicesGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeCoreV1) ServiceAccounts(namespace string) v1.ServiceAccountInterface {
 	return &FakeServiceAccounts{c, namespace}
+}
+
+func (c *FakeCoreV1) ScopedServiceAccounts(scope rest.Scope) v1.ServiceAccountsGetter {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

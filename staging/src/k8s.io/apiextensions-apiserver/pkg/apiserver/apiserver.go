@@ -49,6 +49,7 @@ import (
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/apiserver/pkg/util/webhook"
+	"k8s.io/client-go/dynamic"
 	restclient "k8s.io/client-go/rest"
 )
 
@@ -250,10 +251,14 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 	namingController := status.NewNamingConditionController(s.Informers.Apiextensions().V1().CustomResourceDefinitions(), crdClient.ApiextensionsV1())
 	nonStructuralSchemaController := nonstructuralschema.NewConditionController(s.Informers.Apiextensions().V1().CustomResourceDefinitions(), crdClient.ApiextensionsV1())
 	apiApprovalController := apiapproval.NewKubernetesAPIApprovalPolicyConformantConditionController(s.Informers.Apiextensions().V1().CustomResourceDefinitions(), crdClient.ApiextensionsV1())
+	dynamicClient, err := dynamic.NewScopingForConfig(s.GenericAPIServer.LoopbackClientConfig)
+	if err != nil {
+		return nil, err
+	}
 	finalizingController := finalizer.NewCRDFinalizer(
 		s.Informers.Apiextensions().V1().CustomResourceDefinitions(),
 		crdClient.ApiextensionsV1(),
-		crdHandler,
+		dynamicClient,
 	)
 	openapiController := openapicontroller.NewController(s.Informers.Apiextensions().V1().CustomResourceDefinitions())
 	var openapiv3Controller *openapiv3controller.Controller

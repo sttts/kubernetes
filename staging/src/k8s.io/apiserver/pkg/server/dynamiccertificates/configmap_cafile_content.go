@@ -110,26 +110,34 @@ func NewDynamicCAFromConfigMapController(purpose, namespace, name, key string, k
 			return true // always return true just in case.  The checks are fairly cheap
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
-			// we have a filter, so any time we're called, we may as well queue. We only ever check one configmap
-			// so we don't have to be choosy about our key.
 			AddFunc: func(obj interface{}) {
-				c.queue.Add(c.keyFn())
+				key, err := cache.ObjectKeyFunc(obj)
+				if err != nil {
+					klog.Errorf("Error extracting key")
+					return
+				}
+				c.queue.Add(key)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				c.queue.Add(c.keyFn())
+				key, err := cache.ObjectKeyFunc(newObj)
+				if err != nil {
+					klog.Errorf("Error extracting key")
+					return
+				}
+				c.queue.Add(key)
 			},
 			DeleteFunc: func(obj interface{}) {
-				c.queue.Add(c.keyFn())
+				key, err := cache.ObjectKeyFunc(obj)
+				if err != nil {
+					klog.Errorf("Error extracting key")
+					return
+				}
+				c.queue.Add(key)
 			},
 		},
 	})
 
 	return c, nil
-}
-
-func (c *ConfigMapCAController) keyFn() string {
-	// this format matches DeletionHandlingMetaNamespaceKeyFunc for our single key
-	return c.configmapNamespace + "/" + c.configmapName
 }
 
 // AddListener adds a listener to be notified when the CA content changes.

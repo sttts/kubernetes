@@ -32,6 +32,10 @@ func (c *FakeWardleV1beta1) Flunders(namespace string) v1beta1.FlunderInterface 
 	return &FakeFlunders{c, namespace}
 }
 
+func (c *FakeWardleV1beta1) ScopedFlunders(scope rest.Scope) v1beta1.FlundersGetter {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeWardleV1beta1) RESTClient() rest.Interface {

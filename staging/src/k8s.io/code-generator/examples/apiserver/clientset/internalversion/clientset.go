@@ -29,35 +29,36 @@ import (
 	thirdexampleinternalversion "k8s.io/code-generator/examples/apiserver/clientset/internalversion/typed/example3.io/internalversion"
 )
 
-type ClusterInterface interface {
-	Cluster(name string) Interface
+type Scoper interface {
+	Scope(scope rest.Scope) Interface
 }
 
-type Cluster struct {
+type scoper struct {
 	*scopedClientset
 }
 
-// Cluster sets the cluster for a Clientset.
-func (c *Cluster) Cluster(name string) Interface {
+// Scope scopes a clientset.
+func (s *scoper) Scope(scope rest.Scope) Interface {
 	return &Clientset{
-		scopedClientset: c.scopedClientset,
-		cluster:         name,
+		scopedClientset: s.scopedClientset,
+		scope:           scope,
 	}
 }
 
-// NewClusterForConfig creates a new Cluster for the given config.
+// NewScoperForConfig creates a new Scoper for the given config.
 // If config's RateLimiter is not set and QPS and Burst are acceptable,
-// NewClusterForConfig will generate a rate-limiter in configShallowCopy.
-func NewClusterForConfig(c *rest.Config) (*Cluster, error) {
+// NewScoperForConfig will generate a rate-limiter in configShallowCopy.
+func NewScoperForConfig(c *rest.Config) (*scoper, error) {
 	cs, err := NewForConfig(c)
 	if err != nil {
 		return nil, err
 	}
-	return &Cluster{scopedClientset: cs.scopedClientset}, nil
+	return &scoper{scopedClientset: cs.scopedClientset}, nil
 }
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
+	ScopedDiscovery(scope rest.Scope) discovery.DiscoveryInterface
 	Example() exampleinternalversion.ExampleInterface
 	SecondExample() secondexampleinternalversion.SecondExampleInterface
 	ThirdExample() thirdexampleinternalversion.ThirdExampleInterface
@@ -67,7 +68,7 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*scopedClientset
-	cluster string
+	scope rest.Scope
 }
 
 // scopedClientset contains the clients for groups. Each group has exactly one
@@ -81,17 +82,17 @@ type scopedClientset struct {
 
 // Example retrieves the ExampleClient
 func (c *Clientset) Example() exampleinternalversion.ExampleInterface {
-	return exampleinternalversion.NewWithCluster(c.example.RESTClient(), c.cluster)
+	return exampleinternalversion.NewWithScope(c.example.RESTClient(), c.scope)
 }
 
 // SecondExample retrieves the SecondExampleClient
 func (c *Clientset) SecondExample() secondexampleinternalversion.SecondExampleInterface {
-	return secondexampleinternalversion.NewWithCluster(c.secondExample.RESTClient(), c.cluster)
+	return secondexampleinternalversion.NewWithScope(c.secondExample.RESTClient(), c.scope)
 }
 
 // ThirdExample retrieves the ThirdExampleClient
 func (c *Clientset) ThirdExample() thirdexampleinternalversion.ThirdExampleInterface {
-	return thirdexampleinternalversion.NewWithCluster(c.thirdExample.RESTClient(), c.cluster)
+	return thirdexampleinternalversion.NewWithScope(c.thirdExample.RESTClient(), c.scope)
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -99,7 +100,15 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	if c == nil {
 		return nil
 	}
-	return c.DiscoveryClient.WithCluster(c.cluster)
+	return c.DiscoveryClient.Scope(c.scope)
+}
+
+// ScopedDiscovery retrieves a scoped DiscoveryInterface.
+func (c *Clientset) ScopedDiscovery(scope rest.Scope) discovery.DiscoveryInterface {
+	if c == nil {
+		return nil
+	}
+	return c.DiscoveryClient.Scope(scope)
 }
 
 // NewForConfig creates a new Clientset for the given config.

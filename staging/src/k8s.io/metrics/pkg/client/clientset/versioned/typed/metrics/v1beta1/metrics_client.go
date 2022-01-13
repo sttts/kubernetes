@@ -35,11 +35,11 @@ type MetricsV1beta1Interface interface {
 // MetricsV1beta1Client is used to interact with features provided by the metrics.k8s.io group.
 type MetricsV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *MetricsV1beta1Client) NodeMetricses() NodeMetricsInterface {
-	return newNodeMetricses(c, nil)
+	return newNodeMetricses(c, c.scope)
 }
 
 func (c *MetricsV1beta1Client) ScopedNodeMetricses(scope rest.Scope) NodeMetricsInterface {
@@ -47,11 +47,11 @@ func (c *MetricsV1beta1Client) ScopedNodeMetricses(scope rest.Scope) NodeMetrics
 }
 
 func (c *MetricsV1beta1Client) PodMetricses(namespace string) PodMetricsInterface {
-	return newPodMetricses(c, nil, namespace)
+	return newPodMetricses(c, c.scope, namespace)
 }
 
-func (c *MetricsV1beta1Client) ScopedPodMetricses(scope rest.Scope, namespace string) PodMetricsInterface {
-	return newPodMetricses(c, scope, namespace)
+func (c *MetricsV1beta1Client) ScopedPodMetricses(scope rest.Scope) PodMetricsesGetter {
+	return newPodMetricsesScoper(c, scope)
 }
 
 // NewForConfig creates a new MetricsV1beta1Client for the given config.
@@ -98,9 +98,9 @@ func New(c rest.Interface) *MetricsV1beta1Client {
 	return &MetricsV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new MetricsV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *MetricsV1beta1Client {
-	return &MetricsV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new MetricsV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *MetricsV1beta1Client {
+	return &MetricsV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

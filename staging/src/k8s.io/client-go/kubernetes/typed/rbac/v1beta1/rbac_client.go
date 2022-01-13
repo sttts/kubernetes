@@ -39,11 +39,11 @@ type RbacV1beta1Interface interface {
 // RbacV1beta1Client is used to interact with features provided by the rbac.authorization.k8s.io group.
 type RbacV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *RbacV1beta1Client) ClusterRoles() ClusterRoleInterface {
-	return newClusterRoles(c, nil)
+	return newClusterRoles(c, c.scope)
 }
 
 func (c *RbacV1beta1Client) ScopedClusterRoles(scope rest.Scope) ClusterRoleInterface {
@@ -51,7 +51,7 @@ func (c *RbacV1beta1Client) ScopedClusterRoles(scope rest.Scope) ClusterRoleInte
 }
 
 func (c *RbacV1beta1Client) ClusterRoleBindings() ClusterRoleBindingInterface {
-	return newClusterRoleBindings(c, nil)
+	return newClusterRoleBindings(c, c.scope)
 }
 
 func (c *RbacV1beta1Client) ScopedClusterRoleBindings(scope rest.Scope) ClusterRoleBindingInterface {
@@ -59,19 +59,19 @@ func (c *RbacV1beta1Client) ScopedClusterRoleBindings(scope rest.Scope) ClusterR
 }
 
 func (c *RbacV1beta1Client) Roles(namespace string) RoleInterface {
-	return newRoles(c, nil, namespace)
+	return newRoles(c, c.scope, namespace)
 }
 
-func (c *RbacV1beta1Client) ScopedRoles(scope rest.Scope, namespace string) RoleInterface {
-	return newRoles(c, scope, namespace)
+func (c *RbacV1beta1Client) ScopedRoles(scope rest.Scope) RolesGetter {
+	return newRolesScoper(c, scope)
 }
 
 func (c *RbacV1beta1Client) RoleBindings(namespace string) RoleBindingInterface {
-	return newRoleBindings(c, nil, namespace)
+	return newRoleBindings(c, c.scope, namespace)
 }
 
-func (c *RbacV1beta1Client) ScopedRoleBindings(scope rest.Scope, namespace string) RoleBindingInterface {
-	return newRoleBindings(c, scope, namespace)
+func (c *RbacV1beta1Client) ScopedRoleBindings(scope rest.Scope) RoleBindingsGetter {
+	return newRoleBindingsScoper(c, scope)
 }
 
 // NewForConfig creates a new RbacV1beta1Client for the given config.
@@ -118,9 +118,9 @@ func New(c rest.Interface) *RbacV1beta1Client {
 	return &RbacV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new RbacV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *RbacV1beta1Client {
-	return &RbacV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new RbacV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *RbacV1beta1Client {
+	return &RbacV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

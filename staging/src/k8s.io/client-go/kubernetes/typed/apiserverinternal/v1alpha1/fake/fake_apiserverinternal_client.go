@@ -32,6 +32,10 @@ func (c *FakeInternalV1alpha1) StorageVersions() v1alpha1.StorageVersionInterfac
 	return &FakeStorageVersions{c}
 }
 
+func (c *FakeInternalV1alpha1) ScopedStorageVersions(scope rest.Scope) v1alpha1.StorageVersionInterface {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeInternalV1alpha1) RESTClient() rest.Interface {

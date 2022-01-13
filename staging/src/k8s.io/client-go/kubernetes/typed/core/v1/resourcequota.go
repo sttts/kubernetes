@@ -40,7 +40,7 @@ type ResourceQuotasGetter interface {
 }
 
 type ScopedResourceQuotasGetter interface {
-	ScopedResourceQuotas(scope rest.Scope, namespace string) ResourceQuotaInterface
+	ScopedResourceQuotas(scope rest.Scope) ResourceQuotasGetter
 }
 
 // ResourceQuotaInterface has methods to work with ResourceQuota resources.
@@ -59,21 +59,35 @@ type ResourceQuotaInterface interface {
 	ResourceQuotaExpansion
 }
 
+type resourceQuotasScoper struct {
+	client *CoreV1Client
+	scope  rest.Scope
+}
+
+func newResourceQuotasScoper(c *CoreV1Client, scope rest.Scope) *resourceQuotasScoper {
+	return &resourceQuotasScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *resourceQuotasScoper) ResourceQuotas(namespace string) ResourceQuotaInterface {
+	return newResourceQuotas(s.client, s.scope, namespace)
+}
+
 // resourceQuotas implements ResourceQuotaInterface
 type resourceQuotas struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newResourceQuotas returns a ResourceQuotas
 func newResourceQuotas(c *CoreV1Client, scope rest.Scope, namespace string) *resourceQuotas {
 	return &resourceQuotas{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -81,7 +95,6 @@ func newResourceQuotas(c *CoreV1Client, scope rest.Scope, namespace string) *res
 func (c *resourceQuotas) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ResourceQuota, err error) {
 	result = &v1.ResourceQuota{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -100,7 +113,6 @@ func (c *resourceQuotas) List(ctx context.Context, opts metav1.ListOptions) (res
 	}
 	result = &v1.ResourceQuotaList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -119,7 +131,6 @@ func (c *resourceQuotas) Watch(ctx context.Context, opts metav1.ListOptions) (wa
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -132,7 +143,6 @@ func (c *resourceQuotas) Watch(ctx context.Context, opts metav1.ListOptions) (wa
 func (c *resourceQuotas) Create(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.CreateOptions) (result *v1.ResourceQuota, err error) {
 	result = &v1.ResourceQuota{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -147,7 +157,6 @@ func (c *resourceQuotas) Create(ctx context.Context, resourceQuota *v1.ResourceQ
 func (c *resourceQuotas) Update(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (result *v1.ResourceQuota, err error) {
 	result = &v1.ResourceQuota{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -164,7 +173,6 @@ func (c *resourceQuotas) Update(ctx context.Context, resourceQuota *v1.ResourceQ
 func (c *resourceQuotas) UpdateStatus(ctx context.Context, resourceQuota *v1.ResourceQuota, opts metav1.UpdateOptions) (result *v1.ResourceQuota, err error) {
 	result = &v1.ResourceQuota{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -180,7 +188,6 @@ func (c *resourceQuotas) UpdateStatus(ctx context.Context, resourceQuota *v1.Res
 // Delete takes name of the resourceQuota and deletes it. Returns an error if one occurs.
 func (c *resourceQuotas) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -197,7 +204,6 @@ func (c *resourceQuotas) DeleteCollection(ctx context.Context, opts metav1.Delet
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -212,7 +218,6 @@ func (c *resourceQuotas) DeleteCollection(ctx context.Context, opts metav1.Delet
 func (c *resourceQuotas) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ResourceQuota, err error) {
 	result = &v1.ResourceQuota{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -241,7 +246,6 @@ func (c *resourceQuotas) Apply(ctx context.Context, resourceQuota *corev1.Resour
 	}
 	result = &v1.ResourceQuota{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").
@@ -272,7 +276,6 @@ func (c *resourceQuotas) ApplyStatus(ctx context.Context, resourceQuota *corev1.
 
 	result = &v1.ResourceQuota{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("resourcequotas").

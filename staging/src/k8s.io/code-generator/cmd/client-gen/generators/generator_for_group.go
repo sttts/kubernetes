@@ -105,6 +105,7 @@ func (g *genGroup) GenerateType(c *generator.Context, t *types.Type, w io.Writer
 		"RESTHTTPClientFor":                c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "HTTPClientFor"}),
 		"restRESTClientFor":                c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "RESTClientFor"}),
 		"restRESTClientForConfigAndClient": c.Universe.Function(types.Name{Package: "k8s.io/client-go/rest", Name: "RESTClientForConfigAndClient"}),
+		"restScope":                        c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Scope"}),
 		"SchemeGroupVersion":               c.Universe.Variable(types.Name{Package: path.Vendorless(g.inputPackage), Name: "SchemeGroupVersion"}),
 	}
 	sw.Do(groupInterfaceTemplate, m)
@@ -156,25 +157,25 @@ var groupClientTemplate = `
 // $.GroupGoName$$.Version$Client is used to interact with features provided by the $.groupName$ group.
 type $.GroupGoName$$.Version$Client struct {
 	restClient $.restRESTClientInterface|raw$
-	cluster    string
+	scope      $.restScope|raw$
 }
 `
 
 var getterImplNamespaced = `
 func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$(namespace string) $.type|public$Interface {
-	return new$.type|publicPlural$(c, nil, namespace)
+	return new$.type|publicPlural$(c, c.scope, namespace)
 }
 `
 
 var getterImplNonNamespaced = `
 func (c *$.GroupGoName$$.Version$Client) $.type|publicPlural$() $.type|public$Interface {
-	return new$.type|publicPlural$(c, nil)
+	return new$.type|publicPlural$(c, c.scope)
 }
 `
 
 var scopedGetterImplNamespaced = `
-func (c *$.GroupGoName$$.Version$Client) Scoped$.type|publicPlural$(scope $.restScope|raw$, namespace string) $.type|public$Interface {
-	return new$.type|publicPlural$(c, scope, namespace)
+func (c *$.GroupGoName$$.Version$Client) Scoped$.type|publicPlural$(scope $.restScope|raw$) $.type|publicPlural$Getter {
+	return new$.type|publicPlural$Scoper(c, scope)
 }
 `
 
@@ -248,9 +249,9 @@ func New(c $.restRESTClientInterface|raw$) *$.GroupGoName$$.Version$Client {
 `
 
 var newClientForRESTClientAndClusterTemplate = `
-// NewWithCluster creates a new $.GroupGoName$$.Version$Client for the given RESTClient and cluster.
-func NewWithCluster(c $.restRESTClientInterface|raw$, cluster string) *$.GroupGoName$$.Version$Client {
-	return &$.GroupGoName$$.Version$Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new $.GroupGoName$$.Version$Client for the given RESTClient and scope.
+func NewWithScope(c $.restRESTClientInterface|raw$, scope $.restScope|raw$) *$.GroupGoName$$.Version$Client {
+	return &$.GroupGoName$$.Version$Client{restClient: c, scope: scope}
 }
 `
 

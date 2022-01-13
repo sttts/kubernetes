@@ -85,6 +85,7 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 		"NewDiscoveryClientForConfigOrDie":     c.Universe.Function(types.Name{Package: "k8s.io/client-go/discovery", Name: "NewDiscoveryClientForConfigOrDie"}),
 		"NewDiscoveryClient":                   c.Universe.Function(types.Name{Package: "k8s.io/client-go/discovery", Name: "NewDiscoveryClient"}),
 		"flowcontrolNewTokenBucketRateLimiter": c.Universe.Function(types.Name{Package: "k8s.io/client-go/util/flowcontrol", Name: "NewTokenBucketRateLimiter"}),
+		"restScope":                            c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Scope"}),
 	}
 	sw.Do(clusterInterface, m)
 	sw.Do(clusterTemplate, m)
@@ -97,6 +98,7 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 		sw.Do(clientsetInterfaceImplTemplate, g)
 	}
 	sw.Do(getDiscoveryTemplate, m)
+	sw.Do(getScopedDiscoveryTemplate, m)
 	sw.Do(newClientsetForConfigTemplate, m)
 	sw.Do(newClientsetForConfigAndClientTemplate, m)
 	sw.Do(newClientsetForConfigOrDieTemplate, m)
@@ -106,43 +108,44 @@ func (g *genClientset) GenerateType(c *generator.Context, t *types.Type, w io.Wr
 }
 
 var clusterInterface = `
-type ClusterInterface interface {
-	Cluster(name string) Interface
+type Scoper interface {
+	Scope(scope $.restScope|raw$) Interface
 }
 `
 
 var clusterTemplate = `
-type Cluster struct {
+type scoper struct {
 	*scopedClientset
 }
 `
 
 var setClusterTemplate = `
-// Cluster sets the cluster for a Clientset.
-func (c *Cluster) Cluster(name string) Interface {
+// Scope scopes a clientset.
+func (s *scoper) Scope(scope $.restScope|raw$) Interface {
 	return &Clientset{
-		scopedClientset: c.scopedClientset,
-		cluster:         name,
+		scopedClientset: s.scopedClientset,
+		scope:         scope,
 	}
 }
 `
 
 var newClusterForConfigTemplate = `
-// NewClusterForConfig creates a new Cluster for the given config.
-// If config's RateLimiter is not set and QPS and Burst are acceptable, 
-// NewClusterForConfig will generate a rate-limiter in configShallowCopy.
-func NewClusterForConfig(c *$.Config|raw$) (*Cluster, error) {
+// NewScoperForConfig creates a new Scoper for the given config.
+// If config's RateLimiter is not set and QPS and Burst are acceptable,
+// NewScoperForConfig will generate a rate-limiter in configShallowCopy.
+func NewScoperForConfig(c *$.Config|raw$) (*scoper, error) {
 	cs, err := NewForConfig(c)
 	if err != nil {
 		return nil, err
 	}
-	return &Cluster{scopedClientset: cs.scopedClientset}, nil
+	return &scoper{scopedClientset: cs.scopedClientset}, nil
 }
 `
 
 var clientsetInterface = `
 type Interface interface {
 	Discovery() $.DiscoveryInterface|raw$
+	ScopedDiscovery(scope $.restScope|raw$) $.DiscoveryInterface|raw$
     $range .allGroups$$.GroupGoName$$.Version$() $.PackageAlias$.$.GroupGoName$$.Version$Interface
 	$end$
 }
@@ -153,7 +156,7 @@ var clientsetTemplate = `
 // version included in a Clientset.
 type Clientset struct {
 	*scopedClientset
-	cluster string
+	scope $.restScope|raw$
 }
 `
 
@@ -170,7 +173,7 @@ type scopedClientset struct {
 var clientsetInterfaceImplTemplate = `
 // $.GroupGoName$$.Version$ retrieves the $.GroupGoName$$.Version$Client
 func (c *Clientset) $.GroupGoName$$.Version$() $.PackageAlias$.$.GroupGoName$$.Version$Interface {
-	return $.PackageAlias$.NewWithCluster(c.$.LowerCaseGroupGoName$$.Version$.RESTClient(), c.cluster)
+	return $.PackageAlias$.NewWithScope(c.$.LowerCaseGroupGoName$$.Version$.RESTClient(), c.scope)
 }
 `
 
@@ -180,13 +183,23 @@ func (c *Clientset) Discovery() $.DiscoveryInterface|raw$ {
 	if c == nil {
 		return nil
 	}
-	return c.DiscoveryClient.WithCluster(c.cluster)
+	return c.DiscoveryClient.Scope(c.scope)
+}
+`
+
+var getScopedDiscoveryTemplate = `
+// ScopedDiscovery retrieves a scoped DiscoveryInterface.
+func (c *Clientset) ScopedDiscovery(scope $.restScope|raw$) $.DiscoveryInterface|raw$ {
+	if c == nil {
+		return nil
+	}
+	return c.DiscoveryClient.Scope(scope)
 }
 `
 
 var newClientsetForConfigTemplate = `
 // NewForConfig creates a new Clientset for the given config.
-// If config's RateLimiter is not set and QPS and Burst are acceptable, 
+// If config's RateLimiter is not set and QPS and Burst are acceptable,
 // NewForConfig will generate a rate-limiter in configShallowCopy.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).

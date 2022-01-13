@@ -37,27 +37,27 @@ type PolicyV1beta1Interface interface {
 // PolicyV1beta1Client is used to interact with features provided by the policy group.
 type PolicyV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *PolicyV1beta1Client) Evictions(namespace string) EvictionInterface {
-	return newEvictions(c, nil, namespace)
+	return newEvictions(c, c.scope, namespace)
 }
 
-func (c *PolicyV1beta1Client) ScopedEvictions(scope rest.Scope, namespace string) EvictionInterface {
-	return newEvictions(c, scope, namespace)
+func (c *PolicyV1beta1Client) ScopedEvictions(scope rest.Scope) EvictionsGetter {
+	return newEvictionsScoper(c, scope)
 }
 
 func (c *PolicyV1beta1Client) PodDisruptionBudgets(namespace string) PodDisruptionBudgetInterface {
-	return newPodDisruptionBudgets(c, nil, namespace)
+	return newPodDisruptionBudgets(c, c.scope, namespace)
 }
 
-func (c *PolicyV1beta1Client) ScopedPodDisruptionBudgets(scope rest.Scope, namespace string) PodDisruptionBudgetInterface {
-	return newPodDisruptionBudgets(c, scope, namespace)
+func (c *PolicyV1beta1Client) ScopedPodDisruptionBudgets(scope rest.Scope) PodDisruptionBudgetsGetter {
+	return newPodDisruptionBudgetsScoper(c, scope)
 }
 
 func (c *PolicyV1beta1Client) PodSecurityPolicies() PodSecurityPolicyInterface {
-	return newPodSecurityPolicies(c, nil)
+	return newPodSecurityPolicies(c, c.scope)
 }
 
 func (c *PolicyV1beta1Client) ScopedPodSecurityPolicies(scope rest.Scope) PodSecurityPolicyInterface {
@@ -108,9 +108,9 @@ func New(c rest.Interface) *PolicyV1beta1Client {
 	return &PolicyV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new PolicyV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *PolicyV1beta1Client {
-	return &PolicyV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new PolicyV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *PolicyV1beta1Client {
+	return &PolicyV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

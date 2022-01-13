@@ -74,6 +74,7 @@ func (g *genClientset) Imports(c *generator.Context) (imports []string) {
 	imports = append(imports,
 		"k8s.io/client-go/testing",
 		"k8s.io/client-go/discovery",
+		"k8s.io/client-go/rest",
 		"fakediscovery \"k8s.io/client-go/discovery/fake\"",
 		"k8s.io/apimachinery/pkg/runtime",
 		"k8s.io/apimachinery/pkg/watch",
@@ -148,6 +149,10 @@ type Clientset struct {
 
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
+}
+
+func (c *Clientset) ScopedDiscovery(scope rest.Scope) discovery.DiscoveryInterface {
+	panic("not implemented yet!")
 }
 
 func (c *Clientset) Tracker() testing.ObjectTracker {

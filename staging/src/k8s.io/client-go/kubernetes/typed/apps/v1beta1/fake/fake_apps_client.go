@@ -32,12 +32,24 @@ func (c *FakeAppsV1beta1) ControllerRevisions(namespace string) v1beta1.Controll
 	return &FakeControllerRevisions{c, namespace}
 }
 
+func (c *FakeAppsV1beta1) ScopedControllerRevisions(scope rest.Scope) v1beta1.ControllerRevisionsGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeAppsV1beta1) Deployments(namespace string) v1beta1.DeploymentInterface {
 	return &FakeDeployments{c, namespace}
 }
 
+func (c *FakeAppsV1beta1) ScopedDeployments(scope rest.Scope) v1beta1.DeploymentsGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeAppsV1beta1) StatefulSets(namespace string) v1beta1.StatefulSetInterface {
 	return &FakeStatefulSets{c, namespace}
+}
+
+func (c *FakeAppsV1beta1) ScopedStatefulSets(scope rest.Scope) v1beta1.StatefulSetsGetter {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -31,9 +31,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apiserver/pkg/endpoints/handlers/negotiation"
 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	clientgoinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"k8s.io/kube-aggregator/pkg/controllers/openapi/aggregator"
 	"k8s.io/kube-openapi/pkg/handler"
@@ -186,22 +186,22 @@ func (s *MiniAggregatorServer) filterAPIsRequest(req *restful.Request, resp *res
 func (s *MiniAggregatorServer) serveOpenAPI(w http.ResponseWriter, req *http.Request) {
 	downloader := aggregator.NewDownloader()
 
-	cluster := genericapirequest.ClusterFrom(req.Context())
+	scope := rest.ScopeFrom(req.Context())
 
-	withCluster := func(handler http.Handler) http.HandlerFunc {
+	withScope := func(handler http.Handler) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
-			if cluster != nil {
-				req = req.Clone(genericapirequest.WithCluster(req.Context(), *cluster))
+			if scope != nil {
+				req = req.Clone(rest.WithScope(req.Context(), scope))
 			}
 			handler.ServeHTTP(res, req)
 		}
 	}
 
-	// Can't use withCluster here because the GenericControlPlane doesn't have APIs coming from multiple logical clusters at this time.
+	// Can't use withScope here because the GenericControlPlane doesn't have APIs coming from multiple logical clusters at this time.
 	controlPlaneSpec, _, _, err := downloader.Download(s.GenericControlPlane.GenericAPIServer.Handler.Director, "")
 
-	// Use withCluster here because each logical cluster can have a distinct set of APIs coming from its CRDs.
-	crdSpecs, _, _, err := downloader.Download(withCluster(s.CustomResourceDefinitions.GenericAPIServer.Handler.Director), "")
+	// Use withScope here because each logical cluster can have a distinct set of APIs coming from its CRDs.
+	crdSpecs, _, _, err := downloader.Download(withScope(s.CustomResourceDefinitions.GenericAPIServer.Handler.Director), "")
 
 	// TODO(ncdc): merging on the fly is expensive. We may need to optimize this (e.g. caching).
 	mergedSpecs, err := builder.MergeSpecs(controlPlaneSpec, crdSpecs)

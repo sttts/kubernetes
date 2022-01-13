@@ -33,15 +33,15 @@ type EventsV1beta1Interface interface {
 // EventsV1beta1Client is used to interact with features provided by the events.k8s.io group.
 type EventsV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *EventsV1beta1Client) Events(namespace string) EventInterface {
-	return newEvents(c, nil, namespace)
+	return newEvents(c, c.scope, namespace)
 }
 
-func (c *EventsV1beta1Client) ScopedEvents(scope rest.Scope, namespace string) EventInterface {
-	return newEvents(c, scope, namespace)
+func (c *EventsV1beta1Client) ScopedEvents(scope rest.Scope) EventsGetter {
+	return newEventsScoper(c, scope)
 }
 
 // NewForConfig creates a new EventsV1beta1Client for the given config.
@@ -88,9 +88,9 @@ func New(c rest.Interface) *EventsV1beta1Client {
 	return &EventsV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new EventsV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *EventsV1beta1Client {
-	return &EventsV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new EventsV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *EventsV1beta1Client {
+	return &EventsV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

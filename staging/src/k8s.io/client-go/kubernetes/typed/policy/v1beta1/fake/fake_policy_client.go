@@ -32,12 +32,24 @@ func (c *FakePolicyV1beta1) Evictions(namespace string) v1beta1.EvictionInterfac
 	return &FakeEvictions{c, namespace}
 }
 
+func (c *FakePolicyV1beta1) ScopedEvictions(scope rest.Scope) v1beta1.EvictionsGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakePolicyV1beta1) PodDisruptionBudgets(namespace string) v1beta1.PodDisruptionBudgetInterface {
 	return &FakePodDisruptionBudgets{c, namespace}
 }
 
+func (c *FakePolicyV1beta1) ScopedPodDisruptionBudgets(scope rest.Scope) v1beta1.PodDisruptionBudgetsGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakePolicyV1beta1) PodSecurityPolicies() v1beta1.PodSecurityPolicyInterface {
 	return &FakePodSecurityPolicies{c}
+}
+
+func (c *FakePolicyV1beta1) ScopedPodSecurityPolicies(scope rest.Scope) v1beta1.PodSecurityPolicyInterface {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

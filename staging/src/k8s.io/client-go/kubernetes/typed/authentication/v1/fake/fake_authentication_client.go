@@ -32,6 +32,10 @@ func (c *FakeAuthenticationV1) TokenReviews() v1.TokenReviewInterface {
 	return &FakeTokenReviews{c}
 }
 
+func (c *FakeAuthenticationV1) ScopedTokenReviews(scope rest.Scope) v1.TokenReviewInterface {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeAuthenticationV1) RESTClient() rest.Interface {

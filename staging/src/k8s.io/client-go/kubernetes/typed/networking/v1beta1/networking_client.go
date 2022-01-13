@@ -35,19 +35,19 @@ type NetworkingV1beta1Interface interface {
 // NetworkingV1beta1Client is used to interact with features provided by the networking.k8s.io group.
 type NetworkingV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *NetworkingV1beta1Client) Ingresses(namespace string) IngressInterface {
-	return newIngresses(c, nil, namespace)
+	return newIngresses(c, c.scope, namespace)
 }
 
-func (c *NetworkingV1beta1Client) ScopedIngresses(scope rest.Scope, namespace string) IngressInterface {
-	return newIngresses(c, scope, namespace)
+func (c *NetworkingV1beta1Client) ScopedIngresses(scope rest.Scope) IngressesGetter {
+	return newIngressesScoper(c, scope)
 }
 
 func (c *NetworkingV1beta1Client) IngressClasses() IngressClassInterface {
-	return newIngressClasses(c, nil)
+	return newIngressClasses(c, c.scope)
 }
 
 func (c *NetworkingV1beta1Client) ScopedIngressClasses(scope rest.Scope) IngressClassInterface {
@@ -98,9 +98,9 @@ func New(c rest.Interface) *NetworkingV1beta1Client {
 	return &NetworkingV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new NetworkingV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *NetworkingV1beta1Client {
-	return &NetworkingV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new NetworkingV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *NetworkingV1beta1Client {
+	return &NetworkingV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

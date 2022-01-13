@@ -52,6 +52,10 @@ const (
 	defaultTimeout = 32 * time.Second
 )
 
+type Scoper interface {
+	ScopedDiscovery(scope rest.Scope) DiscoveryInterface
+}
+
 // DiscoveryInterface holds the methods that discover server-supported API groups,
 // versions and resources.
 type DiscoveryInterface interface {
@@ -132,13 +136,13 @@ type OpenAPISchemaInterface interface {
 // versions and resources.
 type DiscoveryClient struct {
 	*scopedClient
-	cluster string
+	scope rest.Scope
 }
 
-func (d *DiscoveryClient) WithCluster(cluster string) DiscoveryInterface {
+func (d *DiscoveryClient) Scope(scope rest.Scope) DiscoveryInterface {
 	return &DiscoveryClient{
 		scopedClient: d.scopedClient,
-		cluster:      cluster,
+		scope:        scope,
 	}
 }
 
@@ -170,7 +174,7 @@ func apiVersionsToAPIGroup(apiVersions *metav1.APIVersions) (apiGroup metav1.API
 func (d *DiscoveryClient) ServerGroups() (apiGroupList *metav1.APIGroupList, err error) {
 	// Get the groupVersions exposed at /api
 	v := &metav1.APIVersions{}
-	err = d.restClient.Get().AbsPath(d.clusterAwarePath(d.LegacyPrefix)).Do(context.TODO()).Into(v)
+	err = d.restClient.Get().Scope(d.scope).AbsPath(d.LegacyPrefix).Do(context.TODO()).Into(v)
 	apiGroup := metav1.APIGroup{}
 	if err == nil && len(v.Versions) != 0 {
 		apiGroup = apiVersionsToAPIGroup(v)
@@ -181,7 +185,7 @@ func (d *DiscoveryClient) ServerGroups() (apiGroupList *metav1.APIGroupList, err
 
 	// Get the groupVersions exposed at /apis
 	apiGroupList = &metav1.APIGroupList{}
-	err = d.restClient.Get().AbsPath(d.clusterAwarePath("/apis")).Do(context.TODO()).Into(apiGroupList)
+	err = d.restClient.Get().Scope(d.scope).AbsPath("/apis").Do(context.TODO()).Into(apiGroupList)
 	if err != nil && !errors.IsNotFound(err) && !errors.IsForbidden(err) {
 		return nil, err
 	}
@@ -211,7 +215,7 @@ func (d *DiscoveryClient) ServerResourcesForGroupVersion(groupVersion string) (r
 	resources = &metav1.APIResourceList{
 		GroupVersion: groupVersion,
 	}
-	err = d.restClient.Get().AbsPath(d.clusterAwarePath(url.String())).Do(context.TODO()).Into(resources)
+	err = d.restClient.Get().Scope(d.scope).AbsPath(url.String()).Do(context.TODO()).Into(resources)
 	if err != nil {
 		// ignore 403 or 404 error to be compatible with an v1.0 server.
 		if groupVersion == "v1" && (errors.IsNotFound(err) || errors.IsForbidden(err)) {
@@ -418,16 +422,9 @@ func ServerPreferredNamespacedResources(d DiscoveryInterface) ([]*metav1.APIReso
 	}), all), err
 }
 
-func (d *DiscoveryClient) clusterAwarePath(path string) string {
-	if d.cluster == "" {
-		return path
-	}
-	return "/clusters/" + d.cluster + path
-}
-
 // ServerVersion retrieves and parses the server's version (git version).
 func (d *DiscoveryClient) ServerVersion() (*version.Info, error) {
-	body, err := d.restClient.Get().AbsPath(d.clusterAwarePath("/version")).Do(context.TODO()).Raw()
+	body, err := d.restClient.Get().Scope(d.scope).AbsPath("/version").Do(context.TODO()).Raw()
 	if err != nil {
 		return nil, err
 	}
@@ -441,12 +438,12 @@ func (d *DiscoveryClient) ServerVersion() (*version.Info, error) {
 
 // OpenAPISchema fetches the open api schema using a rest client and parses the proto.
 func (d *DiscoveryClient) OpenAPISchema() (*openapi_v2.Document, error) {
-	data, err := d.restClient.Get().AbsPath(d.clusterAwarePath("/openapi/v2")).SetHeader("Accept", mimePb).Do(context.TODO()).Raw()
+	data, err := d.restClient.Get().Scope(d.scope).AbsPath("/openapi/v2").SetHeader("Accept", mimePb).Do(context.TODO()).Raw()
 	if err != nil {
 		if errors.IsForbidden(err) || errors.IsNotFound(err) || errors.IsNotAcceptable(err) {
 			// single endpoint not found/registered in old server, try to fetch old endpoint
 			// TODO: remove this when kubectl/client-go don't work with 1.9 server
-			data, err = d.restClient.Get().AbsPath(d.clusterAwarePath("/swagger-2.0.0.pb-v1")).Do(context.TODO()).Raw()
+			data, err = d.restClient.Get().Scope(d.scope).AbsPath("/swagger-2.0.0.pb-v1").Do(context.TODO()).Raw()
 			if err != nil {
 				return nil, err
 			}

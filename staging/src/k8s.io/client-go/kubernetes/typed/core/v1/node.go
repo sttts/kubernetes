@@ -61,17 +61,15 @@ type NodeInterface interface {
 
 // nodes implements NodeInterface
 type nodes struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newNodes returns a Nodes
 func newNodes(c *CoreV1Client, scope rest.Scope) *nodes {
 	return &nodes{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -79,7 +77,6 @@ func newNodes(c *CoreV1Client, scope rest.Scope) *nodes {
 func (c *nodes) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Node, err error) {
 	result = &v1.Node{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		Name(name).
@@ -97,7 +94,6 @@ func (c *nodes) List(ctx context.Context, opts metav1.ListOptions) (result *v1.N
 	}
 	result = &v1.NodeList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -115,7 +111,6 @@ func (c *nodes) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Inter
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -127,7 +122,6 @@ func (c *nodes) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Inter
 func (c *nodes) Create(ctx context.Context, node *v1.Node, opts metav1.CreateOptions) (result *v1.Node, err error) {
 	result = &v1.Node{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -141,7 +135,6 @@ func (c *nodes) Create(ctx context.Context, node *v1.Node, opts metav1.CreateOpt
 func (c *nodes) Update(ctx context.Context, node *v1.Node, opts metav1.UpdateOptions) (result *v1.Node, err error) {
 	result = &v1.Node{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		Name(node.Name).
@@ -157,7 +150,6 @@ func (c *nodes) Update(ctx context.Context, node *v1.Node, opts metav1.UpdateOpt
 func (c *nodes) UpdateStatus(ctx context.Context, node *v1.Node, opts metav1.UpdateOptions) (result *v1.Node, err error) {
 	result = &v1.Node{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		Name(node.Name).
@@ -172,7 +164,6 @@ func (c *nodes) UpdateStatus(ctx context.Context, node *v1.Node, opts metav1.Upd
 // Delete takes name of the node and deletes it. Returns an error if one occurs.
 func (c *nodes) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		Name(name).
@@ -188,7 +179,6 @@ func (c *nodes) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions,
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -202,7 +192,6 @@ func (c *nodes) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions,
 func (c *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Node, err error) {
 	result = &v1.Node{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		Name(name).
@@ -230,7 +219,6 @@ func (c *nodes) Apply(ctx context.Context, node *corev1.NodeApplyConfiguration, 
 	}
 	result = &v1.Node{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		Name(*name).
@@ -260,7 +248,6 @@ func (c *nodes) ApplyStatus(ctx context.Context, node *corev1.NodeApplyConfigura
 
 	result = &v1.Node{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("nodes").
 		Name(*name).

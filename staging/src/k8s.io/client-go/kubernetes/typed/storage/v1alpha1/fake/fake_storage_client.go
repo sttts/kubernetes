@@ -32,8 +32,16 @@ func (c *FakeStorageV1alpha1) CSIStorageCapacities(namespace string) v1alpha1.CS
 	return &FakeCSIStorageCapacities{c, namespace}
 }
 
+func (c *FakeStorageV1alpha1) ScopedCSIStorageCapacities(scope rest.Scope) v1alpha1.CSIStorageCapacitiesGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeStorageV1alpha1) VolumeAttachments() v1alpha1.VolumeAttachmentInterface {
 	return &FakeVolumeAttachments{c}
+}
+
+func (c *FakeStorageV1alpha1) ScopedVolumeAttachments(scope rest.Scope) v1alpha1.VolumeAttachmentInterface {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

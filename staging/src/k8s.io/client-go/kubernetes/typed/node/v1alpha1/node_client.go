@@ -33,11 +33,11 @@ type NodeV1alpha1Interface interface {
 // NodeV1alpha1Client is used to interact with features provided by the node.k8s.io group.
 type NodeV1alpha1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *NodeV1alpha1Client) RuntimeClasses() RuntimeClassInterface {
-	return newRuntimeClasses(c, nil)
+	return newRuntimeClasses(c, c.scope)
 }
 
 func (c *NodeV1alpha1Client) ScopedRuntimeClasses(scope rest.Scope) RuntimeClassInterface {
@@ -88,9 +88,9 @@ func New(c rest.Interface) *NodeV1alpha1Client {
 	return &NodeV1alpha1Client{restClient: c}
 }
 
-// NewWithCluster creates a new NodeV1alpha1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *NodeV1alpha1Client {
-	return &NodeV1alpha1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new NodeV1alpha1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *NodeV1alpha1Client {
+	return &NodeV1alpha1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

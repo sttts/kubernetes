@@ -32,6 +32,10 @@ func (c *FakeAutoscalingV1) HorizontalPodAutoscalers(namespace string) v1.Horizo
 	return &FakeHorizontalPodAutoscalers{c, namespace}
 }
 
+func (c *FakeAutoscalingV1) ScopedHorizontalPodAutoscalers(scope rest.Scope) v1.HorizontalPodAutoscalersGetter {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeAutoscalingV1) RESTClient() rest.Interface {

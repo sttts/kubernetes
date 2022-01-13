@@ -40,7 +40,7 @@ type CronJobsGetter interface {
 }
 
 type ScopedCronJobsGetter interface {
-	ScopedCronJobs(scope rest.Scope, namespace string) CronJobInterface
+	ScopedCronJobs(scope rest.Scope) CronJobsGetter
 }
 
 // CronJobInterface has methods to work with CronJob resources.
@@ -59,21 +59,35 @@ type CronJobInterface interface {
 	CronJobExpansion
 }
 
+type cronJobsScoper struct {
+	client *BatchV1beta1Client
+	scope  rest.Scope
+}
+
+func newCronJobsScoper(c *BatchV1beta1Client, scope rest.Scope) *cronJobsScoper {
+	return &cronJobsScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *cronJobsScoper) CronJobs(namespace string) CronJobInterface {
+	return newCronJobs(s.client, s.scope, namespace)
+}
+
 // cronJobs implements CronJobInterface
 type cronJobs struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newCronJobs returns a CronJobs
 func newCronJobs(c *BatchV1beta1Client, scope rest.Scope, namespace string) *cronJobs {
 	return &cronJobs{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -81,7 +95,6 @@ func newCronJobs(c *BatchV1beta1Client, scope rest.Scope, namespace string) *cro
 func (c *cronJobs) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.CronJob, err error) {
 	result = &v1beta1.CronJob{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -100,7 +113,6 @@ func (c *cronJobs) List(ctx context.Context, opts v1.ListOptions) (result *v1bet
 	}
 	result = &v1beta1.CronJobList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -119,7 +131,6 @@ func (c *cronJobs) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interf
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -132,7 +143,6 @@ func (c *cronJobs) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interf
 func (c *cronJobs) Create(ctx context.Context, cronJob *v1beta1.CronJob, opts v1.CreateOptions) (result *v1beta1.CronJob, err error) {
 	result = &v1beta1.CronJob{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -147,7 +157,6 @@ func (c *cronJobs) Create(ctx context.Context, cronJob *v1beta1.CronJob, opts v1
 func (c *cronJobs) Update(ctx context.Context, cronJob *v1beta1.CronJob, opts v1.UpdateOptions) (result *v1beta1.CronJob, err error) {
 	result = &v1beta1.CronJob{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -164,7 +173,6 @@ func (c *cronJobs) Update(ctx context.Context, cronJob *v1beta1.CronJob, opts v1
 func (c *cronJobs) UpdateStatus(ctx context.Context, cronJob *v1beta1.CronJob, opts v1.UpdateOptions) (result *v1beta1.CronJob, err error) {
 	result = &v1beta1.CronJob{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -180,7 +188,6 @@ func (c *cronJobs) UpdateStatus(ctx context.Context, cronJob *v1beta1.CronJob, o
 // Delete takes name of the cronJob and deletes it. Returns an error if one occurs.
 func (c *cronJobs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -197,7 +204,6 @@ func (c *cronJobs) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, 
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -212,7 +218,6 @@ func (c *cronJobs) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, 
 func (c *cronJobs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CronJob, err error) {
 	result = &v1beta1.CronJob{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -241,7 +246,6 @@ func (c *cronJobs) Apply(ctx context.Context, cronJob *batchv1beta1.CronJobApply
 	}
 	result = &v1beta1.CronJob{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").
@@ -272,7 +276,6 @@ func (c *cronJobs) ApplyStatus(ctx context.Context, cronJob *batchv1beta1.CronJo
 
 	result = &v1beta1.CronJob{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("cronjobs").

@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
+	discoveryclient "k8s.io/client-go/discovery"
 	kubeversion "k8s.io/client-go/pkg/version"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/testing"
@@ -37,6 +38,8 @@ type FakeDiscovery struct {
 	*testing.Fake
 	FakedServerVersion *version.Info
 }
+
+var _ discoveryclient.DiscoveryInterface = (*FakeDiscovery)(nil)
 
 // ServerResourcesForGroupVersion returns the supported resources for a group
 // and version.

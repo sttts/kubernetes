@@ -61,17 +61,15 @@ type CertificateSigningRequestInterface interface {
 
 // certificateSigningRequests implements CertificateSigningRequestInterface
 type certificateSigningRequests struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newCertificateSigningRequests returns a CertificateSigningRequests
 func newCertificateSigningRequests(c *CertificatesV1beta1Client, scope rest.Scope) *certificateSigningRequests {
 	return &certificateSigningRequests{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -79,7 +77,6 @@ func newCertificateSigningRequests(c *CertificatesV1beta1Client, scope rest.Scop
 func (c *certificateSigningRequests) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.CertificateSigningRequest, err error) {
 	result = &v1beta1.CertificateSigningRequest{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		Name(name).
@@ -97,7 +94,6 @@ func (c *certificateSigningRequests) List(ctx context.Context, opts v1.ListOptio
 	}
 	result = &v1beta1.CertificateSigningRequestList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -115,7 +111,6 @@ func (c *certificateSigningRequests) Watch(ctx context.Context, opts v1.ListOpti
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -127,7 +122,6 @@ func (c *certificateSigningRequests) Watch(ctx context.Context, opts v1.ListOpti
 func (c *certificateSigningRequests) Create(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts v1.CreateOptions) (result *v1beta1.CertificateSigningRequest, err error) {
 	result = &v1beta1.CertificateSigningRequest{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -141,7 +135,6 @@ func (c *certificateSigningRequests) Create(ctx context.Context, certificateSign
 func (c *certificateSigningRequests) Update(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts v1.UpdateOptions) (result *v1beta1.CertificateSigningRequest, err error) {
 	result = &v1beta1.CertificateSigningRequest{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		Name(certificateSigningRequest.Name).
@@ -157,7 +150,6 @@ func (c *certificateSigningRequests) Update(ctx context.Context, certificateSign
 func (c *certificateSigningRequests) UpdateStatus(ctx context.Context, certificateSigningRequest *v1beta1.CertificateSigningRequest, opts v1.UpdateOptions) (result *v1beta1.CertificateSigningRequest, err error) {
 	result = &v1beta1.CertificateSigningRequest{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		Name(certificateSigningRequest.Name).
@@ -172,7 +164,6 @@ func (c *certificateSigningRequests) UpdateStatus(ctx context.Context, certifica
 // Delete takes name of the certificateSigningRequest and deletes it. Returns an error if one occurs.
 func (c *certificateSigningRequests) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		Name(name).
@@ -188,7 +179,6 @@ func (c *certificateSigningRequests) DeleteCollection(ctx context.Context, opts 
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -202,7 +192,6 @@ func (c *certificateSigningRequests) DeleteCollection(ctx context.Context, opts 
 func (c *certificateSigningRequests) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CertificateSigningRequest, err error) {
 	result = &v1beta1.CertificateSigningRequest{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		Name(name).
@@ -230,7 +219,6 @@ func (c *certificateSigningRequests) Apply(ctx context.Context, certificateSigni
 	}
 	result = &v1beta1.CertificateSigningRequest{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		Name(*name).
@@ -260,7 +248,6 @@ func (c *certificateSigningRequests) ApplyStatus(ctx context.Context, certificat
 
 	result = &v1beta1.CertificateSigningRequest{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("certificatesigningrequests").
 		Name(*name).

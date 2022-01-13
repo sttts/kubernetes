@@ -35,11 +35,11 @@ type AdmissionregistrationV1Interface interface {
 // AdmissionregistrationV1Client is used to interact with features provided by the admissionregistration.k8s.io group.
 type AdmissionregistrationV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *AdmissionregistrationV1Client) MutatingWebhookConfigurations() MutatingWebhookConfigurationInterface {
-	return newMutatingWebhookConfigurations(c, nil)
+	return newMutatingWebhookConfigurations(c, c.scope)
 }
 
 func (c *AdmissionregistrationV1Client) ScopedMutatingWebhookConfigurations(scope rest.Scope) MutatingWebhookConfigurationInterface {
@@ -47,7 +47,7 @@ func (c *AdmissionregistrationV1Client) ScopedMutatingWebhookConfigurations(scop
 }
 
 func (c *AdmissionregistrationV1Client) ValidatingWebhookConfigurations() ValidatingWebhookConfigurationInterface {
-	return newValidatingWebhookConfigurations(c, nil)
+	return newValidatingWebhookConfigurations(c, c.scope)
 }
 
 func (c *AdmissionregistrationV1Client) ScopedValidatingWebhookConfigurations(scope rest.Scope) ValidatingWebhookConfigurationInterface {
@@ -98,9 +98,9 @@ func New(c rest.Interface) *AdmissionregistrationV1Client {
 	return &AdmissionregistrationV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new AdmissionregistrationV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *AdmissionregistrationV1Client {
-	return &AdmissionregistrationV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new AdmissionregistrationV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *AdmissionregistrationV1Client {
+	return &AdmissionregistrationV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

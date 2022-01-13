@@ -32,6 +32,10 @@ func (c *FakeCertificatesV1beta1) CertificateSigningRequests() v1beta1.Certifica
 	return &FakeCertificateSigningRequests{c}
 }
 
+func (c *FakeCertificatesV1beta1) ScopedCertificateSigningRequests(scope rest.Scope) v1beta1.CertificateSigningRequestInterface {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeCertificatesV1beta1) RESTClient() rest.Interface {

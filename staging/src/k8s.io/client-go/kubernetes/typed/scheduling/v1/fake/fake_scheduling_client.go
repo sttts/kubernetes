@@ -32,6 +32,10 @@ func (c *FakeSchedulingV1) PriorityClasses() v1.PriorityClassInterface {
 	return &FakePriorityClasses{c}
 }
 
+func (c *FakeSchedulingV1) ScopedPriorityClasses(scope rest.Scope) v1.PriorityClassInterface {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeSchedulingV1) RESTClient() rest.Interface {

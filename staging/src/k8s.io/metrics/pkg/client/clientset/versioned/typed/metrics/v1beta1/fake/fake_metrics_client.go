@@ -32,8 +32,16 @@ func (c *FakeMetricsV1beta1) NodeMetricses() v1beta1.NodeMetricsInterface {
 	return &FakeNodeMetricses{c}
 }
 
+func (c *FakeMetricsV1beta1) ScopedNodeMetricses(scope rest.Scope) v1beta1.NodeMetricsInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeMetricsV1beta1) PodMetricses(namespace string) v1beta1.PodMetricsInterface {
 	return &FakePodMetricses{c, namespace}
+}
+
+func (c *FakeMetricsV1beta1) ScopedPodMetricses(scope rest.Scope) v1beta1.PodMetricsesGetter {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

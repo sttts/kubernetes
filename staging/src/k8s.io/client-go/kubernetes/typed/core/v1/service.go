@@ -40,7 +40,7 @@ type ServicesGetter interface {
 }
 
 type ScopedServicesGetter interface {
-	ScopedServices(scope rest.Scope, namespace string) ServiceInterface
+	ScopedServices(scope rest.Scope) ServicesGetter
 }
 
 // ServiceInterface has methods to work with Service resources.
@@ -58,21 +58,35 @@ type ServiceInterface interface {
 	ServiceExpansion
 }
 
+type servicesScoper struct {
+	client *CoreV1Client
+	scope  rest.Scope
+}
+
+func newServicesScoper(c *CoreV1Client, scope rest.Scope) *servicesScoper {
+	return &servicesScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *servicesScoper) Services(namespace string) ServiceInterface {
+	return newServices(s.client, s.scope, namespace)
+}
+
 // services implements ServiceInterface
 type services struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newServices returns a Services
 func newServices(c *CoreV1Client, scope rest.Scope, namespace string) *services {
 	return &services{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -80,7 +94,6 @@ func newServices(c *CoreV1Client, scope rest.Scope, namespace string) *services 
 func (c *services) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Service, err error) {
 	result = &v1.Service{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").
@@ -99,7 +112,6 @@ func (c *services) List(ctx context.Context, opts metav1.ListOptions) (result *v
 	}
 	result = &v1.ServiceList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").
@@ -118,7 +130,6 @@ func (c *services) Watch(ctx context.Context, opts metav1.ListOptions) (watch.In
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").
@@ -131,7 +142,6 @@ func (c *services) Watch(ctx context.Context, opts metav1.ListOptions) (watch.In
 func (c *services) Create(ctx context.Context, service *v1.Service, opts metav1.CreateOptions) (result *v1.Service, err error) {
 	result = &v1.Service{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").
@@ -146,7 +156,6 @@ func (c *services) Create(ctx context.Context, service *v1.Service, opts metav1.
 func (c *services) Update(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (result *v1.Service, err error) {
 	result = &v1.Service{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").
@@ -163,7 +172,6 @@ func (c *services) Update(ctx context.Context, service *v1.Service, opts metav1.
 func (c *services) UpdateStatus(ctx context.Context, service *v1.Service, opts metav1.UpdateOptions) (result *v1.Service, err error) {
 	result = &v1.Service{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").
@@ -179,7 +187,6 @@ func (c *services) UpdateStatus(ctx context.Context, service *v1.Service, opts m
 // Delete takes name of the service and deletes it. Returns an error if one occurs.
 func (c *services) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").
@@ -193,7 +200,6 @@ func (c *services) Delete(ctx context.Context, name string, opts metav1.DeleteOp
 func (c *services) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Service, err error) {
 	result = &v1.Service{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").
@@ -222,7 +228,6 @@ func (c *services) Apply(ctx context.Context, service *corev1.ServiceApplyConfig
 	}
 	result = &v1.Service{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").
@@ -253,7 +258,6 @@ func (c *services) ApplyStatus(ctx context.Context, service *corev1.ServiceApply
 
 	result = &v1.Service{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("services").

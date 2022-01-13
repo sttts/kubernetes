@@ -40,7 +40,7 @@ type IngressesGetter interface {
 }
 
 type ScopedIngressesGetter interface {
-	ScopedIngresses(scope rest.Scope, namespace string) IngressInterface
+	ScopedIngresses(scope rest.Scope) IngressesGetter
 }
 
 // IngressInterface has methods to work with Ingress resources.
@@ -59,21 +59,35 @@ type IngressInterface interface {
 	IngressExpansion
 }
 
+type ingressesScoper struct {
+	client *NetworkingV1Client
+	scope  rest.Scope
+}
+
+func newIngressesScoper(c *NetworkingV1Client, scope rest.Scope) *ingressesScoper {
+	return &ingressesScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *ingressesScoper) Ingresses(namespace string) IngressInterface {
+	return newIngresses(s.client, s.scope, namespace)
+}
+
 // ingresses implements IngressInterface
 type ingresses struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newIngresses returns a Ingresses
 func newIngresses(c *NetworkingV1Client, scope rest.Scope, namespace string) *ingresses {
 	return &ingresses{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -81,7 +95,6 @@ func newIngresses(c *NetworkingV1Client, scope rest.Scope, namespace string) *in
 func (c *ingresses) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Ingress, err error) {
 	result = &v1.Ingress{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -100,7 +113,6 @@ func (c *ingresses) List(ctx context.Context, opts metav1.ListOptions) (result *
 	}
 	result = &v1.IngressList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -119,7 +131,6 @@ func (c *ingresses) Watch(ctx context.Context, opts metav1.ListOptions) (watch.I
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -132,7 +143,6 @@ func (c *ingresses) Watch(ctx context.Context, opts metav1.ListOptions) (watch.I
 func (c *ingresses) Create(ctx context.Context, ingress *v1.Ingress, opts metav1.CreateOptions) (result *v1.Ingress, err error) {
 	result = &v1.Ingress{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -147,7 +157,6 @@ func (c *ingresses) Create(ctx context.Context, ingress *v1.Ingress, opts metav1
 func (c *ingresses) Update(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (result *v1.Ingress, err error) {
 	result = &v1.Ingress{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -164,7 +173,6 @@ func (c *ingresses) Update(ctx context.Context, ingress *v1.Ingress, opts metav1
 func (c *ingresses) UpdateStatus(ctx context.Context, ingress *v1.Ingress, opts metav1.UpdateOptions) (result *v1.Ingress, err error) {
 	result = &v1.Ingress{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -180,7 +188,6 @@ func (c *ingresses) UpdateStatus(ctx context.Context, ingress *v1.Ingress, opts 
 // Delete takes name of the ingress and deletes it. Returns an error if one occurs.
 func (c *ingresses) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -197,7 +204,6 @@ func (c *ingresses) DeleteCollection(ctx context.Context, opts metav1.DeleteOpti
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -212,7 +218,6 @@ func (c *ingresses) DeleteCollection(ctx context.Context, opts metav1.DeleteOpti
 func (c *ingresses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Ingress, err error) {
 	result = &v1.Ingress{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -241,7 +246,6 @@ func (c *ingresses) Apply(ctx context.Context, ingress *networkingv1.IngressAppl
 	}
 	result = &v1.Ingress{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").
@@ -272,7 +276,6 @@ func (c *ingresses) ApplyStatus(ctx context.Context, ingress *networkingv1.Ingre
 
 	result = &v1.Ingress{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("ingresses").

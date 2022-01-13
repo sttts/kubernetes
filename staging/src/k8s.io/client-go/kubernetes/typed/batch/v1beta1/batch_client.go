@@ -33,15 +33,15 @@ type BatchV1beta1Interface interface {
 // BatchV1beta1Client is used to interact with features provided by the batch group.
 type BatchV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *BatchV1beta1Client) CronJobs(namespace string) CronJobInterface {
-	return newCronJobs(c, nil, namespace)
+	return newCronJobs(c, c.scope, namespace)
 }
 
-func (c *BatchV1beta1Client) ScopedCronJobs(scope rest.Scope, namespace string) CronJobInterface {
-	return newCronJobs(c, scope, namespace)
+func (c *BatchV1beta1Client) ScopedCronJobs(scope rest.Scope) CronJobsGetter {
+	return newCronJobsScoper(c, scope)
 }
 
 // NewForConfig creates a new BatchV1beta1Client for the given config.
@@ -88,9 +88,9 @@ func New(c rest.Interface) *BatchV1beta1Client {
 	return &BatchV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new BatchV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *BatchV1beta1Client {
-	return &BatchV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new BatchV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *BatchV1beta1Client {
+	return &BatchV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

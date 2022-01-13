@@ -53,7 +53,7 @@ func (s *scope) ScopeRequest(req *http.Request) error {
 	return nil
 }
 
-var defaultScope = scope{name: ""}
+var defaultScope = &scope{name: ""}
 
 type defaultScoper struct{}
 
@@ -61,12 +61,16 @@ type defaultScoper struct{}
 // 	return &defaultScope, nil
 // }
 
+func (ds *defaultScoper) NewScope(name string) rest.Scope {
+	return &scope{name: name}
+}
+
 func (ds *defaultScoper) ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
-	return &defaultScope, nil
+	return defaultScope, nil
 }
 
 func (ds *defaultScoper) ScopeFromKey(key string) (rest.Scope, error) {
-	return &defaultScope, nil
+	return defaultScope, nil
 }
 
 type ControllerzConfig struct {
@@ -170,6 +174,10 @@ func NamespaceNameKeyFunc(ctx context.Context, namespace, name string) (string, 
 // func ScopeFromContext(ctx context.Context) (rest.Scope, error) {
 // 	return cc.Scoper.ScopeFromContext(ctx)
 // }
+
+func NewScope(name string) rest.Scope {
+	return cc.Scoper.NewScope(name)
+}
 
 func ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
 	return cc.Scoper.ScopeFromObject(obj)

@@ -32,16 +32,32 @@ func (c *FakeAuthorizationV1) LocalSubjectAccessReviews(namespace string) v1.Loc
 	return &FakeLocalSubjectAccessReviews{c, namespace}
 }
 
+func (c *FakeAuthorizationV1) ScopedLocalSubjectAccessReviews(scope rest.Scope) v1.LocalSubjectAccessReviewsGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeAuthorizationV1) SelfSubjectAccessReviews() v1.SelfSubjectAccessReviewInterface {
 	return &FakeSelfSubjectAccessReviews{c}
+}
+
+func (c *FakeAuthorizationV1) ScopedSelfSubjectAccessReviews(scope rest.Scope) v1.SelfSubjectAccessReviewInterface {
+	panic("not implemented yet!")
 }
 
 func (c *FakeAuthorizationV1) SelfSubjectRulesReviews() v1.SelfSubjectRulesReviewInterface {
 	return &FakeSelfSubjectRulesReviews{c}
 }
 
+func (c *FakeAuthorizationV1) ScopedSelfSubjectRulesReviews(scope rest.Scope) v1.SelfSubjectRulesReviewInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeAuthorizationV1) SubjectAccessReviews() v1.SubjectAccessReviewInterface {
 	return &FakeSubjectAccessReviews{c}
+}
+
+func (c *FakeAuthorizationV1) ScopedSubjectAccessReviews(scope rest.Scope) v1.SubjectAccessReviewInterface {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

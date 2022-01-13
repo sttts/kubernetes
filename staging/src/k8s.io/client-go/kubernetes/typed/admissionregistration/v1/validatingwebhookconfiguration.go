@@ -59,17 +59,15 @@ type ValidatingWebhookConfigurationInterface interface {
 
 // validatingWebhookConfigurations implements ValidatingWebhookConfigurationInterface
 type validatingWebhookConfigurations struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newValidatingWebhookConfigurations returns a ValidatingWebhookConfigurations
 func newValidatingWebhookConfigurations(c *AdmissionregistrationV1Client, scope rest.Scope) *validatingWebhookConfigurations {
 	return &validatingWebhookConfigurations{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -77,7 +75,6 @@ func newValidatingWebhookConfigurations(c *AdmissionregistrationV1Client, scope 
 func (c *validatingWebhookConfigurations) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
 	result = &v1.ValidatingWebhookConfiguration{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("validatingwebhookconfigurations").
 		Name(name).
@@ -95,7 +92,6 @@ func (c *validatingWebhookConfigurations) List(ctx context.Context, opts metav1.
 	}
 	result = &v1.ValidatingWebhookConfigurationList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("validatingwebhookconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -113,7 +109,6 @@ func (c *validatingWebhookConfigurations) Watch(ctx context.Context, opts metav1
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("validatingwebhookconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -125,7 +120,6 @@ func (c *validatingWebhookConfigurations) Watch(ctx context.Context, opts metav1
 func (c *validatingWebhookConfigurations) Create(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.CreateOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
 	result = &v1.ValidatingWebhookConfiguration{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("validatingwebhookconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -139,7 +133,6 @@ func (c *validatingWebhookConfigurations) Create(ctx context.Context, validating
 func (c *validatingWebhookConfigurations) Update(ctx context.Context, validatingWebhookConfiguration *v1.ValidatingWebhookConfiguration, opts metav1.UpdateOptions) (result *v1.ValidatingWebhookConfiguration, err error) {
 	result = &v1.ValidatingWebhookConfiguration{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("validatingwebhookconfigurations").
 		Name(validatingWebhookConfiguration.Name).
@@ -153,7 +146,6 @@ func (c *validatingWebhookConfigurations) Update(ctx context.Context, validating
 // Delete takes name of the validatingWebhookConfiguration and deletes it. Returns an error if one occurs.
 func (c *validatingWebhookConfigurations) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("validatingwebhookconfigurations").
 		Name(name).
@@ -169,7 +161,6 @@ func (c *validatingWebhookConfigurations) DeleteCollection(ctx context.Context, 
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("validatingwebhookconfigurations").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -183,7 +174,6 @@ func (c *validatingWebhookConfigurations) DeleteCollection(ctx context.Context, 
 func (c *validatingWebhookConfigurations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ValidatingWebhookConfiguration, err error) {
 	result = &v1.ValidatingWebhookConfiguration{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("validatingwebhookconfigurations").
 		Name(name).
@@ -211,7 +201,6 @@ func (c *validatingWebhookConfigurations) Apply(ctx context.Context, validatingW
 	}
 	result = &v1.ValidatingWebhookConfiguration{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("validatingwebhookconfigurations").
 		Name(*name).

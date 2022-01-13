@@ -36,7 +36,7 @@ type PodMetricsesGetter interface {
 }
 
 type ScopedPodMetricsesGetter interface {
-	ScopedPodMetricses(scope rest.Scope, namespace string) PodMetricsInterface
+	ScopedPodMetricses(scope rest.Scope) PodMetricsesGetter
 }
 
 // PodMetricsInterface has methods to work with PodMetrics resources.
@@ -47,21 +47,35 @@ type PodMetricsInterface interface {
 	PodMetricsExpansion
 }
 
+type podMetricsesScoper struct {
+	client *MetricsV1alpha1Client
+	scope  rest.Scope
+}
+
+func newPodMetricsesScoper(c *MetricsV1alpha1Client, scope rest.Scope) *podMetricsesScoper {
+	return &podMetricsesScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *podMetricsesScoper) PodMetricses(namespace string) PodMetricsInterface {
+	return newPodMetricses(s.client, s.scope, namespace)
+}
+
 // podMetricses implements PodMetricsInterface
 type podMetricses struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newPodMetricses returns a PodMetricses
 func newPodMetricses(c *MetricsV1alpha1Client, scope rest.Scope, namespace string) *podMetricses {
 	return &podMetricses{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -69,7 +83,6 @@ func newPodMetricses(c *MetricsV1alpha1Client, scope rest.Scope, namespace strin
 func (c *podMetricses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.PodMetrics, err error) {
 	result = &v1alpha1.PodMetrics{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("pods").
@@ -88,7 +101,6 @@ func (c *podMetricses) List(ctx context.Context, opts v1.ListOptions) (result *v
 	}
 	result = &v1alpha1.PodMetricsList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("pods").
@@ -107,7 +119,6 @@ func (c *podMetricses) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("pods").

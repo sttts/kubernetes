@@ -28,35 +28,36 @@ import (
 	metricsv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
 )
 
-type ClusterInterface interface {
-	Cluster(name string) Interface
+type Scoper interface {
+	Scope(scope rest.Scope) Interface
 }
 
-type Cluster struct {
+type scoper struct {
 	*scopedClientset
 }
 
-// Cluster sets the cluster for a Clientset.
-func (c *Cluster) Cluster(name string) Interface {
+// Scope scopes a clientset.
+func (s *scoper) Scope(scope rest.Scope) Interface {
 	return &Clientset{
-		scopedClientset: c.scopedClientset,
-		cluster:         name,
+		scopedClientset: s.scopedClientset,
+		scope:           scope,
 	}
 }
 
-// NewClusterForConfig creates a new Cluster for the given config.
+// NewScoperForConfig creates a new Scoper for the given config.
 // If config's RateLimiter is not set and QPS and Burst are acceptable,
-// NewClusterForConfig will generate a rate-limiter in configShallowCopy.
-func NewClusterForConfig(c *rest.Config) (*Cluster, error) {
+// NewScoperForConfig will generate a rate-limiter in configShallowCopy.
+func NewScoperForConfig(c *rest.Config) (*scoper, error) {
 	cs, err := NewForConfig(c)
 	if err != nil {
 		return nil, err
 	}
-	return &Cluster{scopedClientset: cs.scopedClientset}, nil
+	return &scoper{scopedClientset: cs.scopedClientset}, nil
 }
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
+	ScopedDiscovery(scope rest.Scope) discovery.DiscoveryInterface
 	MetricsV1alpha1() metricsv1alpha1.MetricsV1alpha1Interface
 	MetricsV1beta1() metricsv1beta1.MetricsV1beta1Interface
 }
@@ -65,7 +66,7 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*scopedClientset
-	cluster string
+	scope rest.Scope
 }
 
 // scopedClientset contains the clients for groups. Each group has exactly one
@@ -78,12 +79,12 @@ type scopedClientset struct {
 
 // MetricsV1alpha1 retrieves the MetricsV1alpha1Client
 func (c *Clientset) MetricsV1alpha1() metricsv1alpha1.MetricsV1alpha1Interface {
-	return metricsv1alpha1.NewWithCluster(c.metricsV1alpha1.RESTClient(), c.cluster)
+	return metricsv1alpha1.NewWithScope(c.metricsV1alpha1.RESTClient(), c.scope)
 }
 
 // MetricsV1beta1 retrieves the MetricsV1beta1Client
 func (c *Clientset) MetricsV1beta1() metricsv1beta1.MetricsV1beta1Interface {
-	return metricsv1beta1.NewWithCluster(c.metricsV1beta1.RESTClient(), c.cluster)
+	return metricsv1beta1.NewWithScope(c.metricsV1beta1.RESTClient(), c.scope)
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -91,7 +92,15 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	if c == nil {
 		return nil
 	}
-	return c.DiscoveryClient.WithCluster(c.cluster)
+	return c.DiscoveryClient.Scope(c.scope)
+}
+
+// ScopedDiscovery retrieves a scoped DiscoveryInterface.
+func (c *Clientset) ScopedDiscovery(scope rest.Scope) discovery.DiscoveryInterface {
+	if c == nil {
+		return nil
+	}
+	return c.DiscoveryClient.Scope(scope)
 }
 
 // NewForConfig creates a new Clientset for the given config.

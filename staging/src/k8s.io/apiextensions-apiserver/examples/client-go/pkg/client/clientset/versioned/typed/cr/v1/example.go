@@ -37,7 +37,7 @@ type ExamplesGetter interface {
 }
 
 type ScopedExamplesGetter interface {
-	ScopedExamples(scope rest.Scope, namespace string) ExampleInterface
+	ScopedExamples(scope rest.Scope) ExamplesGetter
 }
 
 // ExampleInterface has methods to work with Example resources.
@@ -53,21 +53,35 @@ type ExampleInterface interface {
 	ExampleExpansion
 }
 
+type examplesScoper struct {
+	client *CrV1Client
+	scope  rest.Scope
+}
+
+func newExamplesScoper(c *CrV1Client, scope rest.Scope) *examplesScoper {
+	return &examplesScoper{
+		client: c,
+		scope:  scope,
+	}
+}
+
+func (s *examplesScoper) Examples(namespace string) ExampleInterface {
+	return newExamples(s.client, s.scope, namespace)
+}
+
 // examples implements ExampleInterface
 type examples struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
-	ns      string
+	client rest.Interface
+	scope  rest.Scope
+	ns     string
 }
 
 // newExamples returns a Examples
 func newExamples(c *CrV1Client, scope rest.Scope, namespace string) *examples {
 	return &examples{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
-		ns:      namespace,
+		client: c.RESTClient(),
+		scope:  scope,
+		ns:     namespace,
 	}
 }
 
@@ -75,7 +89,6 @@ func newExamples(c *CrV1Client, scope rest.Scope, namespace string) *examples {
 func (c *examples) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Example, err error) {
 	result = &v1.Example{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("examples").
@@ -94,7 +107,6 @@ func (c *examples) List(ctx context.Context, opts metav1.ListOptions) (result *v
 	}
 	result = &v1.ExampleList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("examples").
@@ -113,7 +125,6 @@ func (c *examples) Watch(ctx context.Context, opts metav1.ListOptions) (watch.In
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("examples").
@@ -126,7 +137,6 @@ func (c *examples) Watch(ctx context.Context, opts metav1.ListOptions) (watch.In
 func (c *examples) Create(ctx context.Context, example *v1.Example, opts metav1.CreateOptions) (result *v1.Example, err error) {
 	result = &v1.Example{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("examples").
@@ -141,7 +151,6 @@ func (c *examples) Create(ctx context.Context, example *v1.Example, opts metav1.
 func (c *examples) Update(ctx context.Context, example *v1.Example, opts metav1.UpdateOptions) (result *v1.Example, err error) {
 	result = &v1.Example{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("examples").
@@ -156,7 +165,6 @@ func (c *examples) Update(ctx context.Context, example *v1.Example, opts metav1.
 // Delete takes name of the example and deletes it. Returns an error if one occurs.
 func (c *examples) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("examples").
@@ -173,7 +181,6 @@ func (c *examples) DeleteCollection(ctx context.Context, opts metav1.DeleteOptio
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("examples").
@@ -188,7 +195,6 @@ func (c *examples) DeleteCollection(ctx context.Context, opts metav1.DeleteOptio
 func (c *examples) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Example, err error) {
 	result = &v1.Example{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Namespace(c.ns).
 		Resource("examples").

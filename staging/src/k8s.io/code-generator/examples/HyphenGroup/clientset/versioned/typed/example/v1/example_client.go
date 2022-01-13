@@ -35,11 +35,11 @@ type ExampleGroupV1Interface interface {
 // ExampleGroupV1Client is used to interact with features provided by the example-group.hyphens.code-generator.k8s.io group.
 type ExampleGroupV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *ExampleGroupV1Client) ClusterTestTypes() ClusterTestTypeInterface {
-	return newClusterTestTypes(c, nil)
+	return newClusterTestTypes(c, c.scope)
 }
 
 func (c *ExampleGroupV1Client) ScopedClusterTestTypes(scope rest.Scope) ClusterTestTypeInterface {
@@ -47,11 +47,11 @@ func (c *ExampleGroupV1Client) ScopedClusterTestTypes(scope rest.Scope) ClusterT
 }
 
 func (c *ExampleGroupV1Client) TestTypes(namespace string) TestTypeInterface {
-	return newTestTypes(c, nil, namespace)
+	return newTestTypes(c, c.scope, namespace)
 }
 
-func (c *ExampleGroupV1Client) ScopedTestTypes(scope rest.Scope, namespace string) TestTypeInterface {
-	return newTestTypes(c, scope, namespace)
+func (c *ExampleGroupV1Client) ScopedTestTypes(scope rest.Scope) TestTypesGetter {
+	return newTestTypesScoper(c, scope)
 }
 
 // NewForConfig creates a new ExampleGroupV1Client for the given config.
@@ -98,9 +98,9 @@ func New(c rest.Interface) *ExampleGroupV1Client {
 	return &ExampleGroupV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new ExampleGroupV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *ExampleGroupV1Client {
-	return &ExampleGroupV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new ExampleGroupV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *ExampleGroupV1Client {
+	return &ExampleGroupV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

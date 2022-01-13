@@ -59,17 +59,15 @@ type CSIDriverInterface interface {
 
 // cSIDrivers implements CSIDriverInterface
 type cSIDrivers struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newCSIDrivers returns a CSIDrivers
 func newCSIDrivers(c *StorageV1Client, scope rest.Scope) *cSIDrivers {
 	return &cSIDrivers{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -77,7 +75,6 @@ func newCSIDrivers(c *StorageV1Client, scope rest.Scope) *cSIDrivers {
 func (c *cSIDrivers) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.CSIDriver, err error) {
 	result = &v1.CSIDriver{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csidrivers").
 		Name(name).
@@ -95,7 +92,6 @@ func (c *cSIDrivers) List(ctx context.Context, opts metav1.ListOptions) (result 
 	}
 	result = &v1.CSIDriverList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csidrivers").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -113,7 +109,6 @@ func (c *cSIDrivers) Watch(ctx context.Context, opts metav1.ListOptions) (watch.
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csidrivers").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -125,7 +120,6 @@ func (c *cSIDrivers) Watch(ctx context.Context, opts metav1.ListOptions) (watch.
 func (c *cSIDrivers) Create(ctx context.Context, cSIDriver *v1.CSIDriver, opts metav1.CreateOptions) (result *v1.CSIDriver, err error) {
 	result = &v1.CSIDriver{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csidrivers").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -139,7 +133,6 @@ func (c *cSIDrivers) Create(ctx context.Context, cSIDriver *v1.CSIDriver, opts m
 func (c *cSIDrivers) Update(ctx context.Context, cSIDriver *v1.CSIDriver, opts metav1.UpdateOptions) (result *v1.CSIDriver, err error) {
 	result = &v1.CSIDriver{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csidrivers").
 		Name(cSIDriver.Name).
@@ -153,7 +146,6 @@ func (c *cSIDrivers) Update(ctx context.Context, cSIDriver *v1.CSIDriver, opts m
 // Delete takes name of the cSIDriver and deletes it. Returns an error if one occurs.
 func (c *cSIDrivers) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csidrivers").
 		Name(name).
@@ -169,7 +161,6 @@ func (c *cSIDrivers) DeleteCollection(ctx context.Context, opts metav1.DeleteOpt
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csidrivers").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -183,7 +174,6 @@ func (c *cSIDrivers) DeleteCollection(ctx context.Context, opts metav1.DeleteOpt
 func (c *cSIDrivers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.CSIDriver, err error) {
 	result = &v1.CSIDriver{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csidrivers").
 		Name(name).
@@ -211,7 +201,6 @@ func (c *cSIDrivers) Apply(ctx context.Context, cSIDriver *storagev1.CSIDriverAp
 	}
 	result = &v1.CSIDriver{}
 	err = c.client.Patch(types.ApplyPatchType).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("csidrivers").
 		Name(*name).

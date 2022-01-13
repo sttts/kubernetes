@@ -32,15 +32,15 @@ type ExampleInterface interface {
 // ExampleClient is used to interact with features provided by the example.apiserver.code-generator.k8s.io group.
 type ExampleClient struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *ExampleClient) TestTypes(namespace string) TestTypeInterface {
-	return newTestTypes(c, nil, namespace)
+	return newTestTypes(c, c.scope, namespace)
 }
 
-func (c *ExampleClient) ScopedTestTypes(scope rest.Scope, namespace string) TestTypeInterface {
-	return newTestTypes(c, scope, namespace)
+func (c *ExampleClient) ScopedTestTypes(scope rest.Scope) TestTypesGetter {
+	return newTestTypesScoper(c, scope)
 }
 
 // NewForConfig creates a new ExampleClient for the given config.
@@ -87,9 +87,9 @@ func New(c rest.Interface) *ExampleClient {
 	return &ExampleClient{restClient: c}
 }
 
-// NewWithCluster creates a new ExampleClient for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *ExampleClient {
-	return &ExampleClient{restClient: c, cluster: cluster}
+// NewWithScope creates a new ExampleClient for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *ExampleClient {
+	return &ExampleClient{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

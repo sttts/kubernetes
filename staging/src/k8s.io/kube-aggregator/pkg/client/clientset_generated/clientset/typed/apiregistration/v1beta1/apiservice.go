@@ -56,17 +56,15 @@ type APIServiceInterface interface {
 
 // aPIServices implements APIServiceInterface
 type aPIServices struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newAPIServices returns a APIServices
 func newAPIServices(c *ApiregistrationV1beta1Client, scope rest.Scope) *aPIServices {
 	return &aPIServices{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -74,7 +72,6 @@ func newAPIServices(c *ApiregistrationV1beta1Client, scope rest.Scope) *aPIServi
 func (c *aPIServices) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.APIService, err error) {
 	result = &v1beta1.APIService{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("apiservices").
 		Name(name).
@@ -92,7 +89,6 @@ func (c *aPIServices) List(ctx context.Context, opts v1.ListOptions) (result *v1
 	}
 	result = &v1beta1.APIServiceList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("apiservices").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -110,7 +106,6 @@ func (c *aPIServices) Watch(ctx context.Context, opts v1.ListOptions) (watch.Int
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("apiservices").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -122,7 +117,6 @@ func (c *aPIServices) Watch(ctx context.Context, opts v1.ListOptions) (watch.Int
 func (c *aPIServices) Create(ctx context.Context, aPIService *v1beta1.APIService, opts v1.CreateOptions) (result *v1beta1.APIService, err error) {
 	result = &v1beta1.APIService{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("apiservices").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -136,7 +130,6 @@ func (c *aPIServices) Create(ctx context.Context, aPIService *v1beta1.APIService
 func (c *aPIServices) Update(ctx context.Context, aPIService *v1beta1.APIService, opts v1.UpdateOptions) (result *v1beta1.APIService, err error) {
 	result = &v1beta1.APIService{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("apiservices").
 		Name(aPIService.Name).
@@ -152,7 +145,6 @@ func (c *aPIServices) Update(ctx context.Context, aPIService *v1beta1.APIService
 func (c *aPIServices) UpdateStatus(ctx context.Context, aPIService *v1beta1.APIService, opts v1.UpdateOptions) (result *v1beta1.APIService, err error) {
 	result = &v1beta1.APIService{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("apiservices").
 		Name(aPIService.Name).
@@ -167,7 +159,6 @@ func (c *aPIServices) UpdateStatus(ctx context.Context, aPIService *v1beta1.APIS
 // Delete takes name of the aPIService and deletes it. Returns an error if one occurs.
 func (c *aPIServices) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("apiservices").
 		Name(name).
@@ -183,7 +174,6 @@ func (c *aPIServices) DeleteCollection(ctx context.Context, opts v1.DeleteOption
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("apiservices").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -197,7 +187,6 @@ func (c *aPIServices) DeleteCollection(ctx context.Context, opts v1.DeleteOption
 func (c *aPIServices) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.APIService, err error) {
 	result = &v1beta1.APIService{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("apiservices").
 		Name(name).

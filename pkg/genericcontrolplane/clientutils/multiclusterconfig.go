@@ -42,8 +42,8 @@ import (
 type multiClusterClientConfigRoundTripper struct {
 	rt                  http.RoundTripper
 	requestInfoResolver func() genericapirequest.RequestInfoResolver
-	enabledOn       sets.String
-	disableSharding bool
+	enabledOn           sets.String
+	disableSharding     bool
 }
 
 // EnableMultiCluster allows uses a rountripper to hack the rest.Config used by
@@ -92,7 +92,9 @@ func (mcrt *multiClusterClientConfigRoundTripper) RoundTrip(req *http.Request) (
 	if err != nil {
 		return nil, err
 	}
-	contextCluster := genericapirequest.ClusterFrom(req.Context())
+	// contextScope := rest.ScopeFrom(req.Context())
+	// contextCluster := genericapirequest.ClusterFrom(req.Context())
+	var contextCluster *genericapirequest.Cluster
 	if requestInfo != nil &&
 		mcrt.enabledOn.Has(requestInfo.Resource) {
 		resourceClusterName := ""

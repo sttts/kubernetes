@@ -41,47 +41,47 @@ type AppsV1Interface interface {
 // AppsV1Client is used to interact with features provided by the apps group.
 type AppsV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *AppsV1Client) ControllerRevisions(namespace string) ControllerRevisionInterface {
-	return newControllerRevisions(c, nil, namespace)
+	return newControllerRevisions(c, c.scope, namespace)
 }
 
-func (c *AppsV1Client) ScopedControllerRevisions(scope rest.Scope, namespace string) ControllerRevisionInterface {
-	return newControllerRevisions(c, scope, namespace)
+func (c *AppsV1Client) ScopedControllerRevisions(scope rest.Scope) ControllerRevisionsGetter {
+	return newControllerRevisionsScoper(c, scope)
 }
 
 func (c *AppsV1Client) DaemonSets(namespace string) DaemonSetInterface {
-	return newDaemonSets(c, nil, namespace)
+	return newDaemonSets(c, c.scope, namespace)
 }
 
-func (c *AppsV1Client) ScopedDaemonSets(scope rest.Scope, namespace string) DaemonSetInterface {
-	return newDaemonSets(c, scope, namespace)
+func (c *AppsV1Client) ScopedDaemonSets(scope rest.Scope) DaemonSetsGetter {
+	return newDaemonSetsScoper(c, scope)
 }
 
 func (c *AppsV1Client) Deployments(namespace string) DeploymentInterface {
-	return newDeployments(c, nil, namespace)
+	return newDeployments(c, c.scope, namespace)
 }
 
-func (c *AppsV1Client) ScopedDeployments(scope rest.Scope, namespace string) DeploymentInterface {
-	return newDeployments(c, scope, namespace)
+func (c *AppsV1Client) ScopedDeployments(scope rest.Scope) DeploymentsGetter {
+	return newDeploymentsScoper(c, scope)
 }
 
 func (c *AppsV1Client) ReplicaSets(namespace string) ReplicaSetInterface {
-	return newReplicaSets(c, nil, namespace)
+	return newReplicaSets(c, c.scope, namespace)
 }
 
-func (c *AppsV1Client) ScopedReplicaSets(scope rest.Scope, namespace string) ReplicaSetInterface {
-	return newReplicaSets(c, scope, namespace)
+func (c *AppsV1Client) ScopedReplicaSets(scope rest.Scope) ReplicaSetsGetter {
+	return newReplicaSetsScoper(c, scope)
 }
 
 func (c *AppsV1Client) StatefulSets(namespace string) StatefulSetInterface {
-	return newStatefulSets(c, nil, namespace)
+	return newStatefulSets(c, c.scope, namespace)
 }
 
-func (c *AppsV1Client) ScopedStatefulSets(scope rest.Scope, namespace string) StatefulSetInterface {
-	return newStatefulSets(c, scope, namespace)
+func (c *AppsV1Client) ScopedStatefulSets(scope rest.Scope) StatefulSetsGetter {
+	return newStatefulSetsScoper(c, scope)
 }
 
 // NewForConfig creates a new AppsV1Client for the given config.
@@ -128,9 +128,9 @@ func New(c rest.Interface) *AppsV1Client {
 	return &AppsV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new AppsV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *AppsV1Client {
-	return &AppsV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new AppsV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *AppsV1Client {
+	return &AppsV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

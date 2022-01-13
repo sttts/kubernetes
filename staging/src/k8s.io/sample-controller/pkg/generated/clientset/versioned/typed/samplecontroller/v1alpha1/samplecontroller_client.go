@@ -33,15 +33,15 @@ type SamplecontrollerV1alpha1Interface interface {
 // SamplecontrollerV1alpha1Client is used to interact with features provided by the samplecontroller.k8s.io group.
 type SamplecontrollerV1alpha1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *SamplecontrollerV1alpha1Client) Foos(namespace string) FooInterface {
-	return newFoos(c, nil, namespace)
+	return newFoos(c, c.scope, namespace)
 }
 
-func (c *SamplecontrollerV1alpha1Client) ScopedFoos(scope rest.Scope, namespace string) FooInterface {
-	return newFoos(c, scope, namespace)
+func (c *SamplecontrollerV1alpha1Client) ScopedFoos(scope rest.Scope) FoosGetter {
+	return newFoosScoper(c, scope)
 }
 
 // NewForConfig creates a new SamplecontrollerV1alpha1Client for the given config.
@@ -88,9 +88,9 @@ func New(c rest.Interface) *SamplecontrollerV1alpha1Client {
 	return &SamplecontrollerV1alpha1Client{restClient: c}
 }
 
-// NewWithCluster creates a new SamplecontrollerV1alpha1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *SamplecontrollerV1alpha1Client {
-	return &SamplecontrollerV1alpha1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new SamplecontrollerV1alpha1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *SamplecontrollerV1alpha1Client {
+	return &SamplecontrollerV1alpha1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

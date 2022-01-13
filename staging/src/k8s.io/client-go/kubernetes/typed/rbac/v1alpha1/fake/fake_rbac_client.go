@@ -32,16 +32,32 @@ func (c *FakeRbacV1alpha1) ClusterRoles() v1alpha1.ClusterRoleInterface {
 	return &FakeClusterRoles{c}
 }
 
+func (c *FakeRbacV1alpha1) ScopedClusterRoles(scope rest.Scope) v1alpha1.ClusterRoleInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeRbacV1alpha1) ClusterRoleBindings() v1alpha1.ClusterRoleBindingInterface {
 	return &FakeClusterRoleBindings{c}
+}
+
+func (c *FakeRbacV1alpha1) ScopedClusterRoleBindings(scope rest.Scope) v1alpha1.ClusterRoleBindingInterface {
+	panic("not implemented yet!")
 }
 
 func (c *FakeRbacV1alpha1) Roles(namespace string) v1alpha1.RoleInterface {
 	return &FakeRoles{c, namespace}
 }
 
+func (c *FakeRbacV1alpha1) ScopedRoles(scope rest.Scope) v1alpha1.RolesGetter {
+	panic("not implemented yet!")
+}
+
 func (c *FakeRbacV1alpha1) RoleBindings(namespace string) v1alpha1.RoleBindingInterface {
 	return &FakeRoleBindings{c, namespace}
+}
+
+func (c *FakeRbacV1alpha1) ScopedRoleBindings(scope rest.Scope) v1alpha1.RoleBindingsGetter {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

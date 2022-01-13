@@ -33,11 +33,11 @@ type AuthenticationV1beta1Interface interface {
 // AuthenticationV1beta1Client is used to interact with features provided by the authentication.k8s.io group.
 type AuthenticationV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *AuthenticationV1beta1Client) TokenReviews() TokenReviewInterface {
-	return newTokenReviews(c, nil)
+	return newTokenReviews(c, c.scope)
 }
 
 func (c *AuthenticationV1beta1Client) ScopedTokenReviews(scope rest.Scope) TokenReviewInterface {
@@ -88,9 +88,9 @@ func New(c rest.Interface) *AuthenticationV1beta1Client {
 	return &AuthenticationV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new AuthenticationV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *AuthenticationV1beta1Client {
-	return &AuthenticationV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new AuthenticationV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *AuthenticationV1beta1Client {
+	return &AuthenticationV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

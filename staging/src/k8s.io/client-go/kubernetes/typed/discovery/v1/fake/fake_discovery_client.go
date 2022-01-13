@@ -32,6 +32,10 @@ func (c *FakeDiscoveryV1) EndpointSlices(namespace string) v1.EndpointSliceInter
 	return &FakeEndpointSlices{c, namespace}
 }
 
+func (c *FakeDiscoveryV1) ScopedEndpointSlices(scope rest.Scope) v1.EndpointSlicesGetter {
+	panic("not implemented yet!")
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeDiscoveryV1) RESTClient() rest.Interface {

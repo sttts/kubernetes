@@ -33,11 +33,11 @@ type CertificatesV1beta1Interface interface {
 // CertificatesV1beta1Client is used to interact with features provided by the certificates.k8s.io group.
 type CertificatesV1beta1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *CertificatesV1beta1Client) CertificateSigningRequests() CertificateSigningRequestInterface {
-	return newCertificateSigningRequests(c, nil)
+	return newCertificateSigningRequests(c, c.scope)
 }
 
 func (c *CertificatesV1beta1Client) ScopedCertificateSigningRequests(scope rest.Scope) CertificateSigningRequestInterface {
@@ -88,9 +88,9 @@ func New(c rest.Interface) *CertificatesV1beta1Client {
 	return &CertificatesV1beta1Client{restClient: c}
 }
 
-// NewWithCluster creates a new CertificatesV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *CertificatesV1beta1Client {
-	return &CertificatesV1beta1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new CertificatesV1beta1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *CertificatesV1beta1Client {
+	return &CertificatesV1beta1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

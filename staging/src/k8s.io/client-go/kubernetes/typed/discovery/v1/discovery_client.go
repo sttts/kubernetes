@@ -33,15 +33,15 @@ type DiscoveryV1Interface interface {
 // DiscoveryV1Client is used to interact with features provided by the discovery.k8s.io group.
 type DiscoveryV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *DiscoveryV1Client) EndpointSlices(namespace string) EndpointSliceInterface {
-	return newEndpointSlices(c, nil, namespace)
+	return newEndpointSlices(c, c.scope, namespace)
 }
 
-func (c *DiscoveryV1Client) ScopedEndpointSlices(scope rest.Scope, namespace string) EndpointSliceInterface {
-	return newEndpointSlices(c, scope, namespace)
+func (c *DiscoveryV1Client) ScopedEndpointSlices(scope rest.Scope) EndpointSlicesGetter {
+	return newEndpointSlicesScoper(c, scope)
 }
 
 // NewForConfig creates a new DiscoveryV1Client for the given config.
@@ -88,9 +88,9 @@ func New(c rest.Interface) *DiscoveryV1Client {
 	return &DiscoveryV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new DiscoveryV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *DiscoveryV1Client {
-	return &DiscoveryV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new DiscoveryV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *DiscoveryV1Client {
+	return &DiscoveryV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

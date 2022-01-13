@@ -32,8 +32,16 @@ func (c *FakeExampleGroupV1) ClusterTestTypes() v1.ClusterTestTypeInterface {
 	return &FakeClusterTestTypes{c}
 }
 
+func (c *FakeExampleGroupV1) ScopedClusterTestTypes(scope rest.Scope) v1.ClusterTestTypeInterface {
+	panic("not implemented yet!")
+}
+
 func (c *FakeExampleGroupV1) TestTypes(namespace string) v1.TestTypeInterface {
 	return &FakeTestTypes{c, namespace}
+}
+
+func (c *FakeExampleGroupV1) ScopedTestTypes(scope rest.Scope) v1.TestTypesGetter {
+	panic("not implemented yet!")
 }
 
 // RESTClient returns a RESTClient that is used to communicate

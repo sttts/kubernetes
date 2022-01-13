@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/testing"
 	clientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1"
@@ -70,6 +71,10 @@ type Clientset struct {
 
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
+}
+
+func (c *Clientset) ScopedDiscovery(scope rest.Scope) discovery.DiscoveryInterface {
+	panic("not implemented yet!")
 }
 
 func (c *Clientset) Tracker() testing.ObjectTracker {

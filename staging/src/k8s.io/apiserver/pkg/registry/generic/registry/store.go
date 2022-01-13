@@ -234,12 +234,11 @@ const (
 // NoNamespaceKeyRootFunc is the default function for constructing storage paths
 // to resource directories enforcing namespace rules.
 func NoNamespaceKeyRootFunc(ctx context.Context, prefix string) string {
-	// /registry/apiextensions/customresourcedefinitions
 	scope := storage.ScopeFrom(ctx)
-	// if cluster.Wildcard {
-	// 	return key
-	// }
-	// return key + "/" + cluster.Name
+	if scope == nil {
+		klog.Errorf("ANDY NoNamespaceKeyRootFunc nil scope")
+		return prefix
+	}
 	return scope.NoNamespaceKeyRootFunc(prefix)
 }
 
@@ -1466,7 +1465,8 @@ func (e *Store) CompleteWithOptions(options *generic.StoreOptions) error {
 
 // startObservingCount starts monitoring given prefix and periodically updating metrics. It returns a function to stop collection.
 func (e *Store) startObservingCount(period time.Duration, objectCountTracker flowcontrolrequest.StorageObjectCountTracker) func() {
-	prefix := e.KeyRootFunc(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Wildcard: true}))
+	// prefix := e.KeyRootFunc(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Wildcard: true}))
+	prefix := e.KeyRootFunc(context.TODO())
 	resourceName := e.DefaultQualifiedResource.String()
 	klog.V(2).InfoS("Monitoring resource count at path", "resource", resourceName, "path", "<storage-prefix>/"+prefix)
 	stopCh := make(chan struct{})

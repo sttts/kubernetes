@@ -31,7 +31,6 @@ import (
 	"k8s.io/klog/v2"
 
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/quota/v1/generic"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -461,20 +460,14 @@ func startNamespaceController(ctx context.Context, controllerContext ControllerC
 }
 
 func startModifiedNamespaceController(ctx context.Context, controllerContext ControllerContext, namespaceKubeClient clientset.Interface, nsKubeconfig *restclient.Config) (controller.Interface, bool, error) {
-
-	metadataClient, err := metadata.NewForConfig(nsKubeconfig)
+	metadataClient, err := metadata.NewScopingForConfig(nsKubeconfig)
 	if err != nil {
 		return nil, true, err
-	}
-
-	discoverResourcesFn := func(clusterName string) ([]*metav1.APIResourceList, error) {
-		return namespaceKubeClient.Discovery().ServerPreferredNamespacedResources()
 	}
 
 	namespaceController := namespacecontroller.NewNamespaceController(
 		namespaceKubeClient,
 		metadataClient,
-		discoverResourcesFn,
 		controllerContext.InformerFactory.Core().V1().Namespaces(),
 		controllerContext.ComponentConfig.NamespaceController.NamespaceSyncPeriod.Duration,
 		v1.FinalizerKubernetes,

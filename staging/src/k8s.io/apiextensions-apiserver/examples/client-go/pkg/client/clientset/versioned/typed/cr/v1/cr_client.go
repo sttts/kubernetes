@@ -33,15 +33,15 @@ type CrV1Interface interface {
 // CrV1Client is used to interact with features provided by the cr.example.apiextensions.k8s.io group.
 type CrV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *CrV1Client) Examples(namespace string) ExampleInterface {
-	return newExamples(c, nil, namespace)
+	return newExamples(c, c.scope, namespace)
 }
 
-func (c *CrV1Client) ScopedExamples(scope rest.Scope, namespace string) ExampleInterface {
-	return newExamples(c, scope, namespace)
+func (c *CrV1Client) ScopedExamples(scope rest.Scope) ExamplesGetter {
+	return newExamplesScoper(c, scope)
 }
 
 // NewForConfig creates a new CrV1Client for the given config.
@@ -88,9 +88,9 @@ func New(c rest.Interface) *CrV1Client {
 	return &CrV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new CrV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *CrV1Client {
-	return &CrV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new CrV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *CrV1Client {
+	return &CrV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

@@ -32,11 +32,11 @@ type SecondExampleInterface interface {
 // SecondExampleClient is used to interact with features provided by the example.test.apiserver.code-generator.k8s.io group.
 type SecondExampleClient struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *SecondExampleClient) TestTypes() TestTypeInterface {
-	return newTestTypes(c, nil)
+	return newTestTypes(c, c.scope)
 }
 
 func (c *SecondExampleClient) ScopedTestTypes(scope rest.Scope) TestTypeInterface {
@@ -87,9 +87,9 @@ func New(c rest.Interface) *SecondExampleClient {
 	return &SecondExampleClient{restClient: c}
 }
 
-// NewWithCluster creates a new SecondExampleClient for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *SecondExampleClient {
-	return &SecondExampleClient{restClient: c, cluster: cluster}
+// NewWithScope creates a new SecondExampleClient for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *SecondExampleClient {
+	return &SecondExampleClient{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

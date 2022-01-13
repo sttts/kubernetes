@@ -42,7 +42,6 @@ import (
 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1"
 	listers "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/controller/establish"
-	"k8s.io/apiextensions-apiserver/pkg/controller/finalizer"
 	"k8s.io/apiextensions-apiserver/pkg/controller/openapi/builder"
 	"k8s.io/apiextensions-apiserver/pkg/crdserverscheme"
 	"k8s.io/apiextensions-apiserver/pkg/registry/customresource"
@@ -664,16 +663,6 @@ func (r *crdHandler) tearDown(oldInfo *crdInfo) {
 		// destroy only the main storage. Those for the subresources share cacher and etcd clients.
 		storage.CustomResource.DestroyFunc()
 	}
-}
-
-// GetCustomResourceListerCollectionDeleter returns the ListerCollectionDeleter of
-// the given crd.
-func (r *crdHandler) GetCustomResourceListerCollectionDeleter(crd *apiextensionsv1.CustomResourceDefinition) (finalizer.ListerCollectionDeleter, error) {
-	info, err := r.getOrCreateServingInfoFor(crd)
-	if err != nil {
-		return nil, err
-	}
-	return info.storages[info.storageVersion].CustomResource, nil
 }
 
 // getOrCreateServingInfoFor gets the CRD serving info for the given CRD (by its UID) if the key exists in the storage map.

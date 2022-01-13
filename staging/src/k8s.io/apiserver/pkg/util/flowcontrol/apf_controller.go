@@ -245,7 +245,7 @@ func newTestableController(config TestableConfig) *configController {
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			name, _ := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+			name, _ := cache.DeletionHandlingDelegatingKeyFunc(cache.ObjectKeyFunc)(obj)
 			klog.V(7).Infof("Triggered API priority and fairness config reloading in %s due to deletion of PLC %s", cfgCtlr.name, name)
 			cfgCtlr.configQueue.Add(0)
 
@@ -283,7 +283,7 @@ func newTestableController(config TestableConfig) *configController {
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			name, _ := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+			name, _ := cache.DeletionHandlingDelegatingKeyFunc(cache.ObjectKeyFunc)(obj)
 			klog.V(7).Infof("Triggered API priority and fairness config reloading in %s due to deletion of FS %s", cfgCtlr.name, name)
 			cfgCtlr.configQueue.Add(0)
 

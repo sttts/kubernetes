@@ -33,15 +33,15 @@ type CoordinationV1Interface interface {
 // CoordinationV1Client is used to interact with features provided by the coordination.k8s.io group.
 type CoordinationV1Client struct {
 	restClient rest.Interface
-	cluster    string
+	scope      rest.Scope
 }
 
 func (c *CoordinationV1Client) Leases(namespace string) LeaseInterface {
-	return newLeases(c, nil, namespace)
+	return newLeases(c, c.scope, namespace)
 }
 
-func (c *CoordinationV1Client) ScopedLeases(scope rest.Scope, namespace string) LeaseInterface {
-	return newLeases(c, scope, namespace)
+func (c *CoordinationV1Client) ScopedLeases(scope rest.Scope) LeasesGetter {
+	return newLeasesScoper(c, scope)
 }
 
 // NewForConfig creates a new CoordinationV1Client for the given config.
@@ -88,9 +88,9 @@ func New(c rest.Interface) *CoordinationV1Client {
 	return &CoordinationV1Client{restClient: c}
 }
 
-// NewWithCluster creates a new CoordinationV1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster string) *CoordinationV1Client {
-	return &CoordinationV1Client{restClient: c, cluster: cluster}
+// NewWithScope creates a new CoordinationV1Client for the given RESTClient and scope.
+func NewWithScope(c rest.Interface, scope rest.Scope) *CoordinationV1Client {
+	return &CoordinationV1Client{restClient: c, scope: scope}
 }
 
 func setConfigDefaults(config *rest.Config) error {

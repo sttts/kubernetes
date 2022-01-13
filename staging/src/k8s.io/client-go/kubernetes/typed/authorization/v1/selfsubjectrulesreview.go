@@ -45,17 +45,15 @@ type SelfSubjectRulesReviewInterface interface {
 
 // selfSubjectRulesReviews implements SelfSubjectRulesReviewInterface
 type selfSubjectRulesReviews struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newSelfSubjectRulesReviews returns a SelfSubjectRulesReviews
 func newSelfSubjectRulesReviews(c *AuthorizationV1Client, scope rest.Scope) *selfSubjectRulesReviews {
 	return &selfSubjectRulesReviews{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -63,7 +61,6 @@ func newSelfSubjectRulesReviews(c *AuthorizationV1Client, scope rest.Scope) *sel
 func (c *selfSubjectRulesReviews) Create(ctx context.Context, selfSubjectRulesReview *v1.SelfSubjectRulesReview, opts metav1.CreateOptions) (result *v1.SelfSubjectRulesReview, err error) {
 	result = &v1.SelfSubjectRulesReview{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("selfsubjectrulesreviews").
 		VersionedParams(&opts, scheme.ParameterCodec).

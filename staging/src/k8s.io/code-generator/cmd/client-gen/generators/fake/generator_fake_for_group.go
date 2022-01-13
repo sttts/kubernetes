@@ -91,12 +91,15 @@ func (g *genFakeForGroup) GenerateType(c *generator.Context, t *types.Type, w io
 			"GroupGoName":       g.groupGoName,
 			"Version":           namer.IC(g.version),
 			"realClientPackage": strings.ToLower(filepath.Base(g.realClientPackage)),
+			"restScope":         c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Scope"}),
 		}
 		if tags.NonNamespaced {
 			sw.Do(getterImplNonNamespaced, wrapper)
+			sw.Do(scopedGetterImplNonNamespaced, wrapper)
 			continue
 		}
 		sw.Do(getterImplNamespaced, wrapper)
+		sw.Do(scopedGetterImplNamespaced, wrapper)
 	}
 	sw.Do(getRESTClient, m)
 	return sw.Error()
@@ -117,6 +120,18 @@ func (c *Fake$.GroupGoName$$.Version$) $.type|publicPlural$(namespace string) $.
 var getterImplNonNamespaced = `
 func (c *Fake$.GroupGoName$$.Version$) $.type|publicPlural$() $.realClientPackage$.$.type|public$Interface {
 	return &Fake$.type|publicPlural${c}
+}
+`
+
+var scopedGetterImplNamespaced = `
+func (c *Fake$.GroupGoName$$.Version$) Scoped$.type|publicPlural$(scope $.restScope|raw$) $.realClientPackage$.$.type|publicPlural$Getter {
+	panic("not implemented yet!")
+}
+`
+
+var scopedGetterImplNonNamespaced = `
+func (c *Fake$.GroupGoName$$.Version$) Scoped$.type|publicPlural$(scope $.restScope|raw$) $.realClientPackage$.$.type|public$Interface {
+	panic("not implemented yet!")
 }
 `
 

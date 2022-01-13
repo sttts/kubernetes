@@ -56,17 +56,15 @@ type TestTypeInterface interface {
 
 // testTypes implements TestTypeInterface
 type testTypes struct {
-	client  rest.Interface
-	cluster string
-	scope   rest.Scope
+	client rest.Interface
+	scope  rest.Scope
 }
 
 // newTestTypes returns a TestTypes
 func newTestTypes(c *SecondExampleClient, scope rest.Scope) *testTypes {
 	return &testTypes{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		scope:   scope,
+		client: c.RESTClient(),
+		scope:  scope,
 	}
 }
 
@@ -74,7 +72,6 @@ func newTestTypes(c *SecondExampleClient, scope rest.Scope) *testTypes {
 func (c *testTypes) Get(ctx context.Context, name string, options v1.GetOptions) (result *example2.TestType, err error) {
 	result = &example2.TestType{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("testtypes").
 		Name(name).
@@ -92,7 +89,6 @@ func (c *testTypes) List(ctx context.Context, opts v1.ListOptions) (result *exam
 	}
 	result = &example2.TestTypeList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("testtypes").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -110,7 +106,6 @@ func (c *testTypes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Inter
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("testtypes").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -122,7 +117,6 @@ func (c *testTypes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Inter
 func (c *testTypes) Create(ctx context.Context, testType *example2.TestType, opts v1.CreateOptions) (result *example2.TestType, err error) {
 	result = &example2.TestType{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("testtypes").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -136,7 +130,6 @@ func (c *testTypes) Create(ctx context.Context, testType *example2.TestType, opt
 func (c *testTypes) Update(ctx context.Context, testType *example2.TestType, opts v1.UpdateOptions) (result *example2.TestType, err error) {
 	result = &example2.TestType{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("testtypes").
 		Name(testType.Name).
@@ -152,7 +145,6 @@ func (c *testTypes) Update(ctx context.Context, testType *example2.TestType, opt
 func (c *testTypes) UpdateStatus(ctx context.Context, testType *example2.TestType, opts v1.UpdateOptions) (result *example2.TestType, err error) {
 	result = &example2.TestType{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("testtypes").
 		Name(testType.Name).
@@ -167,7 +159,6 @@ func (c *testTypes) UpdateStatus(ctx context.Context, testType *example2.TestTyp
 // Delete takes name of the testType and deletes it. Returns an error if one occurs.
 func (c *testTypes) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("testtypes").
 		Name(name).
@@ -183,7 +174,6 @@ func (c *testTypes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions,
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("testtypes").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
@@ -197,7 +187,6 @@ func (c *testTypes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions,
 func (c *testTypes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *example2.TestType, err error) {
 	result = &example2.TestType{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Scope(c.scope).
 		Resource("testtypes").
 		Name(name).
