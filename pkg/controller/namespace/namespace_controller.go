@@ -66,7 +66,7 @@ type NamespaceController struct {
 	namespacedResourcesDeleters map[rest.Scope]deletion.NamespacedResourcesDeleterInterface
 
 	scopedNamespaceClient coreclient.ScopedNamespacesGetter
-	metadataClient        metadata.ScopedInterface
+	metadataClient        metadata.ScoperInterface
 	scopedPodClient       coreclient.ScopedPodsGetter
 	discoveryClient       discovery.Scoper
 	finalizerToken        v1.FinalizerName
@@ -75,7 +75,7 @@ type NamespaceController struct {
 // NewNamespaceController creates a new NamespaceController
 func NewNamespaceController(
 	kubeClient clientset.Interface,
-	metadataClient metadata.ScopedInterface,
+	metadataClient metadata.ScoperInterface,
 	namespaceInformer coreinformers.NamespaceInformer,
 	resyncPeriod time.Duration,
 	finalizerToken v1.FinalizerName) *NamespaceController {
@@ -193,7 +193,7 @@ func (nm *NamespaceController) processNextWorkItem() bool {
 	if !found {
 		deleter = deletion.NewNamespacedResourcesDeleter(
 			nm.scopedNamespaceClient.ScopedNamespaces(scope),
-			nm.metadataClient.Scoped(scope),
+			nm.metadataClient.Scope(scope),
 			nm.discoveryClient.ScopedDiscovery(scope),
 			nm.scopedPodClient.ScopedPods(scope),
 			nm.finalizerToken,

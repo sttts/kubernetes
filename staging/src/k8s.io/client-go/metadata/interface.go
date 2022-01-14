@@ -26,8 +26,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type ScopedInterface interface {
-	Scoped(scope rest.Scope) Interface
+type ScoperInterface interface {
+	Scope(scope rest.Scope) Interface
 }
 
 // Interface allows a caller to get the metadata (in the form of PartialObjectMetadata objects)
