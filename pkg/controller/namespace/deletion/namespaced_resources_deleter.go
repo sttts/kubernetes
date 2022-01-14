@@ -51,14 +51,16 @@ func NewNamespacedResourcesDeleter(
 	finalizerToken v1.FinalizerName,
 ) NamespacedResourcesDeleterInterface {
 	d := &namespacedResourcesDeleter{
-		nsClient:       nsClient,
-		metadataClient: metadataClient,
-		podsGetter:     podsGetter,
+		nsClient:        nsClient,
+		metadataClient:  metadataClient,
+		discoveryClient: discoveryClient,
+		podsGetter:      podsGetter,
 		opCache: &operationNotSupportedCache{
 			m: make(map[operationKey]bool),
 		},
 		finalizerToken: finalizerToken,
 	}
+	d.initOpCache()
 	return d
 }
 
@@ -155,7 +157,7 @@ func (d *namespacedResourcesDeleter) Delete(nsName string) error {
 	return nil
 }
 
-func (d *namespacedResourcesDeleter) initOpCache(clusterName string) {
+func (d *namespacedResourcesDeleter) initOpCache() {
 	// pre-fill opCache with the discovery info
 	//
 	// TODO(sttts): get rid of opCache and http 405 logic around it and trust discovery info
