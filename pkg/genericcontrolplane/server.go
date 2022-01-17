@@ -197,9 +197,9 @@ func CreateKubeAPIServerConfig(s completedServerRunOptions) (
 
 	// TODO(ncdc,1.23) upstream has this in the Cobra RunE method and it's called as early as
 	// possible. Do we want to consider doing something similar?
-	if err := s.Logs.ValidateAndApply(); err != nil {
-		return nil, nil, err
-	}
+	// if err := s.Logs.ValidateAndApply(); err != nil {
+	// 	return nil, nil, err
+	// }
 
 	config := &apis.Config{
 		GenericConfig: genericConfig,

@@ -1465,7 +1465,9 @@ func (e *Store) CompleteWithOptions(options *generic.StoreOptions) error {
 
 // startObservingCount starts monitoring given prefix and periodically updating metrics. It returns a function to stop collection.
 func (e *Store) startObservingCount(period time.Duration, objectCountTracker flowcontrolrequest.StorageObjectCountTracker) func() {
-	// prefix := e.KeyRootFunc(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Wildcard: true}))
+	// TODO(ncdc/kcp): this ideally would be per scope, so flow control can be per scope. But the scopes are not known a priori,
+	// and depending on how the scoping mechanism handles the etcd NoNamespaceKeyRootFunc, it may not be possible to (efficiently)
+	// get a list of scopes and get object counts for each scope.
 	prefix := e.KeyRootFunc(context.TODO())
 	resourceName := e.DefaultQualifiedResource.String()
 	klog.V(2).InfoS("Monitoring resource count at path", "resource", resourceName, "path", "<storage-prefix>/"+prefix)
