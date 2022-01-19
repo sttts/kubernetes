@@ -1,10 +1,8 @@
 package cache
 
 import (
-	"context"
 	"net/http"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -65,9 +63,9 @@ func (ds *defaultScoper) NewScope(name string) rest.Scope {
 	return &scope{name: name}
 }
 
-func (ds *defaultScoper) ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
-	return defaultScope, nil
-}
+// func (ds *defaultScoper) ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
+// 	return defaultScope, nil
+// }
 
 func (ds *defaultScoper) ScopeFromKey(key string) (rest.Scope, error) {
 	return defaultScope, nil
@@ -81,10 +79,10 @@ type ControllerzConfig struct {
 	// ListAllIndexValueFunc func(ctx context.Context) (string, error)
 
 	NamespaceIndexFunc IndexFunc
-	NamespaceKeyFunc   func(ctx context.Context, namespace string) (string, error)
+	// NamespaceKeyFunc   func(ctx context.Context, namespace string) (string, error)
 
-	NameKeyFunc          func(ctx context.Context, name string) (string, error)
-	NamespaceNameKeyFunc func(ctx context.Context, namespace, name string) (string, error)
+	// NameKeyFunc          func(ctx context.Context, name string) (string, error)
+	// NamespaceNameKeyFunc func(ctx context.Context, namespace, name string) (string, error)
 
 	// NewSyncContextFunc func(ctx context.Context, key QueueKey) context.Context
 	Scoper rest.Scoper
@@ -114,18 +112,18 @@ func init() {
 			// 	return defaultListAllIndexValue, nil
 			// },
 			NamespaceIndexFunc: MetaNamespaceIndexFunc,
-			NamespaceKeyFunc: func(ctx context.Context, namespace string) (string, error) {
-				return namespace, nil
-			},
-			NameKeyFunc: func(ctx context.Context, name string) (string, error) {
-				return name, nil
-			},
-			NamespaceNameKeyFunc: func(ctx context.Context, namespace, name string) (string, error) {
-				if len(namespace) > 0 {
-					return namespace + "/" + name, nil
-				}
-				return name, nil
-			},
+			// NamespaceKeyFunc: func(ctx context.Context, namespace string) (string, error) {
+			// 	return namespace, nil
+			// },
+			// NameKeyFunc: func(ctx context.Context, name string) (string, error) {
+			// 	return name, nil
+			// },
+			// NamespaceNameKeyFunc: func(ctx context.Context, namespace, name string) (string, error) {
+			// 	if len(namespace) > 0 {
+			// 		return namespace + "/" + name, nil
+			// 	}
+			// 	return name, nil
+			// },
 			// NewSyncContextFunc: func(ctx context.Context, key QueueKey) context.Context {
 			// 	return ctx
 			// },
@@ -159,13 +157,13 @@ func NamespaceIndexFunc() IndexFunc {
 	return cc.NamespaceIndexFunc
 }
 
-func NameKeyFunc(ctx context.Context, name string) (string, error) {
-	return cc.NameKeyFunc(ctx, name)
-}
+// func NameKeyFunc(ctx context.Context, name string) (string, error) {
+// 	return cc.NameKeyFunc(ctx, name)
+// }
 
-func NamespaceNameKeyFunc(ctx context.Context, namespace, name string) (string, error) {
-	return cc.NamespaceNameKeyFunc(ctx, namespace, name)
-}
+// func NamespaceNameKeyFunc(ctx context.Context, namespace, name string) (string, error) {
+// 	return cc.NamespaceNameKeyFunc(ctx, namespace, name)
+// }
 
 // func NewSyncContext(ctx context.Context, key QueueKey) context.Context {
 // 	return cc.NewSyncContextFunc(ctx, key)
@@ -179,9 +177,9 @@ func NewScope(name string) rest.Scope {
 	return cc.Scoper.NewScope(name)
 }
 
-func ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
-	return cc.Scoper.ScopeFromObject(obj)
-}
+// func ScopeFromObject(obj metav1.Object) (rest.Scope, error) {
+// 	return cc.Scoper.ScopeFromObject(obj)
+// }
 
 func ScopeFromKey(key string) (rest.Scope, error) {
 	return cc.Scoper.ScopeFromKey(key)

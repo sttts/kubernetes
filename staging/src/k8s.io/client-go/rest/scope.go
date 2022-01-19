@@ -3,8 +3,6 @@ package rest
 import (
 	"context"
 	"net/http"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Scope interface {
@@ -16,7 +14,7 @@ type Scope interface {
 type Scoper interface {
 	// ScopeFromContext(ctx context.Context) (Scope, error)
 	NewScope(name string) Scope
-	ScopeFromObject(obj metav1.Object) (Scope, error)
+	// ScopeFromObject(obj metav1.Object) (Scope, error)
 	ScopeFromKey(key string) (Scope, error)
 }
 
