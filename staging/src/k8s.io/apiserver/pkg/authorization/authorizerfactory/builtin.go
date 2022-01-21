@@ -19,7 +19,6 @@ package authorizerfactory
 import (
 	"context"
 	"errors"
-
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )

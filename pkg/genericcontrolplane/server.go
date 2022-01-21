@@ -73,14 +73,40 @@ func Run(completeOptions completedServerRunOptions, stopCh <-chan struct{}) erro
 	// To help debugging, immediately log version
 	klog.Infof("Version: %+v", version.Get())
 
-	serverChain, err := CreateServerChain(completeOptions, stopCh)
+	config, pluginInitializer, err := CreateKubeAPIServerConfig(completeOptions)
 	if err != nil {
 		return err
 	}
-	server := serverChain.MiniAggregator.GenericAPIServer
 
-	prepared := server.PrepareRun()
-	return prepared.Run(stopCh)
+	// Wire in a ServiceResolver that always returns an error that ResolveEndpoint is not yet
+	// supported. The effect is that CRD webhook conversions are not supported and will always get an
+	// error.
+	serviceResolver := &unimplementedServiceResolver{}
+
+	// If additional API servers are added, they should be gated.
+	apiExtensionsConfig, err := CreateAPIExtensionsConfig(
+		*config.GenericConfig,
+		config.ExtraConfig.VersionedInformers,
+		pluginInitializer,
+		completeOptions.ServerRunOptions,
+		serviceResolver,
+		webhook.NewDefaultAuthenticationInfoResolverWrapper(
+			nil,
+			config.GenericConfig.EgressSelector,
+			config.GenericConfig.LoopbackClientConfig,
+			config.GenericConfig.TracerProvider,
+		),
+	)
+	if err != nil {
+		return fmt.Errorf("configure api extensions: %v", err)
+	}
+
+	serverChain, err := CreateServerChain(config.Complete(), apiExtensionsConfig.Complete())
+	if err != nil {
+		return err
+	}
+
+	return serverChain.MiniAggregator.GenericAPIServer.PrepareRun().Run(stopCh)
 }
 
 type ServerChain struct {
@@ -100,59 +126,23 @@ func (r *unimplementedServiceResolver) ResolveEndpoint(namespace string, name st
 }
 
 // CreateServerChain creates the apiservers connected via delegation.
-func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan struct{}) (*ServerChain, error) {
-	kubeAPIServerConfig, pluginInitializer, err := CreateKubeAPIServerConfig(completedOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	// Wire in a ServiceResolver that always returns an error that ResolveEndpoint is not yet
-	// supported. The effect is that CRD webhook conversions are not supported and will always get an
-	// error.
-	serviceResolver := &unimplementedServiceResolver{}
-
-	// If additional API servers are added, they should be gated.
-	apiExtensionsConfig, err := createAPIExtensionsConfig(
-		*kubeAPIServerConfig.GenericConfig,
-		kubeAPIServerConfig.ExtraConfig.VersionedInformers,
-		pluginInitializer,
-		completedOptions.ServerRunOptions,
-		serviceResolver,
-		webhook.NewDefaultAuthenticationInfoResolverWrapper(
-			nil,
-			kubeAPIServerConfig.GenericConfig.EgressSelector,
-			kubeAPIServerConfig.GenericConfig.LoopbackClientConfig,
-			kubeAPIServerConfig.GenericConfig.TracerProvider,
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("configure api extensions: %v", err)
-	}
-	notFoundHandler := notfoundhandler.New(kubeAPIServerConfig.GenericConfig.Serializer, genericapifilters.NoMuxAndDiscoveryIncompleteKey)
-	apiExtensionsServer, err := createAPIExtensionsServer(apiExtensionsConfig, genericapiserver.NewEmptyDelegateWithCustomHandler(notFoundHandler))
+func CreateServerChain(config apis.CompletedConfig, apiExtensionConfig apiextensionsapiserver.CompletedConfig) (*ServerChain, error) {
+	notFoundHandler := notfoundhandler.New(config.GenericConfig.Serializer, genericapifilters.NoMuxAndDiscoveryIncompleteKey)
+	apiExtensionsServer, err := apiExtensionConfig.New(genericapiserver.NewEmptyDelegateWithCustomHandler(notFoundHandler))
 	if err != nil {
 		return nil, fmt.Errorf("create api extensions: %v", err)
 	}
 
-	kubeAPIServer, err := CreateKubeAPIServer(kubeAPIServerConfig, apiExtensionsServer.GenericAPIServer)
+	kubeAPIServer, err := config.New(apiExtensionsServer.GenericAPIServer)
 	if err != nil {
 		return nil, err
 	}
 
 	miniAggregatorConfig := &aggregator.MiniAggregatorConfig{
-		GenericConfig: kubeAPIServerConfig.GenericConfig,
+		GenericConfig: config.GenericConfig.Config,
 	}
 
-	if err := completedOptions.ServerRunOptions.Admission.ApplyTo(
-		kubeAPIServerConfig.GenericConfig,
-		kubeAPIServerConfig.ExtraConfig.VersionedInformers,
-		kubeAPIServerConfig.GenericConfig.LoopbackClientConfig,
-		feature.DefaultFeatureGate,
-		pluginInitializer...); err != nil {
-		return nil, err
-	}
-
-	miniAggregatorServer, err := miniAggregatorConfig.Complete(kubeAPIServerConfig.ExtraConfig.VersionedInformers).New(kubeAPIServer.GenericAPIServer, kubeAPIServer, apiExtensionsServer)
+	miniAggregatorServer, err := miniAggregatorConfig.Complete(config.ExtraConfig.VersionedInformers).New(kubeAPIServer.GenericAPIServer, kubeAPIServer, apiExtensionsServer)
 	if err != nil {
 		return nil, err
 	}
@@ -162,16 +152,6 @@ func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan
 		GenericControlPlane:       kubeAPIServer,
 		MiniAggregator:            miniAggregatorServer,
 	}, nil
-}
-
-// CreateKubeAPIServer creates and wires a workable kube-apiserver
-func CreateKubeAPIServer(kubeAPIServerConfig *apis.Config, delegateAPIServer genericapiserver.DelegationTarget) (*apis.GenericControlPlane, error) {
-	kubeAPIServer, err := kubeAPIServerConfig.Complete().New(delegateAPIServer)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubeAPIServer, nil
 }
 
 // CreateKubeAPIServerConfig creates all the resources for running the API server, but runs none of them
@@ -232,6 +212,15 @@ func CreateKubeAPIServerConfig(s completedServerRunOptions) (
 		config.ExtraConfig.ClusterAuthenticationInfo.RequestHeaderExtraHeaderPrefixes = requestHeaderConfig.ExtraHeaderPrefixes
 		config.ExtraConfig.ClusterAuthenticationInfo.RequestHeaderGroupHeaders = requestHeaderConfig.GroupHeaders
 		config.ExtraConfig.ClusterAuthenticationInfo.RequestHeaderUsernameHeaders = requestHeaderConfig.UsernameHeaders
+	}
+
+	if err := s.ServerRunOptions.Admission.ApplyTo(
+		config.GenericConfig,
+		config.ExtraConfig.VersionedInformers,
+		config.GenericConfig.LoopbackClientConfig,
+		feature.DefaultFeatureGate,
+		pluginInitializers...); err != nil {
+		return nil, nil, err
 	}
 
 	// if err := config.GenericConfig.AddPostStartHook("start-kube-apiserver-admission-initializer", admissionPostStartHook); err != nil {
