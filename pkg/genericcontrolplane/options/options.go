@@ -20,14 +20,11 @@ import (
 	"net/http"
 	"time"
 
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
 	"k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
 	"k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/storage/storagebackend"
-	"k8s.io/client-go/rest"
 	"k8s.io/component-base/logs"
 	"k8s.io/component-base/metrics"
 
@@ -74,10 +71,6 @@ type ServerRunOptions struct {
 
 	// BuildHandlerChainFunc allows you to build custom handler chains by decorating the apiHandler.
 	BuildHandlerChainFunc func(apiHandler http.Handler, c *genericapiserver.Config) (secure http.Handler)
-
-	// TODO consider either moving into an apiextensions-specific struct, or maybe reuse apiextensions-apiserver/pkg/cmd/options?
-	APIExtensionsNewClientFunc                func(config *rest.Config) (apiextensionsclient.Interface, error)
-	APIExtensionsNewSharedInformerFactoryFunc func(client apiextensionsclient.Interface, resyncPeriod time.Duration) apiextensionsinformers.SharedInformerFactory
 }
 
 // NewServerRunOptions creates a new ServerRunOptions object with default parameters
