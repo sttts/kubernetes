@@ -42,8 +42,8 @@ import (
 type multiClusterClientConfigRoundTripper struct {
 	rt                  http.RoundTripper
 	requestInfoResolver func() genericapirequest.RequestInfoResolver
-	enabledOn       sets.String
-	disableSharding bool
+	enabledOn           sets.String
+	disableSharding     bool
 }
 
 // EnableMultiCluster allows uses a rountripper to hack the rest.Config used by
@@ -104,7 +104,7 @@ func (mcrt *multiClusterClientConfigRoundTripper) RoundTrip(req *http.Request) (
 			} else {
 				headerCluster = "*"
 			}
-		case "create", "update":
+		case "create", "update", "patch":
 			err := func() error {
 				// We dn't try to mutate the object here. Just guessing the ClusterName field from the body,
 				// in order to set the header accordingly
