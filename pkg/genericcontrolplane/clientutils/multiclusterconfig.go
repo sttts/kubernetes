@@ -88,11 +88,41 @@ func defaultRequestInfoResolver() genericapirequest.RequestInfoResolver {
 
 func (mcrt *multiClusterClientConfigRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = utilnet.CloneRequest(req)
+
+	requestClusterName := ""
+	if path := req.URL.Path; strings.HasPrefix(path, "/clusters/") {
+		path = strings.TrimPrefix(path, "/clusters/")
+		if i := strings.Index(path, "/"); i != -1 {
+			requestClusterName, path = path[:i], path[i:]
+			req.URL.Path = path
+			for i := 0; i < 2 && len(req.URL.RawPath) > 1; i++ {
+				if slash := strings.Index(req.URL.RawPath[1:], "/"); slash != -1 {
+					req.URL.RawPath = req.URL.RawPath[slash:]
+				}
+			}
+		}
+	} else {
+		requestClusterName = req.Header.Get("X-Kubernetes-Cluster")
+	}
+	
+	contextCluster := genericapirequest.ClusterFrom(req.Context())
+	
+	if contextCluster == nil && requestClusterName != "" {
+		contextCluster = &genericapirequest.Cluster {
+			Parents: []string{},
+		}
+		if requestClusterName == "*" {
+			contextCluster.Wildcard = true
+		} else {
+			contextCluster.Name = requestClusterName
+		}
+		req = req.WithContext(genericapirequest.WithCluster(req.Context(), *contextCluster))
+	}
+
 	requestInfo, err := mcrt.requestInfoResolver().NewRequestInfo(req)
 	if err != nil {
 		return nil, err
 	}
-	contextCluster := genericapirequest.ClusterFrom(req.Context())
 	if requestInfo != nil &&
 		mcrt.enabledOn.Has(requestInfo.Resource) {
 		resourceClusterName := ""
@@ -137,7 +167,7 @@ func (mcrt *multiClusterClientConfigRoundTripper) RoundTrip(req *http.Request) (
 			fallthrough
 		default:
 			if resourceClusterName != "" {
-				if contextCluster != nil && contextCluster.Name != resourceClusterName {
+				if contextCluster != nil && contextCluster.Name != "" && contextCluster.Name != resourceClusterName {
 					return nil, errors.New("Resource cluster name " + resourceClusterName + " incompatible with context cluster name " + contextCluster.Name)
 				}
 				headerCluster = resourceClusterName
