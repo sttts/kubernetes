@@ -42,9 +42,10 @@ bash "${CODEGEN_PKG}/generate-internal-groups.sh" deepcopy,conversion \
   --output-base "$(dirname "${BASH_SOURCE[0]}")/../../.." \
   --go-header-file "${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
-GO111MODULE=on GOBIN="${OUTPUT_DIR}" "${HACK_PKG}/go-install.sh" github.com/kcp-dev/code-generator code-generator 2dc1248118a7f2337c6374ff5778c0880e1a4226
+#GO111MODULE=on GOBIN="${OUTPUT_DIR}" "${HACK_PKG}/go-install.sh" github.com/kcp-dev/code-generator code-generator 2dc1248118a7f2337c6374ff5778c0880e1a4226
 pushd "${SCRIPT_ROOT}"
-GO111MODULE=on "${OUTPUT_DIR}/code-generator" \
+CODE_GENERATOR=/Users/lszaszki/go/src/github.com/kcp-dev/code-generator/bin
+GO111MODULE=on "${CODE_GENERATOR}/code-generator" \
   "client:standalone=true,outputPackagePath=k8s.io/apiextensions-apiserver/pkg/client/kcp,name=clientset,apiPackagePath=k8s.io/apiextensions-apiserver/pkg/apis,singleClusterClientPackagePath=k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset,headerFile=${HACK_PKG}/boilerplate.go.txt" \
   "lister:apiPackagePath=k8s.io/apiextensions-apiserver/pkg/apis,singleClusterListerPackagePath=k8s.io/apiextensions-apiserver/pkg/client/listers,headerFile=${HACK_PKG}/boilerplate.go.txt" \
   "informer:standalone=true,outputPackagePath=k8s.io/apiextensions-apiserver/pkg/client/kcp,apiPackagePath=k8s.io/apiextensions-apiserver/pkg/apis,singleClusterClientPackagePath=k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset,singleClusterListerPackagePath=k8s.io/apiextensions-apiserver/pkg/client/listers,singleClusterInformerPackagePath=k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions,headerFile=${HACK_PKG}/boilerplate.go.txt" \
