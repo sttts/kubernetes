@@ -24,7 +24,7 @@ package v1beta1
 
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/client-go/rest"
 	kcpapiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/kcp/clientset/versioned/typed/apiextensions/v1beta1"
@@ -37,7 +37,7 @@ type ApiextensionsV1beta1ClusterClient struct {
 	*kcptesting.Fake 
 }
 
-func (c *ApiextensionsV1beta1ClusterClient) Cluster(cluster logicalcluster.Name) apiextensionsv1beta1.ApiextensionsV1beta1Interface {
+func (c *ApiextensionsV1beta1ClusterClient) Cluster(cluster logicalcluster.Path) apiextensionsv1beta1.ApiextensionsV1beta1Interface {
 	if cluster == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -52,7 +52,7 @@ var _ apiextensionsv1beta1.ApiextensionsV1beta1Interface = (*ApiextensionsV1beta
 
 type ApiextensionsV1beta1Client struct {
 	*kcptesting.Fake
-	Cluster logicalcluster.Name
+	Cluster logicalcluster.Path
 }
 
 func (c *ApiextensionsV1beta1Client) RESTClient() rest.Interface {

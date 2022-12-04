@@ -23,7 +23,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -49,7 +49,7 @@ type customResourceDefinitionsClusterClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *customResourceDefinitionsClusterClient) Cluster(cluster logicalcluster.Name) apiextensionsv1beta1client.CustomResourceDefinitionInterface {
+func (c *customResourceDefinitionsClusterClient) Cluster(cluster logicalcluster.Path) apiextensionsv1beta1client.CustomResourceDefinitionInterface {
 	if cluster == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -84,7 +84,7 @@ func (c *customResourceDefinitionsClusterClient) Watch(ctx context.Context, opts
 }
 type customResourceDefinitionsClient struct {
 	*kcptesting.Fake
-	Cluster logicalcluster.Name
+	Cluster logicalcluster.Path
 	
 }
 
