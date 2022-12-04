@@ -23,7 +23,7 @@ package v1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,14 @@ import (
 )
 
 // NodeClusterLister can list Nodes across all workspaces, or scope down to a NodeLister for one workspace.
+// All objects returned here must be treated as read-only.
 type NodeClusterLister interface {
+	// List lists all Nodes in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*corev1.Node, err error)
+	// Cluster returns a lister that can list and get Nodes in one workspace.
 	Cluster(cluster logicalcluster.Name) corev1listers.NodeLister
+	NodeClusterListerExpansion
 }
 
 type nodeClusterLister struct {
@@ -43,6 +48,10 @@ type nodeClusterLister struct {
 }
 
 // NewNodeClusterLister returns a new NodeClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewNodeClusterLister(indexer cache.Indexer) *nodeClusterLister {
 	return &nodeClusterLister{indexer: indexer}
 }
@@ -68,24 +77,9 @@ type nodeLister struct {
 
 // List lists all Nodes in the indexer for a workspace.
 func (s *nodeLister) List(selector labels.Selector) (ret []*corev1.Node, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*corev1.Node)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*corev1.Node))
+	})
 	return ret, err
 }
 

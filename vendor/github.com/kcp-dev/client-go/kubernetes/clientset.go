@@ -26,7 +26,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/client-go/discovery"
 	client "k8s.io/client-go/kubernetes"
@@ -81,7 +81,7 @@ import (
 )
 
 type ClusterInterface interface {
-	Cluster(logicalcluster.Name) client.Interface
+	Cluster(logicalcluster.Path) client.Interface
 	Discovery() discovery.DiscoveryInterface
 	AdmissionregistrationV1() admissionregistrationv1.AdmissionregistrationV1ClusterInterface
 	AdmissionregistrationV1beta1() admissionregistrationv1beta1.AdmissionregistrationV1beta1ClusterInterface
@@ -415,11 +415,11 @@ func (c *ClusterClientset) StorageV1beta1() storagev1beta1.StorageV1beta1Cluster
 }
 
 // Cluster scopes this clientset to one cluster.
-func (c *ClusterClientset) Cluster(name logicalcluster.Name) client.Interface {
-	if name == logicalcluster.Wildcard {
+func (c *ClusterClientset) Cluster(cluster logicalcluster.Path) client.Interface {
+	if cluster == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(cluster)
 }
 
 // NewForConfig creates a new ClusterClientset for the given config.

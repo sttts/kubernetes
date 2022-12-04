@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	discoveryv1 "k8s.io/client-go/kubernetes/typed/discovery/v1"
 	"k8s.io/client-go/rest"
@@ -37,18 +37,18 @@ type DiscoveryV1ClusterInterface interface {
 }
 
 type DiscoveryV1ClusterScoper interface {
-	Cluster(logicalcluster.Name) discoveryv1.DiscoveryV1Interface
+	Cluster(logicalcluster.Path) discoveryv1.DiscoveryV1Interface
 }
 
 type DiscoveryV1ClusterClient struct {
 	clientCache kcpclient.Cache[*discoveryv1.DiscoveryV1Client]
 }
 
-func (c *DiscoveryV1ClusterClient) Cluster(name logicalcluster.Name) discoveryv1.DiscoveryV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *DiscoveryV1ClusterClient) Cluster(path logicalcluster.Path) discoveryv1.DiscoveryV1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *DiscoveryV1ClusterClient) EndpointSlices() EndpointSliceClusterInterface {

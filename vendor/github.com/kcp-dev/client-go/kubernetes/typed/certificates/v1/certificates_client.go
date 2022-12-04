@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	certificatesv1 "k8s.io/client-go/kubernetes/typed/certificates/v1"
 	"k8s.io/client-go/rest"
@@ -37,18 +37,18 @@ type CertificatesV1ClusterInterface interface {
 }
 
 type CertificatesV1ClusterScoper interface {
-	Cluster(logicalcluster.Name) certificatesv1.CertificatesV1Interface
+	Cluster(logicalcluster.Path) certificatesv1.CertificatesV1Interface
 }
 
 type CertificatesV1ClusterClient struct {
 	clientCache kcpclient.Cache[*certificatesv1.CertificatesV1Client]
 }
 
-func (c *CertificatesV1ClusterClient) Cluster(name logicalcluster.Name) certificatesv1.CertificatesV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *CertificatesV1ClusterClient) Cluster(path logicalcluster.Path) certificatesv1.CertificatesV1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *CertificatesV1ClusterClient) CertificateSigningRequests() CertificateSigningRequestClusterInterface {

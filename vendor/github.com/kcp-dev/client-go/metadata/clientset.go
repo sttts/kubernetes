@@ -22,7 +22,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,8 +39,8 @@ type ClusterClientset struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *ClusterClientset) Cluster(name logicalcluster.Name) metadata.Interface {
-	return c.clientCache.ClusterOrDie(name)
+func (c *ClusterClientset) Cluster(path logicalcluster.Path) metadata.Interface {
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *ClusterClientset) Resource(resource schema.GroupVersionResource) ResourceClusterInterface {
@@ -107,7 +107,7 @@ type ClusterResourceClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *ClusterResourceClient) Cluster(name logicalcluster.Name) metadata.Getter {
+func (c *ClusterResourceClient) Cluster(name logicalcluster.Path) metadata.Getter {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}

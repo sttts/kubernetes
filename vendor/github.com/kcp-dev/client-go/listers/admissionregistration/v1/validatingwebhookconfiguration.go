@@ -23,7 +23,7 @@ package v1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,14 @@ import (
 )
 
 // ValidatingWebhookConfigurationClusterLister can list ValidatingWebhookConfigurations across all workspaces, or scope down to a ValidatingWebhookConfigurationLister for one workspace.
+// All objects returned here must be treated as read-only.
 type ValidatingWebhookConfigurationClusterLister interface {
+	// List lists all ValidatingWebhookConfigurations in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*admissionregistrationv1.ValidatingWebhookConfiguration, err error)
+	// Cluster returns a lister that can list and get ValidatingWebhookConfigurations in one workspace.
 	Cluster(cluster logicalcluster.Name) admissionregistrationv1listers.ValidatingWebhookConfigurationLister
+	ValidatingWebhookConfigurationClusterListerExpansion
 }
 
 type validatingWebhookConfigurationClusterLister struct {
@@ -43,6 +48,10 @@ type validatingWebhookConfigurationClusterLister struct {
 }
 
 // NewValidatingWebhookConfigurationClusterLister returns a new ValidatingWebhookConfigurationClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewValidatingWebhookConfigurationClusterLister(indexer cache.Indexer) *validatingWebhookConfigurationClusterLister {
 	return &validatingWebhookConfigurationClusterLister{indexer: indexer}
 }
@@ -68,24 +77,9 @@ type validatingWebhookConfigurationLister struct {
 
 // List lists all ValidatingWebhookConfigurations in the indexer for a workspace.
 func (s *validatingWebhookConfigurationLister) List(selector labels.Selector) (ret []*admissionregistrationv1.ValidatingWebhookConfiguration, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*admissionregistrationv1.ValidatingWebhookConfiguration)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*admissionregistrationv1.ValidatingWebhookConfiguration))
+	})
 	return ret, err
 }
 

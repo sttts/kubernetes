@@ -23,7 +23,7 @@ package v1alpha1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	schedulingv1alpha1 "k8s.io/api/scheduling/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,14 @@ import (
 )
 
 // PriorityClassClusterLister can list PriorityClasses across all workspaces, or scope down to a PriorityClassLister for one workspace.
+// All objects returned here must be treated as read-only.
 type PriorityClassClusterLister interface {
+	// List lists all PriorityClasses in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*schedulingv1alpha1.PriorityClass, err error)
+	// Cluster returns a lister that can list and get PriorityClasses in one workspace.
 	Cluster(cluster logicalcluster.Name) schedulingv1alpha1listers.PriorityClassLister
+	PriorityClassClusterListerExpansion
 }
 
 type priorityClassClusterLister struct {
@@ -43,6 +48,10 @@ type priorityClassClusterLister struct {
 }
 
 // NewPriorityClassClusterLister returns a new PriorityClassClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewPriorityClassClusterLister(indexer cache.Indexer) *priorityClassClusterLister {
 	return &priorityClassClusterLister{indexer: indexer}
 }
@@ -68,24 +77,9 @@ type priorityClassLister struct {
 
 // List lists all PriorityClasses in the indexer for a workspace.
 func (s *priorityClassLister) List(selector labels.Selector) (ret []*schedulingv1alpha1.PriorityClass, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*schedulingv1alpha1.PriorityClass)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*schedulingv1alpha1.PriorityClass))
+	})
 	return ret, err
 }
 

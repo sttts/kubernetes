@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type CertificateSigningRequestsClusterGetter interface {
 // CertificateSigningRequestClusterInterface can operate on CertificateSigningRequests across all clusters,
 // or scope down to one cluster and return a certificatesv1beta1client.CertificateSigningRequestInterface.
 type CertificateSigningRequestClusterInterface interface {
-	Cluster(logicalcluster.Name) certificatesv1beta1client.CertificateSigningRequestInterface
+	Cluster(logicalcluster.Path) certificatesv1beta1client.CertificateSigningRequestInterface
 	List(ctx context.Context, opts metav1.ListOptions) (*certificatesv1beta1.CertificateSigningRequestList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,12 +52,12 @@ type certificateSigningRequestsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *certificateSigningRequestsClusterInterface) Cluster(name logicalcluster.Name) certificatesv1beta1client.CertificateSigningRequestInterface {
-	if name == logicalcluster.Wildcard {
+func (c *certificateSigningRequestsClusterInterface) Cluster(path logicalcluster.Path) certificatesv1beta1client.CertificateSigningRequestInterface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).CertificateSigningRequests()
+	return c.clientCache.ClusterOrDie(path).CertificateSigningRequests()
 }
 
 // List returns the entire collection of all CertificateSigningRequests across all clusters.

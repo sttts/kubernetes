@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	batchv1beta1 "k8s.io/client-go/kubernetes/typed/batch/v1beta1"
 	"k8s.io/client-go/rest"
@@ -37,18 +37,18 @@ type BatchV1beta1ClusterInterface interface {
 }
 
 type BatchV1beta1ClusterScoper interface {
-	Cluster(logicalcluster.Name) batchv1beta1.BatchV1beta1Interface
+	Cluster(logicalcluster.Path) batchv1beta1.BatchV1beta1Interface
 }
 
 type BatchV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*batchv1beta1.BatchV1beta1Client]
 }
 
-func (c *BatchV1beta1ClusterClient) Cluster(name logicalcluster.Name) batchv1beta1.BatchV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *BatchV1beta1ClusterClient) Cluster(path logicalcluster.Path) batchv1beta1.BatchV1beta1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *BatchV1beta1ClusterClient) CronJobs() CronJobClusterInterface {

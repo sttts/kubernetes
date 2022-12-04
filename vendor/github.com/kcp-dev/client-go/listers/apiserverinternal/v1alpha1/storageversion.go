@@ -23,7 +23,7 @@ package v1alpha1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	internalv1alpha1 "k8s.io/api/apiserverinternal/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,14 @@ import (
 )
 
 // StorageVersionClusterLister can list StorageVersions across all workspaces, or scope down to a StorageVersionLister for one workspace.
+// All objects returned here must be treated as read-only.
 type StorageVersionClusterLister interface {
+	// List lists all StorageVersions in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*internalv1alpha1.StorageVersion, err error)
+	// Cluster returns a lister that can list and get StorageVersions in one workspace.
 	Cluster(cluster logicalcluster.Name) internalv1alpha1listers.StorageVersionLister
+	StorageVersionClusterListerExpansion
 }
 
 type storageVersionClusterLister struct {
@@ -43,6 +48,10 @@ type storageVersionClusterLister struct {
 }
 
 // NewStorageVersionClusterLister returns a new StorageVersionClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewStorageVersionClusterLister(indexer cache.Indexer) *storageVersionClusterLister {
 	return &storageVersionClusterLister{indexer: indexer}
 }
@@ -68,24 +77,9 @@ type storageVersionLister struct {
 
 // List lists all StorageVersions in the indexer for a workspace.
 func (s *storageVersionLister) List(selector labels.Selector) (ret []*internalv1alpha1.StorageVersion, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*internalv1alpha1.StorageVersion)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*internalv1alpha1.StorageVersion))
+	})
 	return ret, err
 }
 

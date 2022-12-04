@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
@@ -52,18 +52,18 @@ type CoreV1ClusterInterface interface {
 }
 
 type CoreV1ClusterScoper interface {
-	Cluster(logicalcluster.Name) corev1.CoreV1Interface
+	Cluster(logicalcluster.Path) corev1.CoreV1Interface
 }
 
 type CoreV1ClusterClient struct {
 	clientCache kcpclient.Cache[*corev1.CoreV1Client]
 }
 
-func (c *CoreV1ClusterClient) Cluster(name logicalcluster.Name) corev1.CoreV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *CoreV1ClusterClient) Cluster(path logicalcluster.Path) corev1.CoreV1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *CoreV1ClusterClient) PersistentVolumes() PersistentVolumeClusterInterface {

@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type MutatingWebhookConfigurationsClusterGetter interface {
 // MutatingWebhookConfigurationClusterInterface can operate on MutatingWebhookConfigurations across all clusters,
 // or scope down to one cluster and return a admissionregistrationv1client.MutatingWebhookConfigurationInterface.
 type MutatingWebhookConfigurationClusterInterface interface {
-	Cluster(logicalcluster.Name) admissionregistrationv1client.MutatingWebhookConfigurationInterface
+	Cluster(logicalcluster.Path) admissionregistrationv1client.MutatingWebhookConfigurationInterface
 	List(ctx context.Context, opts metav1.ListOptions) (*admissionregistrationv1.MutatingWebhookConfigurationList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,12 +52,12 @@ type mutatingWebhookConfigurationsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *mutatingWebhookConfigurationsClusterInterface) Cluster(name logicalcluster.Name) admissionregistrationv1client.MutatingWebhookConfigurationInterface {
-	if name == logicalcluster.Wildcard {
+func (c *mutatingWebhookConfigurationsClusterInterface) Cluster(path logicalcluster.Path) admissionregistrationv1client.MutatingWebhookConfigurationInterface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).MutatingWebhookConfigurations()
+	return c.clientCache.ClusterOrDie(path).MutatingWebhookConfigurations()
 }
 
 // List returns the entire collection of all MutatingWebhookConfigurations across all clusters.

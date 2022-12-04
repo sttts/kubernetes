@@ -23,7 +23,7 @@ package v1beta1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	flowcontrolv1beta1 "k8s.io/api/flowcontrol/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,14 @@ import (
 )
 
 // FlowSchemaClusterLister can list FlowSchemas across all workspaces, or scope down to a FlowSchemaLister for one workspace.
+// All objects returned here must be treated as read-only.
 type FlowSchemaClusterLister interface {
+	// List lists all FlowSchemas in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*flowcontrolv1beta1.FlowSchema, err error)
+	// Cluster returns a lister that can list and get FlowSchemas in one workspace.
 	Cluster(cluster logicalcluster.Name) flowcontrolv1beta1listers.FlowSchemaLister
+	FlowSchemaClusterListerExpansion
 }
 
 type flowSchemaClusterLister struct {
@@ -43,6 +48,10 @@ type flowSchemaClusterLister struct {
 }
 
 // NewFlowSchemaClusterLister returns a new FlowSchemaClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewFlowSchemaClusterLister(indexer cache.Indexer) *flowSchemaClusterLister {
 	return &flowSchemaClusterLister{indexer: indexer}
 }
@@ -68,24 +77,9 @@ type flowSchemaLister struct {
 
 // List lists all FlowSchemas in the indexer for a workspace.
 func (s *flowSchemaLister) List(selector labels.Selector) (ret []*flowcontrolv1beta1.FlowSchema, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*flowcontrolv1beta1.FlowSchema)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*flowcontrolv1beta1.FlowSchema))
+	})
 	return ret, err
 }
 

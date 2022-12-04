@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	authenticationv1beta1 "k8s.io/client-go/kubernetes/typed/authentication/v1beta1"
 	"k8s.io/client-go/rest"
@@ -37,18 +37,18 @@ type AuthenticationV1beta1ClusterInterface interface {
 }
 
 type AuthenticationV1beta1ClusterScoper interface {
-	Cluster(logicalcluster.Name) authenticationv1beta1.AuthenticationV1beta1Interface
+	Cluster(logicalcluster.Path) authenticationv1beta1.AuthenticationV1beta1Interface
 }
 
 type AuthenticationV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*authenticationv1beta1.AuthenticationV1beta1Client]
 }
 
-func (c *AuthenticationV1beta1ClusterClient) Cluster(name logicalcluster.Name) authenticationv1beta1.AuthenticationV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *AuthenticationV1beta1ClusterClient) Cluster(path logicalcluster.Path) authenticationv1beta1.AuthenticationV1beta1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *AuthenticationV1beta1ClusterClient) TokenReviews() TokenReviewClusterInterface {

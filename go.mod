@@ -52,9 +52,10 @@ require (
 	github.com/heketi/heketi v10.3.0+incompatible
 	github.com/heketi/tests v0.0.0-20151005000721-f3775cbcefd6 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20190723014705-7c296d48a2b5
-	github.com/kcp-dev/apimachinery v0.0.0-20221102195355-d65878bc16be
-	github.com/kcp-dev/client-go v0.0.0-20221025140308-a18ccea074a6
+	github.com/kcp-dev/apimachinery v0.0.0-20221206204155-b672b50acabd
+	github.com/kcp-dev/client-go v0.0.0-20221206205322-e284b023fabf
 	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
+	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221206202856-4d025e96f4a8
 	github.com/libopenstorage/openstorage v1.0.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/lpabon/godbc v0.1.1 // indirect
@@ -302,9 +303,11 @@ replace (
 	github.com/julienschmidt/httprouter => github.com/julienschmidt/httprouter v1.3.0
 	github.com/jung-kurt/gofpdf => github.com/jung-kurt/gofpdf v1.0.3-0.20190309125859-24315acbbda5
 	github.com/karrick/godirwalk => github.com/karrick/godirwalk v1.16.1
-	github.com/kcp-dev/apimachinery => github.com/kcp-dev/apimachinery v0.0.0-20221102195355-d65878bc16be
-	github.com/kcp-dev/client-go => github.com/kcp-dev/client-go v0.0.0-20221025140308-a18ccea074a6
+
+	github.com/kcp-dev/apimachinery => github.com/p0lyn0mial/apimachinery v0.0.0-20221206204155-b672b50acabd
+	github.com/kcp-dev/client-go => github.com/p0lyn0mial/client-go v0.0.0-20221206205322-e284b023fabf
 	github.com/kcp-dev/logicalcluster/v2 => github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
+	github.com/kcp-dev/logicalcluster/v3 => github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221206202856-4d025e96f4a8
 	github.com/kisielk/errcheck => github.com/kisielk/errcheck v1.5.0
 	github.com/kisielk/gotool => github.com/kisielk/gotool v1.0.0
 	github.com/konsorten/go-windows-terminal-sequences => github.com/konsorten/go-windows-terminal-sequences v1.0.2

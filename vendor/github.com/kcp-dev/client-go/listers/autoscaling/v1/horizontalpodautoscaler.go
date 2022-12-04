@@ -23,20 +23,24 @@ package v1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	autoscalingv1listers "k8s.io/client-go/listers/autoscaling/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 // HorizontalPodAutoscalerClusterLister can list HorizontalPodAutoscalers across all workspaces, or scope down to a HorizontalPodAutoscalerLister for one workspace.
+// All objects returned here must be treated as read-only.
 type HorizontalPodAutoscalerClusterLister interface {
+	// List lists all HorizontalPodAutoscalers in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*autoscalingv1.HorizontalPodAutoscaler, err error)
+	// Cluster returns a lister that can list and get HorizontalPodAutoscalers in one workspace.
 	Cluster(cluster logicalcluster.Name) autoscalingv1listers.HorizontalPodAutoscalerLister
+	HorizontalPodAutoscalerClusterListerExpansion
 }
 
 type horizontalPodAutoscalerClusterLister struct {
@@ -44,6 +48,11 @@ type horizontalPodAutoscalerClusterLister struct {
 }
 
 // NewHorizontalPodAutoscalerClusterLister returns a new HorizontalPodAutoscalerClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewHorizontalPodAutoscalerClusterLister(indexer cache.Indexer) *horizontalPodAutoscalerClusterLister {
 	return &horizontalPodAutoscalerClusterLister{indexer: indexer}
 }
@@ -69,24 +78,9 @@ type horizontalPodAutoscalerLister struct {
 
 // List lists all HorizontalPodAutoscalers in the indexer for a workspace.
 func (s *horizontalPodAutoscalerLister) List(selector labels.Selector) (ret []*autoscalingv1.HorizontalPodAutoscaler, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*autoscalingv1.HorizontalPodAutoscaler)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*autoscalingv1.HorizontalPodAutoscaler))
+	})
 	return ret, err
 }
 
@@ -104,28 +98,9 @@ type horizontalPodAutoscalerNamespaceLister struct {
 
 // List lists all HorizontalPodAutoscalers in the indexer for a given workspace and namespace.
 func (s *horizontalPodAutoscalerNamespaceLister) List(selector labels.Selector) (ret []*autoscalingv1.HorizontalPodAutoscaler, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	var list []interface{}
-	if s.namespace == metav1.NamespaceAll {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	} else {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*autoscalingv1.HorizontalPodAutoscaler)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.cluster, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*autoscalingv1.HorizontalPodAutoscaler))
+	})
 	return ret, err
 }
 

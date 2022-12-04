@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	policyv1 "k8s.io/client-go/kubernetes/typed/policy/v1"
 	"k8s.io/client-go/rest"
@@ -38,18 +38,18 @@ type PolicyV1ClusterInterface interface {
 }
 
 type PolicyV1ClusterScoper interface {
-	Cluster(logicalcluster.Name) policyv1.PolicyV1Interface
+	Cluster(logicalcluster.Path) policyv1.PolicyV1Interface
 }
 
 type PolicyV1ClusterClient struct {
 	clientCache kcpclient.Cache[*policyv1.PolicyV1Client]
 }
 
-func (c *PolicyV1ClusterClient) Cluster(name logicalcluster.Name) policyv1.PolicyV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *PolicyV1ClusterClient) Cluster(path logicalcluster.Path) policyv1.PolicyV1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *PolicyV1ClusterClient) PodDisruptionBudgets() PodDisruptionBudgetClusterInterface {

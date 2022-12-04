@@ -23,7 +23,7 @@ package v1beta1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,14 @@ import (
 )
 
 // ClusterRoleClusterLister can list ClusterRoles across all workspaces, or scope down to a ClusterRoleLister for one workspace.
+// All objects returned here must be treated as read-only.
 type ClusterRoleClusterLister interface {
+	// List lists all ClusterRoles in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*rbacv1beta1.ClusterRole, err error)
+	// Cluster returns a lister that can list and get ClusterRoles in one workspace.
 	Cluster(cluster logicalcluster.Name) rbacv1beta1listers.ClusterRoleLister
+	ClusterRoleClusterListerExpansion
 }
 
 type clusterRoleClusterLister struct {
@@ -43,6 +48,10 @@ type clusterRoleClusterLister struct {
 }
 
 // NewClusterRoleClusterLister returns a new ClusterRoleClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewClusterRoleClusterLister(indexer cache.Indexer) *clusterRoleClusterLister {
 	return &clusterRoleClusterLister{indexer: indexer}
 }
@@ -68,24 +77,9 @@ type clusterRoleLister struct {
 
 // List lists all ClusterRoles in the indexer for a workspace.
 func (s *clusterRoleLister) List(selector labels.Selector) (ret []*rbacv1beta1.ClusterRole, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*rbacv1beta1.ClusterRole)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*rbacv1beta1.ClusterRole))
+	})
 	return ret, err
 }
 

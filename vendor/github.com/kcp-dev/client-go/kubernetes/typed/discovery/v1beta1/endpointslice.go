@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type EndpointSlicesClusterGetter interface {
 // EndpointSliceClusterInterface can operate on EndpointSlices across all clusters,
 // or scope down to one cluster and return a EndpointSlicesNamespacer.
 type EndpointSliceClusterInterface interface {
-	Cluster(logicalcluster.Name) EndpointSlicesNamespacer
+	Cluster(logicalcluster.Path) EndpointSlicesNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*discoveryv1beta1.EndpointSliceList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,12 +52,12 @@ type endpointSlicesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *endpointSlicesClusterInterface) Cluster(name logicalcluster.Name) EndpointSlicesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *endpointSlicesClusterInterface) Cluster(path logicalcluster.Path) EndpointSlicesNamespacer {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &endpointSlicesNamespacer{clientCache: c.clientCache, name: name}
+	return &endpointSlicesNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all EndpointSlices across all clusters.
@@ -77,9 +77,9 @@ type EndpointSlicesNamespacer interface {
 
 type endpointSlicesNamespacer struct {
 	clientCache kcpclient.Cache[*discoveryv1beta1client.DiscoveryV1beta1Client]
-	name        logicalcluster.Name
+	path        logicalcluster.Path
 }
 
 func (n *endpointSlicesNamespacer) Namespace(namespace string) discoveryv1beta1client.EndpointSliceInterface {
-	return n.clientCache.ClusterOrDie(n.name).EndpointSlices(namespace)
+	return n.clientCache.ClusterOrDie(n.path).EndpointSlices(namespace)
 }

@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	schedulingv1 "k8s.io/client-go/kubernetes/typed/scheduling/v1"
 	"k8s.io/client-go/rest"
@@ -37,18 +37,18 @@ type SchedulingV1ClusterInterface interface {
 }
 
 type SchedulingV1ClusterScoper interface {
-	Cluster(logicalcluster.Name) schedulingv1.SchedulingV1Interface
+	Cluster(logicalcluster.Path) schedulingv1.SchedulingV1Interface
 }
 
 type SchedulingV1ClusterClient struct {
 	clientCache kcpclient.Cache[*schedulingv1.SchedulingV1Client]
 }
 
-func (c *SchedulingV1ClusterClient) Cluster(name logicalcluster.Name) schedulingv1.SchedulingV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *SchedulingV1ClusterClient) Cluster(path logicalcluster.Path) schedulingv1.SchedulingV1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *SchedulingV1ClusterClient) PriorityClasses() PriorityClassClusterInterface {

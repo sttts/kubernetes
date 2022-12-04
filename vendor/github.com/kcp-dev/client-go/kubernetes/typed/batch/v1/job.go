@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type JobsClusterGetter interface {
 // JobClusterInterface can operate on Jobs across all clusters,
 // or scope down to one cluster and return a JobsNamespacer.
 type JobClusterInterface interface {
-	Cluster(logicalcluster.Name) JobsNamespacer
+	Cluster(logicalcluster.Path) JobsNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*batchv1.JobList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,12 +52,12 @@ type jobsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *jobsClusterInterface) Cluster(name logicalcluster.Name) JobsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *jobsClusterInterface) Cluster(path logicalcluster.Path) JobsNamespacer {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &jobsNamespacer{clientCache: c.clientCache, name: name}
+	return &jobsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Jobs across all clusters.
@@ -77,9 +77,9 @@ type JobsNamespacer interface {
 
 type jobsNamespacer struct {
 	clientCache kcpclient.Cache[*batchv1client.BatchV1Client]
-	name        logicalcluster.Name
+	path        logicalcluster.Path
 }
 
 func (n *jobsNamespacer) Namespace(namespace string) batchv1client.JobInterface {
-	return n.clientCache.ClusterOrDie(n.name).Jobs(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Jobs(namespace)
 }

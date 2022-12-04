@@ -23,20 +23,24 @@ package v1beta1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	discoveryv1beta1listers "k8s.io/client-go/listers/discovery/v1beta1"
 	"k8s.io/client-go/tools/cache"
 )
 
 // EndpointSliceClusterLister can list EndpointSlices across all workspaces, or scope down to a EndpointSliceLister for one workspace.
+// All objects returned here must be treated as read-only.
 type EndpointSliceClusterLister interface {
+	// List lists all EndpointSlices in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*discoveryv1beta1.EndpointSlice, err error)
+	// Cluster returns a lister that can list and get EndpointSlices in one workspace.
 	Cluster(cluster logicalcluster.Name) discoveryv1beta1listers.EndpointSliceLister
+	EndpointSliceClusterListerExpansion
 }
 
 type endpointSliceClusterLister struct {
@@ -44,6 +48,11 @@ type endpointSliceClusterLister struct {
 }
 
 // NewEndpointSliceClusterLister returns a new EndpointSliceClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewEndpointSliceClusterLister(indexer cache.Indexer) *endpointSliceClusterLister {
 	return &endpointSliceClusterLister{indexer: indexer}
 }
@@ -69,24 +78,9 @@ type endpointSliceLister struct {
 
 // List lists all EndpointSlices in the indexer for a workspace.
 func (s *endpointSliceLister) List(selector labels.Selector) (ret []*discoveryv1beta1.EndpointSlice, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*discoveryv1beta1.EndpointSlice)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*discoveryv1beta1.EndpointSlice))
+	})
 	return ret, err
 }
 
@@ -104,28 +98,9 @@ type endpointSliceNamespaceLister struct {
 
 // List lists all EndpointSlices in the indexer for a given workspace and namespace.
 func (s *endpointSliceNamespaceLister) List(selector labels.Selector) (ret []*discoveryv1beta1.EndpointSlice, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	var list []interface{}
-	if s.namespace == metav1.NamespaceAll {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	} else {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*discoveryv1beta1.EndpointSlice)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.cluster, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*discoveryv1beta1.EndpointSlice))
+	})
 	return ret, err
 }
 

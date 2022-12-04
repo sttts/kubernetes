@@ -2,7 +2,7 @@
 
 module k8s.io/apiextensions-apiserver
 
-go 1.18
+go 1.16
 
 require (
 	github.com/emicklei/go-restful v2.9.5+incompatible
@@ -12,9 +12,10 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/google/gofuzz v1.1.0
 	github.com/google/uuid v1.1.2
-	github.com/kcp-dev/apimachinery v0.0.0-20221102195355-d65878bc16be
-	github.com/kcp-dev/client-go v0.0.0-20221025140308-a18ccea074a6
+	github.com/kcp-dev/apimachinery v0.0.0-20221206204155-b672b50acabd
+	github.com/kcp-dev/client-go v0.0.0-20221206205322-e284b023fabf
 	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
+	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221206202856-4d025e96f4a8
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
@@ -42,6 +43,10 @@ require (
 replace (
 	github.com/go-logr/logr => github.com/go-logr/logr v1.2.0
 	github.com/google/go-cmp => github.com/google/go-cmp v0.5.5
+
+	github.com/kcp-dev/apimachinery => github.com/p0lyn0mial/apimachinery v0.0.0-20221206204155-b672b50acabd
+	github.com/kcp-dev/client-go => github.com/p0lyn0mial/client-go v0.0.0-20221206205322-e284b023fabf
+	github.com/kcp-dev/logicalcluster/v3 => github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221206202856-4d025e96f4a8
 	github.com/stretchr/testify => github.com/stretchr/testify v1.7.0
 	golang.org/x/net => golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/sys => golang.org/x/sys v0.0.0-20220209214540-3681064d5158

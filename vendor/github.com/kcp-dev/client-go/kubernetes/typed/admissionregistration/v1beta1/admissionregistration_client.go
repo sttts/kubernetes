@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	admissionregistrationv1beta1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1"
 	"k8s.io/client-go/rest"
@@ -38,18 +38,18 @@ type AdmissionregistrationV1beta1ClusterInterface interface {
 }
 
 type AdmissionregistrationV1beta1ClusterScoper interface {
-	Cluster(logicalcluster.Name) admissionregistrationv1beta1.AdmissionregistrationV1beta1Interface
+	Cluster(logicalcluster.Path) admissionregistrationv1beta1.AdmissionregistrationV1beta1Interface
 }
 
 type AdmissionregistrationV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*admissionregistrationv1beta1.AdmissionregistrationV1beta1Client]
 }
 
-func (c *AdmissionregistrationV1beta1ClusterClient) Cluster(name logicalcluster.Name) admissionregistrationv1beta1.AdmissionregistrationV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *AdmissionregistrationV1beta1ClusterClient) Cluster(path logicalcluster.Path) admissionregistrationv1beta1.AdmissionregistrationV1beta1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *AdmissionregistrationV1beta1ClusterClient) ValidatingWebhookConfigurations() ValidatingWebhookConfigurationClusterInterface {

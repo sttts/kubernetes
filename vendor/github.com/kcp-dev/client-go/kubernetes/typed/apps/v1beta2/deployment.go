@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type DeploymentsClusterGetter interface {
 // DeploymentClusterInterface can operate on Deployments across all clusters,
 // or scope down to one cluster and return a DeploymentsNamespacer.
 type DeploymentClusterInterface interface {
-	Cluster(logicalcluster.Name) DeploymentsNamespacer
+	Cluster(logicalcluster.Path) DeploymentsNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*appsv1beta2.DeploymentList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,12 +52,12 @@ type deploymentsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *deploymentsClusterInterface) Cluster(name logicalcluster.Name) DeploymentsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *deploymentsClusterInterface) Cluster(path logicalcluster.Path) DeploymentsNamespacer {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &deploymentsNamespacer{clientCache: c.clientCache, name: name}
+	return &deploymentsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Deployments across all clusters.
@@ -77,9 +77,9 @@ type DeploymentsNamespacer interface {
 
 type deploymentsNamespacer struct {
 	clientCache kcpclient.Cache[*appsv1beta2client.AppsV1beta2Client]
-	name        logicalcluster.Name
+	path        logicalcluster.Path
 }
 
 func (n *deploymentsNamespacer) Namespace(namespace string) appsv1beta2client.DeploymentInterface {
-	return n.clientCache.ClusterOrDie(n.name).Deployments(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Deployments(namespace)
 }

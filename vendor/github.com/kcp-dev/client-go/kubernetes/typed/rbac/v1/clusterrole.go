@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type ClusterRolesClusterGetter interface {
 // ClusterRoleClusterInterface can operate on ClusterRoles across all clusters,
 // or scope down to one cluster and return a rbacv1client.ClusterRoleInterface.
 type ClusterRoleClusterInterface interface {
-	Cluster(logicalcluster.Name) rbacv1client.ClusterRoleInterface
+	Cluster(logicalcluster.Path) rbacv1client.ClusterRoleInterface
 	List(ctx context.Context, opts metav1.ListOptions) (*rbacv1.ClusterRoleList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,12 +52,12 @@ type clusterRolesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *clusterRolesClusterInterface) Cluster(name logicalcluster.Name) rbacv1client.ClusterRoleInterface {
-	if name == logicalcluster.Wildcard {
+func (c *clusterRolesClusterInterface) Cluster(path logicalcluster.Path) rbacv1client.ClusterRoleInterface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).ClusterRoles()
+	return c.clientCache.ClusterOrDie(path).ClusterRoles()
 }
 
 // List returns the entire collection of all ClusterRoles across all clusters.

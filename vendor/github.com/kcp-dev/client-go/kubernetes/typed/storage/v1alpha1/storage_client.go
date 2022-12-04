@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	storagev1alpha1 "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
 	"k8s.io/client-go/rest"
@@ -38,18 +38,18 @@ type StorageV1alpha1ClusterInterface interface {
 }
 
 type StorageV1alpha1ClusterScoper interface {
-	Cluster(logicalcluster.Name) storagev1alpha1.StorageV1alpha1Interface
+	Cluster(logicalcluster.Path) storagev1alpha1.StorageV1alpha1Interface
 }
 
 type StorageV1alpha1ClusterClient struct {
 	clientCache kcpclient.Cache[*storagev1alpha1.StorageV1alpha1Client]
 }
 
-func (c *StorageV1alpha1ClusterClient) Cluster(name logicalcluster.Name) storagev1alpha1.StorageV1alpha1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *StorageV1alpha1ClusterClient) Cluster(path logicalcluster.Path) storagev1alpha1.StorageV1alpha1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *StorageV1alpha1ClusterClient) VolumeAttachments() VolumeAttachmentClusterInterface {

@@ -23,20 +23,24 @@ package v1beta1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	extensionsv1beta1listers "k8s.io/client-go/listers/extensions/v1beta1"
 	"k8s.io/client-go/tools/cache"
 )
 
 // DaemonSetClusterLister can list DaemonSets across all workspaces, or scope down to a DaemonSetLister for one workspace.
+// All objects returned here must be treated as read-only.
 type DaemonSetClusterLister interface {
+	// List lists all DaemonSets in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*extensionsv1beta1.DaemonSet, err error)
+	// Cluster returns a lister that can list and get DaemonSets in one workspace.
 	Cluster(cluster logicalcluster.Name) extensionsv1beta1listers.DaemonSetLister
+	DaemonSetClusterListerExpansion
 }
 
 type daemonSetClusterLister struct {
@@ -44,6 +48,11 @@ type daemonSetClusterLister struct {
 }
 
 // NewDaemonSetClusterLister returns a new DaemonSetClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewDaemonSetClusterLister(indexer cache.Indexer) *daemonSetClusterLister {
 	return &daemonSetClusterLister{indexer: indexer}
 }
@@ -69,24 +78,9 @@ type daemonSetLister struct {
 
 // List lists all DaemonSets in the indexer for a workspace.
 func (s *daemonSetLister) List(selector labels.Selector) (ret []*extensionsv1beta1.DaemonSet, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*extensionsv1beta1.DaemonSet)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*extensionsv1beta1.DaemonSet))
+	})
 	return ret, err
 }
 
@@ -104,28 +98,9 @@ type daemonSetNamespaceLister struct {
 
 // List lists all DaemonSets in the indexer for a given workspace and namespace.
 func (s *daemonSetNamespaceLister) List(selector labels.Selector) (ret []*extensionsv1beta1.DaemonSet, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	var list []interface{}
-	if s.namespace == metav1.NamespaceAll {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	} else {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*extensionsv1beta1.DaemonSet)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.cluster, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*extensionsv1beta1.DaemonSet))
+	})
 	return ret, err
 }
 

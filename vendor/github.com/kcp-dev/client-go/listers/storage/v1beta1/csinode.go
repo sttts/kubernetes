@@ -23,7 +23,7 @@ package v1beta1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,14 @@ import (
 )
 
 // CSINodeClusterLister can list CSINodes across all workspaces, or scope down to a CSINodeLister for one workspace.
+// All objects returned here must be treated as read-only.
 type CSINodeClusterLister interface {
+	// List lists all CSINodes in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*storagev1beta1.CSINode, err error)
+	// Cluster returns a lister that can list and get CSINodes in one workspace.
 	Cluster(cluster logicalcluster.Name) storagev1beta1listers.CSINodeLister
+	CSINodeClusterListerExpansion
 }
 
 type cSINodeClusterLister struct {
@@ -43,6 +48,10 @@ type cSINodeClusterLister struct {
 }
 
 // NewCSINodeClusterLister returns a new CSINodeClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewCSINodeClusterLister(indexer cache.Indexer) *cSINodeClusterLister {
 	return &cSINodeClusterLister{indexer: indexer}
 }
@@ -68,24 +77,9 @@ type cSINodeLister struct {
 
 // List lists all CSINodes in the indexer for a workspace.
 func (s *cSINodeLister) List(selector labels.Selector) (ret []*storagev1beta1.CSINode, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*storagev1beta1.CSINode)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*storagev1beta1.CSINode))
+	})
 	return ret, err
 }
 

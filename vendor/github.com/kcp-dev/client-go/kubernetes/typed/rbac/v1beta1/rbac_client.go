@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	rbacv1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	"k8s.io/client-go/rest"
@@ -40,18 +40,18 @@ type RbacV1beta1ClusterInterface interface {
 }
 
 type RbacV1beta1ClusterScoper interface {
-	Cluster(logicalcluster.Name) rbacv1beta1.RbacV1beta1Interface
+	Cluster(logicalcluster.Path) rbacv1beta1.RbacV1beta1Interface
 }
 
 type RbacV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*rbacv1beta1.RbacV1beta1Client]
 }
 
-func (c *RbacV1beta1ClusterClient) Cluster(name logicalcluster.Name) rbacv1beta1.RbacV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *RbacV1beta1ClusterClient) Cluster(path logicalcluster.Path) rbacv1beta1.RbacV1beta1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *RbacV1beta1ClusterClient) Roles() RoleClusterInterface {

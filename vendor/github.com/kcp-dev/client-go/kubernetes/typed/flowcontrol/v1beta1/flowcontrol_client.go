@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	flowcontrolv1beta1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 	"k8s.io/client-go/rest"
@@ -38,18 +38,18 @@ type FlowcontrolV1beta1ClusterInterface interface {
 }
 
 type FlowcontrolV1beta1ClusterScoper interface {
-	Cluster(logicalcluster.Name) flowcontrolv1beta1.FlowcontrolV1beta1Interface
+	Cluster(logicalcluster.Path) flowcontrolv1beta1.FlowcontrolV1beta1Interface
 }
 
 type FlowcontrolV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*flowcontrolv1beta1.FlowcontrolV1beta1Client]
 }
 
-func (c *FlowcontrolV1beta1ClusterClient) Cluster(name logicalcluster.Name) flowcontrolv1beta1.FlowcontrolV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *FlowcontrolV1beta1ClusterClient) Cluster(path logicalcluster.Path) flowcontrolv1beta1.FlowcontrolV1beta1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *FlowcontrolV1beta1ClusterClient) FlowSchemas() FlowSchemaClusterInterface {

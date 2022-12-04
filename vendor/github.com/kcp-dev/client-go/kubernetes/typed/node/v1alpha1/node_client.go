@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	nodev1alpha1 "k8s.io/client-go/kubernetes/typed/node/v1alpha1"
 	"k8s.io/client-go/rest"
@@ -37,18 +37,18 @@ type NodeV1alpha1ClusterInterface interface {
 }
 
 type NodeV1alpha1ClusterScoper interface {
-	Cluster(logicalcluster.Name) nodev1alpha1.NodeV1alpha1Interface
+	Cluster(logicalcluster.Path) nodev1alpha1.NodeV1alpha1Interface
 }
 
 type NodeV1alpha1ClusterClient struct {
 	clientCache kcpclient.Cache[*nodev1alpha1.NodeV1alpha1Client]
 }
 
-func (c *NodeV1alpha1ClusterClient) Cluster(name logicalcluster.Name) nodev1alpha1.NodeV1alpha1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *NodeV1alpha1ClusterClient) Cluster(path logicalcluster.Path) nodev1alpha1.NodeV1alpha1Interface {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *NodeV1alpha1ClusterClient) RuntimeClasses() RuntimeClassClusterInterface {
