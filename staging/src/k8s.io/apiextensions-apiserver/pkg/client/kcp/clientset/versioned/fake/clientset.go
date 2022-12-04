@@ -25,7 +25,7 @@ package fake
 import (
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
 	kcpfakediscovery "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/discovery/fake"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -87,7 +87,7 @@ func (c *ClusterClientset) ApiextensionsV1beta1() kcpapiextensionsv1beta1.Apiext
 	return &fakeapiextensionsv1beta1.ApiextensionsV1beta1ClusterClient{Fake: c.Fake}
 }
 // Cluster scopes this clientset to one cluster.
-func (c *ClusterClientset) Cluster(cluster logicalcluster.Name) client.Interface {
+func (c *ClusterClientset) Cluster(cluster logicalcluster.Path) client.Interface {
 	if cluster == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -106,7 +106,7 @@ type Clientset struct {
 	*kcptesting.Fake
 	discovery *kcpfakediscovery.FakeDiscovery
 	tracker   kcptesting.ScopedObjectTracker
-	cluster logicalcluster.Name
+	cluster logicalcluster.Path
 }
 
 // Discovery retrieves the DiscoveryClient
