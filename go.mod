@@ -496,4 +496,7 @@ replace (
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.6
 	sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.2.1
 	sigs.k8s.io/yaml => sigs.k8s.io/yaml v1.2.0
+
+	github.com/kcp-dev/apimachinery => ../../github.com/kcp-dev/apimachinery
+	github.com/kcp-dev/client-go => ../../github.com/kcp-dev/client-go
 )
