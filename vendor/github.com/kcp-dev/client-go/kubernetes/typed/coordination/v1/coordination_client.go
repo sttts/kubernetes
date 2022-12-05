@@ -44,11 +44,11 @@ type CoordinationV1ClusterClient struct {
 	clientCache kcpclient.Cache[*coordinationv1.CoordinationV1Client]
 }
 
-func (c *CoordinationV1ClusterClient) Cluster(name logicalcluster.Path) coordinationv1.CoordinationV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *CoordinationV1ClusterClient) Cluster(path logicalcluster.Path) coordinationv1.CoordinationV1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *CoordinationV1ClusterClient) Leases() LeaseClusterInterface {

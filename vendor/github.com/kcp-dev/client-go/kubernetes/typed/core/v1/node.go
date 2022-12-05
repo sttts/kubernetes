@@ -52,20 +52,20 @@ type nodesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *nodesClusterInterface) Cluster(name logicalcluster.Path) corev1client.NodeInterface {
-	if name == logicalcluster.Wildcard {
+func (c *nodesClusterInterface) Cluster(path logicalcluster.Path) corev1client.NodeInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).Nodes()
+	return c.clientCache.ClusterOrDie(path).Nodes()
 }
 
 // List returns the entire collection of all Nodes across all clusters.
 func (c *nodesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.NodeList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Nodes().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Nodes().List(ctx, opts)
 }
 
 // Watch begins to watch all Nodes across all clusters.
 func (c *nodesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Nodes().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Nodes().Watch(ctx, opts)
 }

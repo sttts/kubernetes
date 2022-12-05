@@ -52,22 +52,22 @@ type jobsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *jobsClusterInterface) Cluster(name logicalcluster.Path) JobsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *jobsClusterInterface) Cluster(path logicalcluster.Path) JobsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &jobsNamespacer{clientCache: c.clientCache, name: name}
+	return &jobsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Jobs across all clusters.
 func (c *jobsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*batchv1.JobList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Jobs(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Jobs(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Jobs across all clusters.
 func (c *jobsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Jobs(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Jobs(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // JobsNamespacer can scope to objects within a namespace, returning a batchv1client.JobInterface.
@@ -77,9 +77,9 @@ type JobsNamespacer interface {
 
 type jobsNamespacer struct {
 	clientCache kcpclient.Cache[*batchv1client.BatchV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *jobsNamespacer) Namespace(namespace string) batchv1client.JobInterface {
-	return n.clientCache.ClusterOrDie(n.name).Jobs(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Jobs(namespace)
 }

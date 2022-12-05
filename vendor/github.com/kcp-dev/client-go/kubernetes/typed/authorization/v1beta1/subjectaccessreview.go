@@ -44,10 +44,10 @@ type subjectAccessReviewsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *subjectAccessReviewsClusterInterface) Cluster(name logicalcluster.Path) authorizationv1beta1client.SubjectAccessReviewInterface {
-	if name == logicalcluster.Wildcard {
+func (c *subjectAccessReviewsClusterInterface) Cluster(path logicalcluster.Path) authorizationv1beta1client.SubjectAccessReviewInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).SubjectAccessReviews()
+	return c.clientCache.ClusterOrDie(path).SubjectAccessReviews()
 }

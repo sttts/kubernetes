@@ -52,22 +52,22 @@ type eventsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *eventsClusterInterface) Cluster(name logicalcluster.Path) EventsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *eventsClusterInterface) Cluster(path logicalcluster.Path) EventsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &eventsNamespacer{clientCache: c.clientCache, name: name}
+	return &eventsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Events across all clusters.
 func (c *eventsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*eventsv1.EventList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Events(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Events(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Events across all clusters.
 func (c *eventsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Events(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Events(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // EventsNamespacer can scope to objects within a namespace, returning a eventsv1client.EventInterface.
@@ -77,9 +77,9 @@ type EventsNamespacer interface {
 
 type eventsNamespacer struct {
 	clientCache kcpclient.Cache[*eventsv1client.EventsV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *eventsNamespacer) Namespace(namespace string) eventsv1client.EventInterface {
-	return n.clientCache.ClusterOrDie(n.name).Events(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Events(namespace)
 }

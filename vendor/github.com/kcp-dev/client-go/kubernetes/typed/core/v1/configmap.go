@@ -52,22 +52,22 @@ type configMapsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *configMapsClusterInterface) Cluster(name logicalcluster.Path) ConfigMapsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *configMapsClusterInterface) Cluster(path logicalcluster.Path) ConfigMapsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &configMapsNamespacer{clientCache: c.clientCache, name: name}
+	return &configMapsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all ConfigMaps across all clusters.
 func (c *configMapsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ConfigMapList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ConfigMaps(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ConfigMaps(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all ConfigMaps across all clusters.
 func (c *configMapsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ConfigMaps(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ConfigMaps(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // ConfigMapsNamespacer can scope to objects within a namespace, returning a corev1client.ConfigMapInterface.
@@ -77,9 +77,9 @@ type ConfigMapsNamespacer interface {
 
 type configMapsNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *configMapsNamespacer) Namespace(namespace string) corev1client.ConfigMapInterface {
-	return n.clientCache.ClusterOrDie(n.name).ConfigMaps(namespace)
+	return n.clientCache.ClusterOrDie(n.path).ConfigMaps(namespace)
 }

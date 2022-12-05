@@ -52,22 +52,22 @@ type podDisruptionBudgetsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *podDisruptionBudgetsClusterInterface) Cluster(name logicalcluster.Path) PodDisruptionBudgetsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *podDisruptionBudgetsClusterInterface) Cluster(path logicalcluster.Path) PodDisruptionBudgetsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &podDisruptionBudgetsNamespacer{clientCache: c.clientCache, name: name}
+	return &podDisruptionBudgetsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all PodDisruptionBudgets across all clusters.
 func (c *podDisruptionBudgetsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*policyv1.PodDisruptionBudgetList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PodDisruptionBudgets(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PodDisruptionBudgets(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all PodDisruptionBudgets across all clusters.
 func (c *podDisruptionBudgetsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PodDisruptionBudgets(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PodDisruptionBudgets(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // PodDisruptionBudgetsNamespacer can scope to objects within a namespace, returning a policyv1client.PodDisruptionBudgetInterface.
@@ -77,9 +77,9 @@ type PodDisruptionBudgetsNamespacer interface {
 
 type podDisruptionBudgetsNamespacer struct {
 	clientCache kcpclient.Cache[*policyv1client.PolicyV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *podDisruptionBudgetsNamespacer) Namespace(namespace string) policyv1client.PodDisruptionBudgetInterface {
-	return n.clientCache.ClusterOrDie(n.name).PodDisruptionBudgets(namespace)
+	return n.clientCache.ClusterOrDie(n.path).PodDisruptionBudgets(namespace)
 }

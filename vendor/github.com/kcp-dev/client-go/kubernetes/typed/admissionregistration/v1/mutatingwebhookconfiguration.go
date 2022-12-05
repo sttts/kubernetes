@@ -52,20 +52,20 @@ type mutatingWebhookConfigurationsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *mutatingWebhookConfigurationsClusterInterface) Cluster(name logicalcluster.Path) admissionregistrationv1client.MutatingWebhookConfigurationInterface {
-	if name == logicalcluster.Wildcard {
+func (c *mutatingWebhookConfigurationsClusterInterface) Cluster(path logicalcluster.Path) admissionregistrationv1client.MutatingWebhookConfigurationInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).MutatingWebhookConfigurations()
+	return c.clientCache.ClusterOrDie(path).MutatingWebhookConfigurations()
 }
 
 // List returns the entire collection of all MutatingWebhookConfigurations across all clusters.
 func (c *mutatingWebhookConfigurationsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*admissionregistrationv1.MutatingWebhookConfigurationList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).MutatingWebhookConfigurations().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).MutatingWebhookConfigurations().List(ctx, opts)
 }
 
 // Watch begins to watch all MutatingWebhookConfigurations across all clusters.
 func (c *mutatingWebhookConfigurationsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).MutatingWebhookConfigurations().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).MutatingWebhookConfigurations().Watch(ctx, opts)
 }

@@ -52,20 +52,20 @@ type namespacesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *namespacesClusterInterface) Cluster(name logicalcluster.Path) corev1client.NamespaceInterface {
-	if name == logicalcluster.Wildcard {
+func (c *namespacesClusterInterface) Cluster(path logicalcluster.Path) corev1client.NamespaceInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).Namespaces()
+	return c.clientCache.ClusterOrDie(path).Namespaces()
 }
 
 // List returns the entire collection of all Namespaces across all clusters.
 func (c *namespacesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.NamespaceList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Namespaces().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Namespaces().List(ctx, opts)
 }
 
 // Watch begins to watch all Namespaces across all clusters.
 func (c *namespacesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Namespaces().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Namespaces().Watch(ctx, opts)
 }

@@ -52,22 +52,22 @@ type networkPoliciesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *networkPoliciesClusterInterface) Cluster(name logicalcluster.Path) NetworkPoliciesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *networkPoliciesClusterInterface) Cluster(path logicalcluster.Path) NetworkPoliciesNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &networkPoliciesNamespacer{clientCache: c.clientCache, name: name}
+	return &networkPoliciesNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all NetworkPolicies across all clusters.
 func (c *networkPoliciesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*extensionsv1beta1.NetworkPolicyList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).NetworkPolicies(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).NetworkPolicies(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all NetworkPolicies across all clusters.
 func (c *networkPoliciesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).NetworkPolicies(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).NetworkPolicies(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // NetworkPoliciesNamespacer can scope to objects within a namespace, returning a extensionsv1beta1client.NetworkPolicyInterface.
@@ -77,9 +77,9 @@ type NetworkPoliciesNamespacer interface {
 
 type networkPoliciesNamespacer struct {
 	clientCache kcpclient.Cache[*extensionsv1beta1client.ExtensionsV1beta1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *networkPoliciesNamespacer) Namespace(namespace string) extensionsv1beta1client.NetworkPolicyInterface {
-	return n.clientCache.ClusterOrDie(n.name).NetworkPolicies(namespace)
+	return n.clientCache.ClusterOrDie(n.path).NetworkPolicies(namespace)
 }

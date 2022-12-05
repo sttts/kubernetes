@@ -44,10 +44,10 @@ type selfSubjectRulesReviewsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *selfSubjectRulesReviewsClusterInterface) Cluster(name logicalcluster.Path) authorizationv1client.SelfSubjectRulesReviewInterface {
-	if name == logicalcluster.Wildcard {
+func (c *selfSubjectRulesReviewsClusterInterface) Cluster(path logicalcluster.Path) authorizationv1client.SelfSubjectRulesReviewInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).SelfSubjectRulesReviews()
+	return c.clientCache.ClusterOrDie(path).SelfSubjectRulesReviews()
 }

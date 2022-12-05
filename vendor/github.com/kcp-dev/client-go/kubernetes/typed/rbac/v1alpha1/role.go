@@ -52,22 +52,22 @@ type rolesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *rolesClusterInterface) Cluster(name logicalcluster.Path) RolesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *rolesClusterInterface) Cluster(path logicalcluster.Path) RolesNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &rolesNamespacer{clientCache: c.clientCache, name: name}
+	return &rolesNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Roles across all clusters.
 func (c *rolesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*rbacv1alpha1.RoleList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Roles(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Roles(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Roles across all clusters.
 func (c *rolesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Roles(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Roles(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // RolesNamespacer can scope to objects within a namespace, returning a rbacv1alpha1client.RoleInterface.
@@ -77,9 +77,9 @@ type RolesNamespacer interface {
 
 type rolesNamespacer struct {
 	clientCache kcpclient.Cache[*rbacv1alpha1client.RbacV1alpha1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *rolesNamespacer) Namespace(namespace string) rbacv1alpha1client.RoleInterface {
-	return n.clientCache.ClusterOrDie(n.name).Roles(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Roles(namespace)
 }

@@ -52,22 +52,22 @@ type limitRangesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *limitRangesClusterInterface) Cluster(name logicalcluster.Path) LimitRangesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *limitRangesClusterInterface) Cluster(path logicalcluster.Path) LimitRangesNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &limitRangesNamespacer{clientCache: c.clientCache, name: name}
+	return &limitRangesNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all LimitRanges across all clusters.
 func (c *limitRangesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.LimitRangeList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).LimitRanges(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).LimitRanges(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all LimitRanges across all clusters.
 func (c *limitRangesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).LimitRanges(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).LimitRanges(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // LimitRangesNamespacer can scope to objects within a namespace, returning a corev1client.LimitRangeInterface.
@@ -77,9 +77,9 @@ type LimitRangesNamespacer interface {
 
 type limitRangesNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *limitRangesNamespacer) Namespace(namespace string) corev1client.LimitRangeInterface {
-	return n.clientCache.ClusterOrDie(n.name).LimitRanges(namespace)
+	return n.clientCache.ClusterOrDie(n.path).LimitRanges(namespace)
 }

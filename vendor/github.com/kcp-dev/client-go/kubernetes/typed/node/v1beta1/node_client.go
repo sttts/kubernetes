@@ -44,11 +44,11 @@ type NodeV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*nodev1beta1.NodeV1beta1Client]
 }
 
-func (c *NodeV1beta1ClusterClient) Cluster(name logicalcluster.Path) nodev1beta1.NodeV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *NodeV1beta1ClusterClient) Cluster(path logicalcluster.Path) nodev1beta1.NodeV1beta1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *NodeV1beta1ClusterClient) RuntimeClasses() RuntimeClassClusterInterface {

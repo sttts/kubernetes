@@ -52,20 +52,20 @@ type certificateSigningRequestsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *certificateSigningRequestsClusterInterface) Cluster(name logicalcluster.Path) certificatesv1beta1client.CertificateSigningRequestInterface {
-	if name == logicalcluster.Wildcard {
+func (c *certificateSigningRequestsClusterInterface) Cluster(path logicalcluster.Path) certificatesv1beta1client.CertificateSigningRequestInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).CertificateSigningRequests()
+	return c.clientCache.ClusterOrDie(path).CertificateSigningRequests()
 }
 
 // List returns the entire collection of all CertificateSigningRequests across all clusters.
 func (c *certificateSigningRequestsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*certificatesv1beta1.CertificateSigningRequestList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CertificateSigningRequests().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CertificateSigningRequests().List(ctx, opts)
 }
 
 // Watch begins to watch all CertificateSigningRequests across all clusters.
 func (c *certificateSigningRequestsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CertificateSigningRequests().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CertificateSigningRequests().Watch(ctx, opts)
 }

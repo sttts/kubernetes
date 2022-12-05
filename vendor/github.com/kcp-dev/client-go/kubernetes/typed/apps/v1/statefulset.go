@@ -52,22 +52,22 @@ type statefulSetsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *statefulSetsClusterInterface) Cluster(name logicalcluster.Path) StatefulSetsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *statefulSetsClusterInterface) Cluster(path logicalcluster.Path) StatefulSetsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &statefulSetsNamespacer{clientCache: c.clientCache, name: name}
+	return &statefulSetsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all StatefulSets across all clusters.
 func (c *statefulSetsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*appsv1.StatefulSetList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StatefulSets(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).StatefulSets(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all StatefulSets across all clusters.
 func (c *statefulSetsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StatefulSets(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).StatefulSets(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // StatefulSetsNamespacer can scope to objects within a namespace, returning a appsv1client.StatefulSetInterface.
@@ -77,9 +77,9 @@ type StatefulSetsNamespacer interface {
 
 type statefulSetsNamespacer struct {
 	clientCache kcpclient.Cache[*appsv1client.AppsV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *statefulSetsNamespacer) Namespace(namespace string) appsv1client.StatefulSetInterface {
-	return n.clientCache.ClusterOrDie(n.name).StatefulSets(namespace)
+	return n.clientCache.ClusterOrDie(n.path).StatefulSets(namespace)
 }

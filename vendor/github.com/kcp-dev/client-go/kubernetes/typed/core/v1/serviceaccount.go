@@ -52,22 +52,22 @@ type serviceAccountsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *serviceAccountsClusterInterface) Cluster(name logicalcluster.Path) ServiceAccountsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *serviceAccountsClusterInterface) Cluster(path logicalcluster.Path) ServiceAccountsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &serviceAccountsNamespacer{clientCache: c.clientCache, name: name}
+	return &serviceAccountsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all ServiceAccounts across all clusters.
 func (c *serviceAccountsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ServiceAccountList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ServiceAccounts(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ServiceAccounts(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all ServiceAccounts across all clusters.
 func (c *serviceAccountsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ServiceAccounts(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ServiceAccounts(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // ServiceAccountsNamespacer can scope to objects within a namespace, returning a corev1client.ServiceAccountInterface.
@@ -77,9 +77,9 @@ type ServiceAccountsNamespacer interface {
 
 type serviceAccountsNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *serviceAccountsNamespacer) Namespace(namespace string) corev1client.ServiceAccountInterface {
-	return n.clientCache.ClusterOrDie(n.name).ServiceAccounts(namespace)
+	return n.clientCache.ClusterOrDie(n.path).ServiceAccounts(namespace)
 }

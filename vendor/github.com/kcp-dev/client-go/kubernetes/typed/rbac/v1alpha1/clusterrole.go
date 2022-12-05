@@ -52,20 +52,20 @@ type clusterRolesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *clusterRolesClusterInterface) Cluster(name logicalcluster.Path) rbacv1alpha1client.ClusterRoleInterface {
-	if name == logicalcluster.Wildcard {
+func (c *clusterRolesClusterInterface) Cluster(path logicalcluster.Path) rbacv1alpha1client.ClusterRoleInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).ClusterRoles()
+	return c.clientCache.ClusterOrDie(path).ClusterRoles()
 }
 
 // List returns the entire collection of all ClusterRoles across all clusters.
 func (c *clusterRolesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*rbacv1alpha1.ClusterRoleList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ClusterRoles().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ClusterRoles().List(ctx, opts)
 }
 
 // Watch begins to watch all ClusterRoles across all clusters.
 func (c *clusterRolesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ClusterRoles().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ClusterRoles().Watch(ctx, opts)
 }

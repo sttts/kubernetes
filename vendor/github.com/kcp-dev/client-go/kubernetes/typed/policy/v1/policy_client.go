@@ -45,11 +45,11 @@ type PolicyV1ClusterClient struct {
 	clientCache kcpclient.Cache[*policyv1.PolicyV1Client]
 }
 
-func (c *PolicyV1ClusterClient) Cluster(name logicalcluster.Path) policyv1.PolicyV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *PolicyV1ClusterClient) Cluster(path logicalcluster.Path) policyv1.PolicyV1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *PolicyV1ClusterClient) PodDisruptionBudgets() PodDisruptionBudgetClusterInterface {

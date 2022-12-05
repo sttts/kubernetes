@@ -44,12 +44,12 @@ type evictionsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *evictionsClusterInterface) Cluster(name logicalcluster.Path) EvictionsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *evictionsClusterInterface) Cluster(path logicalcluster.Path) EvictionsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &evictionsNamespacer{clientCache: c.clientCache, name: name}
+	return &evictionsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // EvictionsNamespacer can scope to objects within a namespace, returning a policyv1beta1client.EvictionInterface.
@@ -59,9 +59,9 @@ type EvictionsNamespacer interface {
 
 type evictionsNamespacer struct {
 	clientCache kcpclient.Cache[*policyv1beta1client.PolicyV1beta1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *evictionsNamespacer) Namespace(namespace string) policyv1beta1client.EvictionInterface {
-	return n.clientCache.ClusterOrDie(n.name).Evictions(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Evictions(namespace)
 }

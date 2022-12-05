@@ -52,22 +52,22 @@ type cronJobsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *cronJobsClusterInterface) Cluster(name logicalcluster.Path) CronJobsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *cronJobsClusterInterface) Cluster(path logicalcluster.Path) CronJobsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &cronJobsNamespacer{clientCache: c.clientCache, name: name}
+	return &cronJobsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all CronJobs across all clusters.
 func (c *cronJobsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*batchv1.CronJobList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CronJobs(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CronJobs(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all CronJobs across all clusters.
 func (c *cronJobsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CronJobs(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CronJobs(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // CronJobsNamespacer can scope to objects within a namespace, returning a batchv1client.CronJobInterface.
@@ -77,9 +77,9 @@ type CronJobsNamespacer interface {
 
 type cronJobsNamespacer struct {
 	clientCache kcpclient.Cache[*batchv1client.BatchV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *cronJobsNamespacer) Namespace(namespace string) batchv1client.CronJobInterface {
-	return n.clientCache.ClusterOrDie(n.name).CronJobs(namespace)
+	return n.clientCache.ClusterOrDie(n.path).CronJobs(namespace)
 }

@@ -52,20 +52,20 @@ type cSIDriversClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *cSIDriversClusterInterface) Cluster(name logicalcluster.Path) storagev1beta1client.CSIDriverInterface {
-	if name == logicalcluster.Wildcard {
+func (c *cSIDriversClusterInterface) Cluster(path logicalcluster.Path) storagev1beta1client.CSIDriverInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).CSIDrivers()
+	return c.clientCache.ClusterOrDie(path).CSIDrivers()
 }
 
 // List returns the entire collection of all CSIDrivers across all clusters.
 func (c *cSIDriversClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*storagev1beta1.CSIDriverList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CSIDrivers().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CSIDrivers().List(ctx, opts)
 }
 
 // Watch begins to watch all CSIDrivers across all clusters.
 func (c *cSIDriversClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CSIDrivers().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CSIDrivers().Watch(ctx, opts)
 }

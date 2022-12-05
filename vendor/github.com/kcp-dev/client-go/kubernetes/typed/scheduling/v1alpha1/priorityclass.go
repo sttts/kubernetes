@@ -52,20 +52,20 @@ type priorityClassesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *priorityClassesClusterInterface) Cluster(name logicalcluster.Path) schedulingv1alpha1client.PriorityClassInterface {
-	if name == logicalcluster.Wildcard {
+func (c *priorityClassesClusterInterface) Cluster(path logicalcluster.Path) schedulingv1alpha1client.PriorityClassInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).PriorityClasses()
+	return c.clientCache.ClusterOrDie(path).PriorityClasses()
 }
 
 // List returns the entire collection of all PriorityClasses across all clusters.
 func (c *priorityClassesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*schedulingv1alpha1.PriorityClassList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PriorityClasses().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PriorityClasses().List(ctx, opts)
 }
 
 // Watch begins to watch all PriorityClasses across all clusters.
 func (c *priorityClassesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PriorityClasses().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PriorityClasses().Watch(ctx, opts)
 }

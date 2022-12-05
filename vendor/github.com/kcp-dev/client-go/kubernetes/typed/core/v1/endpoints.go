@@ -52,22 +52,22 @@ type endpointsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *endpointsClusterInterface) Cluster(name logicalcluster.Path) EndpointsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *endpointsClusterInterface) Cluster(path logicalcluster.Path) EndpointsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &endpointsNamespacer{clientCache: c.clientCache, name: name}
+	return &endpointsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Endpoints across all clusters.
 func (c *endpointsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.EndpointsList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Endpoints(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Endpoints(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Endpoints across all clusters.
 func (c *endpointsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Endpoints(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Endpoints(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // EndpointsNamespacer can scope to objects within a namespace, returning a corev1client.EndpointsInterface.
@@ -77,9 +77,9 @@ type EndpointsNamespacer interface {
 
 type endpointsNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *endpointsNamespacer) Namespace(namespace string) corev1client.EndpointsInterface {
-	return n.clientCache.ClusterOrDie(n.name).Endpoints(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Endpoints(namespace)
 }

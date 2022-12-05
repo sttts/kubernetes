@@ -44,11 +44,11 @@ type SchedulingV1ClusterClient struct {
 	clientCache kcpclient.Cache[*schedulingv1.SchedulingV1Client]
 }
 
-func (c *SchedulingV1ClusterClient) Cluster(name logicalcluster.Path) schedulingv1.SchedulingV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *SchedulingV1ClusterClient) Cluster(path logicalcluster.Path) schedulingv1.SchedulingV1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *SchedulingV1ClusterClient) PriorityClasses() PriorityClassClusterInterface {

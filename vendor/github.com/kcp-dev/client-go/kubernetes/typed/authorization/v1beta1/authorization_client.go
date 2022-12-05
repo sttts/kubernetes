@@ -47,11 +47,11 @@ type AuthorizationV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*authorizationv1beta1.AuthorizationV1beta1Client]
 }
 
-func (c *AuthorizationV1beta1ClusterClient) Cluster(name logicalcluster.Path) authorizationv1beta1.AuthorizationV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *AuthorizationV1beta1ClusterClient) Cluster(path logicalcluster.Path) authorizationv1beta1.AuthorizationV1beta1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *AuthorizationV1beta1ClusterClient) SubjectAccessReviews() SubjectAccessReviewClusterInterface {

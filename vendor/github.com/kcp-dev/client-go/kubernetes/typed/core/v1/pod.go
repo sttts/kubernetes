@@ -52,22 +52,22 @@ type podsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *podsClusterInterface) Cluster(name logicalcluster.Path) PodsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *podsClusterInterface) Cluster(path logicalcluster.Path) PodsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &podsNamespacer{clientCache: c.clientCache, name: name}
+	return &podsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Pods across all clusters.
 func (c *podsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.PodList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Pods(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Pods(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Pods across all clusters.
 func (c *podsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Pods(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Pods(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // PodsNamespacer can scope to objects within a namespace, returning a corev1client.PodInterface.
@@ -77,9 +77,9 @@ type PodsNamespacer interface {
 
 type podsNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *podsNamespacer) Namespace(namespace string) corev1client.PodInterface {
-	return n.clientCache.ClusterOrDie(n.name).Pods(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Pods(namespace)
 }

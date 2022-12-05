@@ -52,22 +52,22 @@ type leasesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *leasesClusterInterface) Cluster(name logicalcluster.Path) LeasesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *leasesClusterInterface) Cluster(path logicalcluster.Path) LeasesNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &leasesNamespacer{clientCache: c.clientCache, name: name}
+	return &leasesNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Leases across all clusters.
 func (c *leasesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*coordinationv1beta1.LeaseList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Leases(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Leases(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Leases across all clusters.
 func (c *leasesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Leases(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Leases(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // LeasesNamespacer can scope to objects within a namespace, returning a coordinationv1beta1client.LeaseInterface.
@@ -77,9 +77,9 @@ type LeasesNamespacer interface {
 
 type leasesNamespacer struct {
 	clientCache kcpclient.Cache[*coordinationv1beta1client.CoordinationV1beta1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *leasesNamespacer) Namespace(namespace string) coordinationv1beta1client.LeaseInterface {
-	return n.clientCache.ClusterOrDie(n.name).Leases(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Leases(namespace)
 }

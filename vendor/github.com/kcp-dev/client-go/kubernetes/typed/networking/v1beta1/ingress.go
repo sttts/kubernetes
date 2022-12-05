@@ -52,22 +52,22 @@ type ingressesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *ingressesClusterInterface) Cluster(name logicalcluster.Path) IngressesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *ingressesClusterInterface) Cluster(path logicalcluster.Path) IngressesNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &ingressesNamespacer{clientCache: c.clientCache, name: name}
+	return &ingressesNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Ingresses across all clusters.
 func (c *ingressesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*networkingv1beta1.IngressList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Ingresses(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Ingresses(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Ingresses across all clusters.
 func (c *ingressesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Ingresses(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Ingresses(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // IngressesNamespacer can scope to objects within a namespace, returning a networkingv1beta1client.IngressInterface.
@@ -77,9 +77,9 @@ type IngressesNamespacer interface {
 
 type ingressesNamespacer struct {
 	clientCache kcpclient.Cache[*networkingv1beta1client.NetworkingV1beta1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *ingressesNamespacer) Namespace(namespace string) networkingv1beta1client.IngressInterface {
-	return n.clientCache.ClusterOrDie(n.name).Ingresses(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Ingresses(namespace)
 }

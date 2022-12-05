@@ -48,11 +48,11 @@ type AppsV1beta2ClusterClient struct {
 	clientCache kcpclient.Cache[*appsv1beta2.AppsV1beta2Client]
 }
 
-func (c *AppsV1beta2ClusterClient) Cluster(name logicalcluster.Path) appsv1beta2.AppsV1beta2Interface {
-	if name == logicalcluster.Wildcard {
+func (c *AppsV1beta2ClusterClient) Cluster(path logicalcluster.Path) appsv1beta2.AppsV1beta2Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *AppsV1beta2ClusterClient) StatefulSets() StatefulSetClusterInterface {

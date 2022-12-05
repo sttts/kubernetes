@@ -52,20 +52,20 @@ type flowSchemasClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *flowSchemasClusterInterface) Cluster(name logicalcluster.Path) flowcontrolv1alpha1client.FlowSchemaInterface {
-	if name == logicalcluster.Wildcard {
+func (c *flowSchemasClusterInterface) Cluster(path logicalcluster.Path) flowcontrolv1alpha1client.FlowSchemaInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).FlowSchemas()
+	return c.clientCache.ClusterOrDie(path).FlowSchemas()
 }
 
 // List returns the entire collection of all FlowSchemas across all clusters.
 func (c *flowSchemasClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*flowcontrolv1alpha1.FlowSchemaList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).FlowSchemas().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).FlowSchemas().List(ctx, opts)
 }
 
 // Watch begins to watch all FlowSchemas across all clusters.
 func (c *flowSchemasClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).FlowSchemas().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).FlowSchemas().Watch(ctx, opts)
 }

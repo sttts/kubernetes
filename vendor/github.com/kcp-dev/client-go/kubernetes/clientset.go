@@ -415,11 +415,11 @@ func (c *ClusterClientset) StorageV1beta1() storagev1beta1.StorageV1beta1Cluster
 }
 
 // Cluster scopes this clientset to one cluster.
-func (c *ClusterClientset) Cluster(name logicalcluster.Path) client.Interface {
-	if name == logicalcluster.Wildcard {
+func (c *ClusterClientset) Cluster(path logicalcluster.Path) client.Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 // NewForConfig creates a new ClusterClientset for the given config.

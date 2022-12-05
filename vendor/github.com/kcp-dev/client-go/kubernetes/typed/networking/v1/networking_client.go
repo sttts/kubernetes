@@ -46,11 +46,11 @@ type NetworkingV1ClusterClient struct {
 	clientCache kcpclient.Cache[*networkingv1.NetworkingV1Client]
 }
 
-func (c *NetworkingV1ClusterClient) Cluster(name logicalcluster.Path) networkingv1.NetworkingV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *NetworkingV1ClusterClient) Cluster(path logicalcluster.Path) networkingv1.NetworkingV1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *NetworkingV1ClusterClient) NetworkPolicies() NetworkPolicyClusterInterface {

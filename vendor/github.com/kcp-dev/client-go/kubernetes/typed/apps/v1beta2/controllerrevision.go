@@ -52,22 +52,22 @@ type controllerRevisionsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *controllerRevisionsClusterInterface) Cluster(name logicalcluster.Path) ControllerRevisionsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *controllerRevisionsClusterInterface) Cluster(path logicalcluster.Path) ControllerRevisionsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &controllerRevisionsNamespacer{clientCache: c.clientCache, name: name}
+	return &controllerRevisionsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all ControllerRevisions across all clusters.
 func (c *controllerRevisionsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*appsv1beta2.ControllerRevisionList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ControllerRevisions(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ControllerRevisions(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all ControllerRevisions across all clusters.
 func (c *controllerRevisionsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ControllerRevisions(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ControllerRevisions(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // ControllerRevisionsNamespacer can scope to objects within a namespace, returning a appsv1beta2client.ControllerRevisionInterface.
@@ -77,9 +77,9 @@ type ControllerRevisionsNamespacer interface {
 
 type controllerRevisionsNamespacer struct {
 	clientCache kcpclient.Cache[*appsv1beta2client.AppsV1beta2Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *controllerRevisionsNamespacer) Namespace(namespace string) appsv1beta2client.ControllerRevisionInterface {
-	return n.clientCache.ClusterOrDie(n.name).ControllerRevisions(namespace)
+	return n.clientCache.ClusterOrDie(n.path).ControllerRevisions(namespace)
 }

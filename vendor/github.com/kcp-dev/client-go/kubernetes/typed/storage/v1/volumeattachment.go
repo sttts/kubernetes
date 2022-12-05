@@ -52,20 +52,20 @@ type volumeAttachmentsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *volumeAttachmentsClusterInterface) Cluster(name logicalcluster.Path) storagev1client.VolumeAttachmentInterface {
-	if name == logicalcluster.Wildcard {
+func (c *volumeAttachmentsClusterInterface) Cluster(path logicalcluster.Path) storagev1client.VolumeAttachmentInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).VolumeAttachments()
+	return c.clientCache.ClusterOrDie(path).VolumeAttachments()
 }
 
 // List returns the entire collection of all VolumeAttachments across all clusters.
 func (c *volumeAttachmentsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*storagev1.VolumeAttachmentList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).VolumeAttachments().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).VolumeAttachments().List(ctx, opts)
 }
 
 // Watch begins to watch all VolumeAttachments across all clusters.
 func (c *volumeAttachmentsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).VolumeAttachments().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).VolumeAttachments().Watch(ctx, opts)
 }

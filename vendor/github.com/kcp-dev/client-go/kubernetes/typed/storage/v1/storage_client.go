@@ -48,11 +48,11 @@ type StorageV1ClusterClient struct {
 	clientCache kcpclient.Cache[*storagev1.StorageV1Client]
 }
 
-func (c *StorageV1ClusterClient) Cluster(name logicalcluster.Path) storagev1.StorageV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *StorageV1ClusterClient) Cluster(path logicalcluster.Path) storagev1.StorageV1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *StorageV1ClusterClient) StorageClasses() StorageClassClusterInterface {

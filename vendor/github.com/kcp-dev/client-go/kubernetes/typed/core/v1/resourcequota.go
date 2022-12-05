@@ -52,22 +52,22 @@ type resourceQuotasClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *resourceQuotasClusterInterface) Cluster(name logicalcluster.Path) ResourceQuotasNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *resourceQuotasClusterInterface) Cluster(path logicalcluster.Path) ResourceQuotasNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &resourceQuotasNamespacer{clientCache: c.clientCache, name: name}
+	return &resourceQuotasNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all ResourceQuotas across all clusters.
 func (c *resourceQuotasClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ResourceQuotaList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ResourceQuotas(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ResourceQuotas(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all ResourceQuotas across all clusters.
 func (c *resourceQuotasClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ResourceQuotas(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ResourceQuotas(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // ResourceQuotasNamespacer can scope to objects within a namespace, returning a corev1client.ResourceQuotaInterface.
@@ -77,9 +77,9 @@ type ResourceQuotasNamespacer interface {
 
 type resourceQuotasNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *resourceQuotasNamespacer) Namespace(namespace string) corev1client.ResourceQuotaInterface {
-	return n.clientCache.ClusterOrDie(n.name).ResourceQuotas(namespace)
+	return n.clientCache.ClusterOrDie(n.path).ResourceQuotas(namespace)
 }

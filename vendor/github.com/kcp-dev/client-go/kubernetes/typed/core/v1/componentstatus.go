@@ -52,20 +52,20 @@ type componentStatusesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *componentStatusesClusterInterface) Cluster(name logicalcluster.Path) corev1client.ComponentStatusInterface {
-	if name == logicalcluster.Wildcard {
+func (c *componentStatusesClusterInterface) Cluster(path logicalcluster.Path) corev1client.ComponentStatusInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).ComponentStatuses()
+	return c.clientCache.ClusterOrDie(path).ComponentStatuses()
 }
 
 // List returns the entire collection of all ComponentStatuses across all clusters.
 func (c *componentStatusesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ComponentStatusList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ComponentStatuses().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ComponentStatuses().List(ctx, opts)
 }
 
 // Watch begins to watch all ComponentStatuses across all clusters.
 func (c *componentStatusesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ComponentStatuses().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ComponentStatuses().Watch(ctx, opts)
 }

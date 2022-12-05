@@ -52,22 +52,22 @@ type replicaSetsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *replicaSetsClusterInterface) Cluster(name logicalcluster.Path) ReplicaSetsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *replicaSetsClusterInterface) Cluster(path logicalcluster.Path) ReplicaSetsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &replicaSetsNamespacer{clientCache: c.clientCache, name: name}
+	return &replicaSetsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all ReplicaSets across all clusters.
 func (c *replicaSetsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*extensionsv1beta1.ReplicaSetList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ReplicaSets(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ReplicaSets(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all ReplicaSets across all clusters.
 func (c *replicaSetsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ReplicaSets(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ReplicaSets(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // ReplicaSetsNamespacer can scope to objects within a namespace, returning a extensionsv1beta1client.ReplicaSetInterface.
@@ -77,9 +77,9 @@ type ReplicaSetsNamespacer interface {
 
 type replicaSetsNamespacer struct {
 	clientCache kcpclient.Cache[*extensionsv1beta1client.ExtensionsV1beta1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *replicaSetsNamespacer) Namespace(namespace string) extensionsv1beta1client.ReplicaSetInterface {
-	return n.clientCache.ClusterOrDie(n.name).ReplicaSets(namespace)
+	return n.clientCache.ClusterOrDie(n.path).ReplicaSets(namespace)
 }

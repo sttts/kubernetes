@@ -52,22 +52,22 @@ type podTemplatesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *podTemplatesClusterInterface) Cluster(name logicalcluster.Path) PodTemplatesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *podTemplatesClusterInterface) Cluster(path logicalcluster.Path) PodTemplatesNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &podTemplatesNamespacer{clientCache: c.clientCache, name: name}
+	return &podTemplatesNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all PodTemplates across all clusters.
 func (c *podTemplatesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.PodTemplateList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PodTemplates(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PodTemplates(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all PodTemplates across all clusters.
 func (c *podTemplatesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PodTemplates(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PodTemplates(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // PodTemplatesNamespacer can scope to objects within a namespace, returning a corev1client.PodTemplateInterface.
@@ -77,9 +77,9 @@ type PodTemplatesNamespacer interface {
 
 type podTemplatesNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *podTemplatesNamespacer) Namespace(namespace string) corev1client.PodTemplateInterface {
-	return n.clientCache.ClusterOrDie(n.name).PodTemplates(namespace)
+	return n.clientCache.ClusterOrDie(n.path).PodTemplates(namespace)
 }

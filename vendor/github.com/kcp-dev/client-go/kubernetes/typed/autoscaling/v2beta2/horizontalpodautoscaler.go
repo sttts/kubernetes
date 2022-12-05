@@ -52,22 +52,22 @@ type horizontalPodAutoscalersClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *horizontalPodAutoscalersClusterInterface) Cluster(name logicalcluster.Path) HorizontalPodAutoscalersNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *horizontalPodAutoscalersClusterInterface) Cluster(path logicalcluster.Path) HorizontalPodAutoscalersNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &horizontalPodAutoscalersNamespacer{clientCache: c.clientCache, name: name}
+	return &horizontalPodAutoscalersNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all HorizontalPodAutoscalers across all clusters.
 func (c *horizontalPodAutoscalersClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*autoscalingv2beta2.HorizontalPodAutoscalerList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).HorizontalPodAutoscalers(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).HorizontalPodAutoscalers(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all HorizontalPodAutoscalers across all clusters.
 func (c *horizontalPodAutoscalersClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).HorizontalPodAutoscalers(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).HorizontalPodAutoscalers(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // HorizontalPodAutoscalersNamespacer can scope to objects within a namespace, returning a autoscalingv2beta2client.HorizontalPodAutoscalerInterface.
@@ -77,9 +77,9 @@ type HorizontalPodAutoscalersNamespacer interface {
 
 type horizontalPodAutoscalersNamespacer struct {
 	clientCache kcpclient.Cache[*autoscalingv2beta2client.AutoscalingV2beta2Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *horizontalPodAutoscalersNamespacer) Namespace(namespace string) autoscalingv2beta2client.HorizontalPodAutoscalerInterface {
-	return n.clientCache.ClusterOrDie(n.name).HorizontalPodAutoscalers(namespace)
+	return n.clientCache.ClusterOrDie(n.path).HorizontalPodAutoscalers(namespace)
 }

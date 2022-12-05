@@ -45,11 +45,11 @@ type AdmissionregistrationV1ClusterClient struct {
 	clientCache kcpclient.Cache[*admissionregistrationv1.AdmissionregistrationV1Client]
 }
 
-func (c *AdmissionregistrationV1ClusterClient) Cluster(name logicalcluster.Path) admissionregistrationv1.AdmissionregistrationV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *AdmissionregistrationV1ClusterClient) Cluster(path logicalcluster.Path) admissionregistrationv1.AdmissionregistrationV1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *AdmissionregistrationV1ClusterClient) ValidatingWebhookConfigurations() ValidatingWebhookConfigurationClusterInterface {

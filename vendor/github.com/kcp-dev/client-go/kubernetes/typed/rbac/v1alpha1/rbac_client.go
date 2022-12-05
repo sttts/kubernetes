@@ -47,11 +47,11 @@ type RbacV1alpha1ClusterClient struct {
 	clientCache kcpclient.Cache[*rbacv1alpha1.RbacV1alpha1Client]
 }
 
-func (c *RbacV1alpha1ClusterClient) Cluster(name logicalcluster.Path) rbacv1alpha1.RbacV1alpha1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *RbacV1alpha1ClusterClient) Cluster(path logicalcluster.Path) rbacv1alpha1.RbacV1alpha1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *RbacV1alpha1ClusterClient) Roles() RoleClusterInterface {

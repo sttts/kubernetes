@@ -52,20 +52,20 @@ type storageVersionsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *storageVersionsClusterInterface) Cluster(name logicalcluster.Path) internalv1alpha1client.StorageVersionInterface {
-	if name == logicalcluster.Wildcard {
+func (c *storageVersionsClusterInterface) Cluster(path logicalcluster.Path) internalv1alpha1client.StorageVersionInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).StorageVersions()
+	return c.clientCache.ClusterOrDie(path).StorageVersions()
 }
 
 // List returns the entire collection of all StorageVersions across all clusters.
 func (c *storageVersionsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*internalv1alpha1.StorageVersionList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StorageVersions().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).StorageVersions().List(ctx, opts)
 }
 
 // Watch begins to watch all StorageVersions across all clusters.
 func (c *storageVersionsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StorageVersions().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).StorageVersions().Watch(ctx, opts)
 }

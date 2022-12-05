@@ -49,11 +49,11 @@ type ExtensionsV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*extensionsv1beta1.ExtensionsV1beta1Client]
 }
 
-func (c *ExtensionsV1beta1ClusterClient) Cluster(name logicalcluster.Path) extensionsv1beta1.ExtensionsV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *ExtensionsV1beta1ClusterClient) Cluster(path logicalcluster.Path) extensionsv1beta1.ExtensionsV1beta1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *ExtensionsV1beta1ClusterClient) Deployments() DeploymentClusterInterface {

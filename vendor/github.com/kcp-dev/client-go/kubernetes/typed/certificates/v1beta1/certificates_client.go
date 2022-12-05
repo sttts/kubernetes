@@ -44,11 +44,11 @@ type CertificatesV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*certificatesv1beta1.CertificatesV1beta1Client]
 }
 
-func (c *CertificatesV1beta1ClusterClient) Cluster(name logicalcluster.Path) certificatesv1beta1.CertificatesV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *CertificatesV1beta1ClusterClient) Cluster(path logicalcluster.Path) certificatesv1beta1.CertificatesV1beta1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *CertificatesV1beta1ClusterClient) CertificateSigningRequests() CertificateSigningRequestClusterInterface {

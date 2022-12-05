@@ -52,20 +52,20 @@ type priorityLevelConfigurationsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *priorityLevelConfigurationsClusterInterface) Cluster(name logicalcluster.Path) flowcontrolv1beta1client.PriorityLevelConfigurationInterface {
-	if name == logicalcluster.Wildcard {
+func (c *priorityLevelConfigurationsClusterInterface) Cluster(path logicalcluster.Path) flowcontrolv1beta1client.PriorityLevelConfigurationInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).PriorityLevelConfigurations()
+	return c.clientCache.ClusterOrDie(path).PriorityLevelConfigurations()
 }
 
 // List returns the entire collection of all PriorityLevelConfigurations across all clusters.
 func (c *priorityLevelConfigurationsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*flowcontrolv1beta1.PriorityLevelConfigurationList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PriorityLevelConfigurations().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PriorityLevelConfigurations().List(ctx, opts)
 }
 
 // Watch begins to watch all PriorityLevelConfigurations across all clusters.
 func (c *priorityLevelConfigurationsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PriorityLevelConfigurations().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PriorityLevelConfigurations().Watch(ctx, opts)
 }

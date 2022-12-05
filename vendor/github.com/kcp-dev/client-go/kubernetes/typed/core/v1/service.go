@@ -52,22 +52,22 @@ type servicesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *servicesClusterInterface) Cluster(name logicalcluster.Path) ServicesNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *servicesClusterInterface) Cluster(path logicalcluster.Path) ServicesNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &servicesNamespacer{clientCache: c.clientCache, name: name}
+	return &servicesNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Services across all clusters.
 func (c *servicesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.ServiceList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Services(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Services(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Services across all clusters.
 func (c *servicesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Services(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Services(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // ServicesNamespacer can scope to objects within a namespace, returning a corev1client.ServiceInterface.
@@ -77,9 +77,9 @@ type ServicesNamespacer interface {
 
 type servicesNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *servicesNamespacer) Namespace(namespace string) corev1client.ServiceInterface {
-	return n.clientCache.ClusterOrDie(n.name).Services(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Services(namespace)
 }

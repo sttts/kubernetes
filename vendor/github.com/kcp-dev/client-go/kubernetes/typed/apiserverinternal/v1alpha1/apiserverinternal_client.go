@@ -44,11 +44,11 @@ type InternalV1alpha1ClusterClient struct {
 	clientCache kcpclient.Cache[*internalv1alpha1.InternalV1alpha1Client]
 }
 
-func (c *InternalV1alpha1ClusterClient) Cluster(name logicalcluster.Path) internalv1alpha1.InternalV1alpha1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *InternalV1alpha1ClusterClient) Cluster(path logicalcluster.Path) internalv1alpha1.InternalV1alpha1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *InternalV1alpha1ClusterClient) StorageVersions() StorageVersionClusterInterface {

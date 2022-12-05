@@ -52,22 +52,22 @@ type deploymentsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *deploymentsClusterInterface) Cluster(name logicalcluster.Path) DeploymentsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *deploymentsClusterInterface) Cluster(path logicalcluster.Path) DeploymentsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &deploymentsNamespacer{clientCache: c.clientCache, name: name}
+	return &deploymentsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Deployments across all clusters.
 func (c *deploymentsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*appsv1.DeploymentList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Deployments(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Deployments(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Deployments across all clusters.
 func (c *deploymentsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Deployments(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Deployments(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // DeploymentsNamespacer can scope to objects within a namespace, returning a appsv1client.DeploymentInterface.
@@ -77,9 +77,9 @@ type DeploymentsNamespacer interface {
 
 type deploymentsNamespacer struct {
 	clientCache kcpclient.Cache[*appsv1client.AppsV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *deploymentsNamespacer) Namespace(namespace string) appsv1client.DeploymentInterface {
-	return n.clientCache.ClusterOrDie(n.name).Deployments(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Deployments(namespace)
 }

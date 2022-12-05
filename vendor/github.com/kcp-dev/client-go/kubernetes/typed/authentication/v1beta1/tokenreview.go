@@ -44,10 +44,10 @@ type tokenReviewsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *tokenReviewsClusterInterface) Cluster(name logicalcluster.Path) authenticationv1beta1client.TokenReviewInterface {
-	if name == logicalcluster.Wildcard {
+func (c *tokenReviewsClusterInterface) Cluster(path logicalcluster.Path) authenticationv1beta1client.TokenReviewInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).TokenReviews()
+	return c.clientCache.ClusterOrDie(path).TokenReviews()
 }

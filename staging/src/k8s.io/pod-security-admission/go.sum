@@ -356,8 +356,8 @@ github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1y
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56 h1:XxRBHVw8nfR2hS4PrwpfLmGTFHW4fpRmK2o6wtLY5k0=
 github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56/go.mod h1:XEv+UQlH7NT41TOZYRK+LRo2URcwYjP8GQqOqtBk0RI=
-github.com/p0lyn0mial/client-go v0.0.0-20221205103028-e6b916c38744 h1:H9Wzm3fYoR126msZWAlhkMmqCDOixebosoM/ASLBYg8=
-github.com/p0lyn0mial/client-go v0.0.0-20221205103028-e6b916c38744/go.mod h1:kLMJgfd5gpWZv2y42vrn1W7WgeFpBlDV3vcJCqx4qxk=
+github.com/p0lyn0mial/client-go v0.0.0-20221205142109-65bc4b8b4841 h1:i//BsIdz3Mfou7lY70S31aKa7DEhksUKAG3/k3oBTrs=
+github.com/p0lyn0mial/client-go v0.0.0-20221205142109-65bc4b8b4841/go.mod h1:kLMJgfd5gpWZv2y42vrn1W7WgeFpBlDV3vcJCqx4qxk=
 github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226 h1:zS7dh4JYSew1wAimDQjOQLndo/65hwXzeZHnt0Kl5IM=
 github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226/go.mod h1:6rb68Tntup98cRr9+50rvSDxUbfqrC1yQ/T6RiZcSgA=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=

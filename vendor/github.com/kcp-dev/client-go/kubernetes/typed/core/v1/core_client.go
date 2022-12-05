@@ -59,11 +59,11 @@ type CoreV1ClusterClient struct {
 	clientCache kcpclient.Cache[*corev1.CoreV1Client]
 }
 
-func (c *CoreV1ClusterClient) Cluster(name logicalcluster.Path) corev1.CoreV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *CoreV1ClusterClient) Cluster(path logicalcluster.Path) corev1.CoreV1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *CoreV1ClusterClient) PersistentVolumes() PersistentVolumeClusterInterface {

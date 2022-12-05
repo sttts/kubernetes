@@ -52,20 +52,20 @@ type cSINodesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *cSINodesClusterInterface) Cluster(name logicalcluster.Path) storagev1client.CSINodeInterface {
-	if name == logicalcluster.Wildcard {
+func (c *cSINodesClusterInterface) Cluster(path logicalcluster.Path) storagev1client.CSINodeInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).CSINodes()
+	return c.clientCache.ClusterOrDie(path).CSINodes()
 }
 
 // List returns the entire collection of all CSINodes across all clusters.
 func (c *cSINodesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*storagev1.CSINodeList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CSINodes().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CSINodes().List(ctx, opts)
 }
 
 // Watch begins to watch all CSINodes across all clusters.
 func (c *cSINodesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CSINodes().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CSINodes().Watch(ctx, opts)
 }

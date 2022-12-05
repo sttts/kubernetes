@@ -52,22 +52,22 @@ type secretsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *secretsClusterInterface) Cluster(name logicalcluster.Path) SecretsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *secretsClusterInterface) Cluster(path logicalcluster.Path) SecretsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &secretsNamespacer{clientCache: c.clientCache, name: name}
+	return &secretsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all Secrets across all clusters.
 func (c *secretsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.SecretList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Secrets(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Secrets(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all Secrets across all clusters.
 func (c *secretsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Secrets(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Secrets(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // SecretsNamespacer can scope to objects within a namespace, returning a corev1client.SecretInterface.
@@ -77,9 +77,9 @@ type SecretsNamespacer interface {
 
 type secretsNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *secretsNamespacer) Namespace(namespace string) corev1client.SecretInterface {
-	return n.clientCache.ClusterOrDie(n.name).Secrets(namespace)
+	return n.clientCache.ClusterOrDie(n.path).Secrets(namespace)
 }

@@ -52,20 +52,20 @@ type validatingWebhookConfigurationsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *validatingWebhookConfigurationsClusterInterface) Cluster(name logicalcluster.Path) admissionregistrationv1beta1client.ValidatingWebhookConfigurationInterface {
-	if name == logicalcluster.Wildcard {
+func (c *validatingWebhookConfigurationsClusterInterface) Cluster(path logicalcluster.Path) admissionregistrationv1beta1client.ValidatingWebhookConfigurationInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).ValidatingWebhookConfigurations()
+	return c.clientCache.ClusterOrDie(path).ValidatingWebhookConfigurations()
 }
 
 // List returns the entire collection of all ValidatingWebhookConfigurations across all clusters.
 func (c *validatingWebhookConfigurationsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*admissionregistrationv1beta1.ValidatingWebhookConfigurationList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ValidatingWebhookConfigurations().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ValidatingWebhookConfigurations().List(ctx, opts)
 }
 
 // Watch begins to watch all ValidatingWebhookConfigurations across all clusters.
 func (c *validatingWebhookConfigurationsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).ValidatingWebhookConfigurations().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).ValidatingWebhookConfigurations().Watch(ctx, opts)
 }

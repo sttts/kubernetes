@@ -45,11 +45,11 @@ type FlowcontrolV1alpha1ClusterClient struct {
 	clientCache kcpclient.Cache[*flowcontrolv1alpha1.FlowcontrolV1alpha1Client]
 }
 
-func (c *FlowcontrolV1alpha1ClusterClient) Cluster(name logicalcluster.Path) flowcontrolv1alpha1.FlowcontrolV1alpha1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *FlowcontrolV1alpha1ClusterClient) Cluster(path logicalcluster.Path) flowcontrolv1alpha1.FlowcontrolV1alpha1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *FlowcontrolV1alpha1ClusterClient) FlowSchemas() FlowSchemaClusterInterface {

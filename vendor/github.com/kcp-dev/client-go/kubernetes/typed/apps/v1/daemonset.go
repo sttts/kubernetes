@@ -52,22 +52,22 @@ type daemonSetsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *daemonSetsClusterInterface) Cluster(name logicalcluster.Path) DaemonSetsNamespacer {
-	if name == logicalcluster.Wildcard {
+func (c *daemonSetsClusterInterface) Cluster(path logicalcluster.Path) DaemonSetsNamespacer {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return &daemonSetsNamespacer{clientCache: c.clientCache, name: name}
+	return &daemonSetsNamespacer{clientCache: c.clientCache, path: path}
 }
 
 // List returns the entire collection of all DaemonSets across all clusters.
 func (c *daemonSetsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*appsv1.DaemonSetList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).DaemonSets(metav1.NamespaceAll).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).DaemonSets(metav1.NamespaceAll).List(ctx, opts)
 }
 
 // Watch begins to watch all DaemonSets across all clusters.
 func (c *daemonSetsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).DaemonSets(metav1.NamespaceAll).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).DaemonSets(metav1.NamespaceAll).Watch(ctx, opts)
 }
 
 // DaemonSetsNamespacer can scope to objects within a namespace, returning a appsv1client.DaemonSetInterface.
@@ -77,9 +77,9 @@ type DaemonSetsNamespacer interface {
 
 type daemonSetsNamespacer struct {
 	clientCache kcpclient.Cache[*appsv1client.AppsV1Client]
-	name        logicalcluster.Path
+	path        logicalcluster.Path
 }
 
 func (n *daemonSetsNamespacer) Namespace(namespace string) appsv1client.DaemonSetInterface {
-	return n.clientCache.ClusterOrDie(n.name).DaemonSets(namespace)
+	return n.clientCache.ClusterOrDie(n.path).DaemonSets(namespace)
 }

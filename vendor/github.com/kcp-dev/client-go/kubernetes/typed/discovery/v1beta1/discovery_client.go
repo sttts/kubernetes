@@ -44,11 +44,11 @@ type DiscoveryV1beta1ClusterClient struct {
 	clientCache kcpclient.Cache[*discoveryv1beta1.DiscoveryV1beta1Client]
 }
 
-func (c *DiscoveryV1beta1ClusterClient) Cluster(name logicalcluster.Path) discoveryv1beta1.DiscoveryV1beta1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *DiscoveryV1beta1ClusterClient) Cluster(path logicalcluster.Path) discoveryv1beta1.DiscoveryV1beta1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *DiscoveryV1beta1ClusterClient) EndpointSlices() EndpointSliceClusterInterface {

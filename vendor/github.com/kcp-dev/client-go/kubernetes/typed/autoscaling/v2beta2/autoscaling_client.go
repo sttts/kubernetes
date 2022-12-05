@@ -44,11 +44,11 @@ type AutoscalingV2beta2ClusterClient struct {
 	clientCache kcpclient.Cache[*autoscalingv2beta2.AutoscalingV2beta2Client]
 }
 
-func (c *AutoscalingV2beta2ClusterClient) Cluster(name logicalcluster.Path) autoscalingv2beta2.AutoscalingV2beta2Interface {
-	if name == logicalcluster.Wildcard {
+func (c *AutoscalingV2beta2ClusterClient) Cluster(path logicalcluster.Path) autoscalingv2beta2.AutoscalingV2beta2Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *AutoscalingV2beta2ClusterClient) HorizontalPodAutoscalers() HorizontalPodAutoscalerClusterInterface {

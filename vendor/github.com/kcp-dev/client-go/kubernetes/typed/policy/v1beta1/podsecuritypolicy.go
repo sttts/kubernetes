@@ -52,20 +52,20 @@ type podSecurityPoliciesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *podSecurityPoliciesClusterInterface) Cluster(name logicalcluster.Path) policyv1beta1client.PodSecurityPolicyInterface {
-	if name == logicalcluster.Wildcard {
+func (c *podSecurityPoliciesClusterInterface) Cluster(path logicalcluster.Path) policyv1beta1client.PodSecurityPolicyInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).PodSecurityPolicies()
+	return c.clientCache.ClusterOrDie(path).PodSecurityPolicies()
 }
 
 // List returns the entire collection of all PodSecurityPolicies across all clusters.
 func (c *podSecurityPoliciesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*policyv1beta1.PodSecurityPolicyList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PodSecurityPolicies().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PodSecurityPolicies().List(ctx, opts)
 }
 
 // Watch begins to watch all PodSecurityPolicies across all clusters.
 func (c *podSecurityPoliciesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PodSecurityPolicies().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PodSecurityPolicies().Watch(ctx, opts)
 }

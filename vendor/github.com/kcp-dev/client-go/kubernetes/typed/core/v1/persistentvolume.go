@@ -52,20 +52,20 @@ type persistentVolumesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *persistentVolumesClusterInterface) Cluster(name logicalcluster.Path) corev1client.PersistentVolumeInterface {
-	if name == logicalcluster.Wildcard {
+func (c *persistentVolumesClusterInterface) Cluster(path logicalcluster.Path) corev1client.PersistentVolumeInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).PersistentVolumes()
+	return c.clientCache.ClusterOrDie(path).PersistentVolumes()
 }
 
 // List returns the entire collection of all PersistentVolumes across all clusters.
 func (c *persistentVolumesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*corev1.PersistentVolumeList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PersistentVolumes().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PersistentVolumes().List(ctx, opts)
 }
 
 // Watch begins to watch all PersistentVolumes across all clusters.
 func (c *persistentVolumesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).PersistentVolumes().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).PersistentVolumes().Watch(ctx, opts)
 }

@@ -52,20 +52,20 @@ type storageClassesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *storageClassesClusterInterface) Cluster(name logicalcluster.Path) storagev1beta1client.StorageClassInterface {
-	if name == logicalcluster.Wildcard {
+func (c *storageClassesClusterInterface) Cluster(path logicalcluster.Path) storagev1beta1client.StorageClassInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).StorageClasses()
+	return c.clientCache.ClusterOrDie(path).StorageClasses()
 }
 
 // List returns the entire collection of all StorageClasses across all clusters.
 func (c *storageClassesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*storagev1beta1.StorageClassList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StorageClasses().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).StorageClasses().List(ctx, opts)
 }
 
 // Watch begins to watch all StorageClasses across all clusters.
 func (c *storageClassesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).StorageClasses().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).StorageClasses().Watch(ctx, opts)
 }

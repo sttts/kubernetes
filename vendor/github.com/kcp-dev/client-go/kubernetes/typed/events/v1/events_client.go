@@ -44,11 +44,11 @@ type EventsV1ClusterClient struct {
 	clientCache kcpclient.Cache[*eventsv1.EventsV1Client]
 }
 
-func (c *EventsV1ClusterClient) Cluster(name logicalcluster.Path) eventsv1.EventsV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *EventsV1ClusterClient) Cluster(path logicalcluster.Path) eventsv1.EventsV1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *EventsV1ClusterClient) Events() EventClusterInterface {

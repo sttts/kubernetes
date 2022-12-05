@@ -52,20 +52,20 @@ type ingressClassesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *ingressClassesClusterInterface) Cluster(name logicalcluster.Path) networkingv1client.IngressClassInterface {
-	if name == logicalcluster.Wildcard {
+func (c *ingressClassesClusterInterface) Cluster(path logicalcluster.Path) networkingv1client.IngressClassInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).IngressClasses()
+	return c.clientCache.ClusterOrDie(path).IngressClasses()
 }
 
 // List returns the entire collection of all IngressClasses across all clusters.
 func (c *ingressClassesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*networkingv1.IngressClassList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).IngressClasses().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).IngressClasses().List(ctx, opts)
 }
 
 // Watch begins to watch all IngressClasses across all clusters.
 func (c *ingressClassesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).IngressClasses().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).IngressClasses().Watch(ctx, opts)
 }

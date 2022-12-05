@@ -52,20 +52,20 @@ type runtimeClassesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *runtimeClassesClusterInterface) Cluster(name logicalcluster.Path) nodev1client.RuntimeClassInterface {
-	if name == logicalcluster.Wildcard {
+func (c *runtimeClassesClusterInterface) Cluster(path logicalcluster.Path) nodev1client.RuntimeClassInterface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
-	return c.clientCache.ClusterOrDie(name).RuntimeClasses()
+	return c.clientCache.ClusterOrDie(path).RuntimeClasses()
 }
 
 // List returns the entire collection of all RuntimeClasses across all clusters.
 func (c *runtimeClassesClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*nodev1.RuntimeClassList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).RuntimeClasses().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).RuntimeClasses().List(ctx, opts)
 }
 
 // Watch begins to watch all RuntimeClasses across all clusters.
 func (c *runtimeClassesClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).RuntimeClasses().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).RuntimeClasses().Watch(ctx, opts)
 }
