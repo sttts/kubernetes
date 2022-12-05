@@ -46,11 +46,11 @@ type ApiextensionsV1ClusterClient struct {
 	clientCache kcpclient.Cache[*apiextensionsv1.ApiextensionsV1Client]
 }
 
-func (c *ApiextensionsV1ClusterClient) Cluster(name logicalcluster.Path) apiextensionsv1.ApiextensionsV1Interface {
-	if name == logicalcluster.Wildcard {
+func (c *ApiextensionsV1ClusterClient) Cluster(path logicalcluster.Path) apiextensionsv1.ApiextensionsV1Interface {
+	if path == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
-	return c.clientCache.ClusterOrDie(name)
+	return c.clientCache.ClusterOrDie(path)
 }
 
 

@@ -51,7 +51,7 @@ func NewSimpleClientset(objects ...runtime.Object) *ClusterClientset {
 	o.AddAll(objects...)
 
 	cs := &ClusterClientset{Fake: &kcptesting.Fake{}, tracker: o}
-	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: cs.Fake, Cluster: logicalcluster.Wildcard}
+	cs.discovery = &kcpfakediscovery.FakeDiscovery{Fake: cs.Fake, Cluster: logicalcluster.WildcardPath}
 	cs.AddReactor("*", "*", kcptesting.ObjectReaction(o))
 	cs.AddWatchReactor("*", kcptesting.WatchReaction(o))
 
@@ -88,7 +88,7 @@ func (c *ClusterClientset) ApiextensionsV1beta1() kcpapiextensionsv1beta1.Apiext
 }
 // Cluster scopes this clientset to one cluster.
 func (c *ClusterClientset) Cluster(cluster logicalcluster.Path) client.Interface {
-	if cluster == logicalcluster.Wildcard {
+	if cluster == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 	return &Clientset{
