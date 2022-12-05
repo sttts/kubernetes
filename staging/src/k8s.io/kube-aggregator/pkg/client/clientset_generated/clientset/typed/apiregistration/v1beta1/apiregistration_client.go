@@ -21,7 +21,6 @@ package v1beta1
 import (
 	"net/http"
 
-	logicalcluster "github.com/kcp-dev/logicalcluster/v2"
 	rest "k8s.io/client-go/rest"
 	v1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	"k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
@@ -35,7 +34,6 @@ type ApiregistrationV1beta1Interface interface {
 // ApiregistrationV1beta1Client is used to interact with features provided by the apiregistration.k8s.io group.
 type ApiregistrationV1beta1Client struct {
 	restClient rest.Interface
-	cluster    logicalcluster.Name
 }
 
 func (c *ApiregistrationV1beta1Client) APIServices() APIServiceInterface {
@@ -68,7 +66,7 @@ func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ApiregistrationV1be
 	if err != nil {
 		return nil, err
 	}
-	return &ApiregistrationV1beta1Client{restClient: client}, nil
+	return &ApiregistrationV1beta1Client{client}, nil
 }
 
 // NewForConfigOrDie creates a new ApiregistrationV1beta1Client for the given config and
@@ -83,12 +81,7 @@ func NewForConfigOrDie(c *rest.Config) *ApiregistrationV1beta1Client {
 
 // New creates a new ApiregistrationV1beta1Client for the given RESTClient.
 func New(c rest.Interface) *ApiregistrationV1beta1Client {
-	return &ApiregistrationV1beta1Client{restClient: c}
-}
-
-// NewWithCluster creates a new ApiregistrationV1beta1Client for the given RESTClient and cluster.
-func NewWithCluster(c rest.Interface, cluster logicalcluster.Name) *ApiregistrationV1beta1Client {
-	return &ApiregistrationV1beta1Client{restClient: c, cluster: cluster}
+	return &ApiregistrationV1beta1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {

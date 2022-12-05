@@ -22,7 +22,6 @@ import (
 	"context"
 	"time"
 
-	logicalcluster "github.com/kcp-dev/logicalcluster/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -53,15 +52,13 @@ type APIServiceInterface interface {
 
 // aPIServices implements APIServiceInterface
 type aPIServices struct {
-	client  rest.Interface
-	cluster logicalcluster.Name
+	client rest.Interface
 }
 
 // newAPIServices returns a APIServices
 func newAPIServices(c *ApiregistrationV1Client) *aPIServices {
 	return &aPIServices{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
+		client: c.RESTClient(),
 	}
 }
 
@@ -69,7 +66,6 @@ func newAPIServices(c *ApiregistrationV1Client) *aPIServices {
 func (c *aPIServices) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.APIService, err error) {
 	result = &v1.APIService{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Resource("apiservices").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -86,7 +82,6 @@ func (c *aPIServices) List(ctx context.Context, opts metav1.ListOptions) (result
 	}
 	result = &v1.APIServiceList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Resource("apiservices").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -103,7 +98,6 @@ func (c *aPIServices) Watch(ctx context.Context, opts metav1.ListOptions) (watch
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Resource("apiservices").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -114,7 +108,6 @@ func (c *aPIServices) Watch(ctx context.Context, opts metav1.ListOptions) (watch
 func (c *aPIServices) Create(ctx context.Context, aPIService *v1.APIService, opts metav1.CreateOptions) (result *v1.APIService, err error) {
 	result = &v1.APIService{}
 	err = c.client.Post().
-		Cluster(c.cluster).
 		Resource("apiservices").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(aPIService).
@@ -127,7 +120,6 @@ func (c *aPIServices) Create(ctx context.Context, aPIService *v1.APIService, opt
 func (c *aPIServices) Update(ctx context.Context, aPIService *v1.APIService, opts metav1.UpdateOptions) (result *v1.APIService, err error) {
 	result = &v1.APIService{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Resource("apiservices").
 		Name(aPIService.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -142,7 +134,6 @@ func (c *aPIServices) Update(ctx context.Context, aPIService *v1.APIService, opt
 func (c *aPIServices) UpdateStatus(ctx context.Context, aPIService *v1.APIService, opts metav1.UpdateOptions) (result *v1.APIService, err error) {
 	result = &v1.APIService{}
 	err = c.client.Put().
-		Cluster(c.cluster).
 		Resource("apiservices").
 		Name(aPIService.Name).
 		SubResource("status").
@@ -156,7 +147,6 @@ func (c *aPIServices) UpdateStatus(ctx context.Context, aPIService *v1.APIServic
 // Delete takes name of the aPIService and deletes it. Returns an error if one occurs.
 func (c *aPIServices) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Resource("apiservices").
 		Name(name).
 		Body(&opts).
@@ -171,7 +161,6 @@ func (c *aPIServices) DeleteCollection(ctx context.Context, opts metav1.DeleteOp
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Cluster(c.cluster).
 		Resource("apiservices").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -184,7 +173,6 @@ func (c *aPIServices) DeleteCollection(ctx context.Context, opts metav1.DeleteOp
 func (c *aPIServices) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.APIService, err error) {
 	result = &v1.APIService{}
 	err = c.client.Patch(pt).
-		Cluster(c.cluster).
 		Resource("apiservices").
 		Name(name).
 		SubResource(subresources...).
