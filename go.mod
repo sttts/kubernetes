@@ -140,6 +140,7 @@ require (
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3
 	sigs.k8s.io/yaml v1.3.0
+	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221202162321-d770b4ecb0d6
 )
 
 replace (
@@ -302,8 +303,6 @@ replace (
 	github.com/julienschmidt/httprouter => github.com/julienschmidt/httprouter v1.3.0
 	github.com/jung-kurt/gofpdf => github.com/jung-kurt/gofpdf v1.0.3-0.20190309125859-24315acbbda5
 	github.com/karrick/godirwalk => github.com/karrick/godirwalk v1.16.1
-	github.com/kcp-dev/apimachinery => github.com/kcp-dev/apimachinery v0.0.0-20221102195355-d65878bc16be
-	github.com/kcp-dev/client-go => github.com/kcp-dev/client-go v0.0.0-20221025140308-a18ccea074a6
 	github.com/kcp-dev/logicalcluster/v2 => github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
 	github.com/kisielk/errcheck => github.com/kisielk/errcheck v1.5.0
 	github.com/kisielk/gotool => github.com/kisielk/gotool v1.0.0
@@ -499,4 +498,5 @@ replace (
 
 	github.com/kcp-dev/apimachinery => ../../github.com/kcp-dev/apimachinery
 	github.com/kcp-dev/client-go => ../../github.com/kcp-dev/client-go
+	github.com/kcp-dev/logicalcluster/v3 => ../../github.com/kcp-dev/logicalcluster
 )
