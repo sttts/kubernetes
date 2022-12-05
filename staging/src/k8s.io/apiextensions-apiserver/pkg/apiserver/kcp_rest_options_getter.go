@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -37,11 +37,11 @@ func (t apiBindingAwareCRDRESTOptionsGetter) GetRESTOptions(resource schema.Grou
 	//   - /registry/mygroup.io/widgets/identity1234/...
 	//   - /registry/mygroup.io/widgets/identity4567/...
 	if strings.HasSuffix(string(t.crd.UID), ".wildcard.partial-metadata") {
-		ret.StorageConfig.KcpExtraStorageMetadata.Cluster = genericapirequest.Cluster{Name: logicalcluster.Wildcard, PartialMetadataRequest: true}
+		ret.StorageConfig.KcpExtraStorageMetadata.Cluster = genericapirequest.Cluster{Wildcard: true, PartialMetadataRequest: true}
 		return ret, nil
 	}
 
-	ret.StorageConfig.KcpExtraStorageMetadata.Cluster = genericapirequest.Cluster{Name: logicalcluster.Wildcard}
+	ret.StorageConfig.KcpExtraStorageMetadata.Cluster = genericapirequest.Cluster{Wildcard: true}
 	// Normal CRDs (not coming from an APIBinding) are stored in e.g. /registry/mygroup.io/widgets/customresources/...
 	if _, bound := t.crd.Annotations["apis.kcp.dev/bound-crd"]; !bound {
 		ret.ResourcePrefix += "/customresources"

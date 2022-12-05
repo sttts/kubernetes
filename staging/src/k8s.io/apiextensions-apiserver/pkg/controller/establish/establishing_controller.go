@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/kcp-dev/logicalcluster/v3"
+
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
 	kcpapiextensionsv1client "k8s.io/apiextensions-apiserver/pkg/client/kcp/clientset/versioned/typed/apiextensions/v1"
 	kcpapiextensionsv1informers "k8s.io/apiextensions-apiserver/pkg/client/kcp/informers/externalversions/apiextensions/v1"
 	kcpapiextensionsv1listers "k8s.io/apiextensions-apiserver/pkg/client/kcp/listers/apiextensions/v1"
@@ -145,7 +146,7 @@ func (ec *EstablishingController) sync(key string) error {
 	apiextensionshelpers.SetCRDCondition(crd, establishedCondition)
 
 	// Update server with new CRD condition.
-	_, err = ec.crdClient.CustomResourceDefinitions().Cluster(clusterName).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
+	_, err = ec.crdClient.CustomResourceDefinitions().Cluster(clusterName.Path()).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		// deleted or changed in the meantime, we'll get called again
 		return nil

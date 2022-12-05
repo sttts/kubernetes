@@ -23,9 +23,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kcp-dev/logicalcluster/v3"
+
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
 	kcpthirdpartycache "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/tools/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
 	kcpapiextensionsv1client "k8s.io/apiextensions-apiserver/pkg/client/kcp/clientset/versioned/typed/apiextensions/v1"
 	kcpapiextensionsv1informers "k8s.io/apiextensions-apiserver/pkg/client/kcp/informers/externalversions/apiextensions/v1"
 	kcpapiextensionsv1listers "k8s.io/apiextensions-apiserver/pkg/client/kcp/listers/apiextensions/v1"
@@ -284,7 +285,7 @@ func (c *NamingConditionController) sync(key string) error {
 	apiextensionshelpers.SetCRDCondition(crd, namingCondition)
 	apiextensionshelpers.SetCRDCondition(crd, establishedCondition)
 
-	updatedObj, err := c.crdClient.CustomResourceDefinitions().Cluster(clusterName).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
+	updatedObj, err := c.crdClient.CustomResourceDefinitions().Cluster(clusterName.Path()).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		// deleted or changed in the meantime, we'll get called again
 		return nil
