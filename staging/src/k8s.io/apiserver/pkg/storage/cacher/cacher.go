@@ -24,8 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kcp-dev/logicalcluster/v2"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -384,7 +382,7 @@ func NewCacherFromConfig(config Config) (*Cacher, error) {
 	// empty storage metadata usually indicate build-in resources
 	// for those we require only a WildCard cluster to be present in the ctx
 	if config.KcpExtraStorageMetadata == nil {
-		config.KcpExtraStorageMetadata = &storagebackend.KcpStorageMetadata{Cluster: genericapirequest.Cluster{Name: logicalcluster.Wildcard}}
+		config.KcpExtraStorageMetadata = &storagebackend.KcpStorageMetadata{Cluster: genericapirequest.Cluster{Wildcard: true}}
 	}
 
 	watchCache := newWatchCache(

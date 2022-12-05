@@ -25,8 +25,8 @@ import (
 	"strings"
 
 	"github.com/emicklei/go-restful"
+	"github.com/kcp-dev/logicalcluster/v3"
 	"k8s.io/klog/v2"
-	"github.com/kcp-dev/logicalcluster/v2"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -111,7 +111,7 @@ func (a *APIServerHandler) ListedPaths(clusterName logicalcluster.Name) []string
 		handledPaths = append(handledPaths, ws.RootPath())
 	}
 
-	for _, path := range a.NonGoRestfulMux.ListedPaths(logicalcluster.New("")) {
+	for _, path := range a.NonGoRestfulMux.ListedPaths(logicalcluster.Name("")) {
 		if a.PathValidForCluster == nil || a.PathValidForCluster(path, clusterName) {
 			handledPaths = append(handledPaths, path)
 		}
@@ -162,7 +162,7 @@ func (d director) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	d.nonGoRestfulMux.ServeHTTP(w, req)
 }
 
-//TODO: Unify with RecoverPanics?
+// TODO: Unify with RecoverPanics?
 func logStackOnRecover(s runtime.NegotiatedSerializer, panicReason interface{}, w http.ResponseWriter) {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("recover from panic situation: - %v\r\n", panicReason))

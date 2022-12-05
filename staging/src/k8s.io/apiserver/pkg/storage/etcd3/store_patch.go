@@ -19,7 +19,7 @@ package etcd3
 import (
 	"strings"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
@@ -33,7 +33,7 @@ import (
 // - CR partial metadata request: <prefix>/identity/clusterName/<remainder>
 // - any other request: <prefix>/clusterName/<remainder>.
 func adjustClusterNameIfWildcard(shard genericapirequest.Shard, cluster *genericapirequest.Cluster, crdRequest bool, keyPrefix, key string) logicalcluster.Name {
-	if cluster.Name != logicalcluster.Wildcard && !cluster.Wildcard { // TODO: fix this duplicity, as well
+	if !cluster.Wildcard {
 		return cluster.Name
 	}
 
@@ -43,9 +43,9 @@ func adjustClusterNameIfWildcard(shard genericapirequest.Shard, cluster *generic
 	extract := func(minLen, i int) logicalcluster.Name {
 		if len(parts) < minLen {
 			klog.Warningf("shard=%s cluster=%s invalid key=%s had %d parts, not %d", shard, cluster, keyWithoutPrefix, len(parts), minLen)
-			return logicalcluster.Name{}
+			return ""
 		}
-		return logicalcluster.New(parts[i])
+		return logicalcluster.Name(parts[i])
 	}
 
 	switch {

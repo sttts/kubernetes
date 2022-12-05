@@ -20,8 +20,8 @@ import (
 	"net/http"
 
 	restful "github.com/emicklei/go-restful"
+	"github.com/kcp-dev/logicalcluster/v3"
 	"k8s.io/klog/v2"
-	"github.com/kcp-dev/logicalcluster/v2"
 
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/server/mux"
@@ -140,7 +140,6 @@ func (p *openAPIServiceProvider) Register() {
 	}
 
 	err = defaultOpenAPIService.RegisterOpenAPIVersionedService(p.path, &clusterAwarePathHandler{
-		clusterName: logicalcluster.Name{},
 		addHandlerForCluster: func(clusterName logicalcluster.Name, handler http.Handler) {
 			p.defaultOpenAPIServiceHandler = handler
 		},
