@@ -17,7 +17,6 @@ limitations under the License.
 // Package app implements a server that runs a set of active
 // components.  This includes replication controllers, service endpoints and
 // nodes.
-//
 package app
 
 import (
@@ -28,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kcp-dev/logicalcluster/v2"
 	"k8s.io/klog/v2"
 
 	v1 "k8s.io/api/core/v1"
