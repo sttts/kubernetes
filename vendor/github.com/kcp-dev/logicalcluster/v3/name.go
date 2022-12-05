@@ -54,6 +54,11 @@ func (n Name) IsValid() bool {
 	return n.value == "*" || clusterNameRegExp.MatchString(n.value)
 }
 
+// Empty returns true if the cluster name is unset.
+func (n Name) Empty() bool {
+	return n.value == ""
+}
+
 // Object is a local interface representation of the Kubernetes metav1.Object, to avoid dependencies on
 // k8s.io/apimachinery.
 type Object interface {
