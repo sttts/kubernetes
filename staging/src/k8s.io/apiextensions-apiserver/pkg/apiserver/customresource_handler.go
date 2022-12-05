@@ -32,7 +32,6 @@ import (
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
 
-	"github.com/kcp-dev/logicalcluster/v2"
 	apiextensionshelpers "k8s.io/apiextensions-apiserver/pkg/apihelpers"
 	apiextensionsinternal "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
