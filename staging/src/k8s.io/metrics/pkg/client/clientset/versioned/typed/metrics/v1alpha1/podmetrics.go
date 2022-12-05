@@ -22,7 +22,6 @@ import (
 	"context"
 	"time"
 
-	logicalcluster "github.com/kcp-dev/logicalcluster/v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -46,17 +45,15 @@ type PodMetricsInterface interface {
 
 // podMetricses implements PodMetricsInterface
 type podMetricses struct {
-	client  rest.Interface
-	cluster logicalcluster.Name
-	ns      string
+	client rest.Interface
+	ns     string
 }
 
 // newPodMetricses returns a PodMetricses
 func newPodMetricses(c *MetricsV1alpha1Client, namespace string) *podMetricses {
 	return &podMetricses{
-		client:  c.RESTClient(),
-		cluster: c.cluster,
-		ns:      namespace,
+		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -64,7 +61,6 @@ func newPodMetricses(c *MetricsV1alpha1Client, namespace string) *podMetricses {
 func (c *podMetricses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.PodMetrics, err error) {
 	result = &v1alpha1.PodMetrics{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Namespace(c.ns).
 		Resource("pods").
 		Name(name).
@@ -82,7 +78,6 @@ func (c *podMetricses) List(ctx context.Context, opts v1.ListOptions) (result *v
 	}
 	result = &v1alpha1.PodMetricsList{}
 	err = c.client.Get().
-		Cluster(c.cluster).
 		Namespace(c.ns).
 		Resource("pods").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -100,7 +95,6 @@ func (c *podMetricses) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Cluster(c.cluster).
 		Namespace(c.ns).
 		Resource("pods").
 		VersionedParams(&opts, scheme.ParameterCodec).
