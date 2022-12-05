@@ -23,7 +23,7 @@ import (
 
 	kcpkubernetesclientset "github.com/kcp-dev/client-go/kubernetes"
 	kcpcorev1listers "github.com/kcp-dev/client-go/listers/core/v1"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -48,7 +48,7 @@ type serviceAccountTokenClusterGetter struct {
 
 func (s *serviceAccountTokenClusterGetter) Cluster(name logicalcluster.Name) serviceaccount.ServiceAccountTokenGetter {
 	return NewGetterFromClient(
-		s.client.Cluster(name),
+		s.client.Cluster(name.Path()),
 		s.secretLister.Cluster(name),
 		s.serviceAccountLister.Cluster(name),
 		nil,

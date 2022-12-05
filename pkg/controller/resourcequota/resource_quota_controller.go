@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"k8s.io/klog/v2"
 

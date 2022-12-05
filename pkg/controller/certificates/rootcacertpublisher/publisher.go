@@ -23,10 +23,10 @@ import (
 	"time"
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	kcpkubernetesclientset "github.com/kcp-dev/client-go/kubernetes"
 	kcpcorev1informers "github.com/kcp-dev/client-go/informers/core/v1"
+	kcpkubernetesclientset "github.com/kcp-dev/client-go/kubernetes"
 	kcpcorev1listers "github.com/kcp-dev/client-go/listers/core/v1"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -222,7 +222,7 @@ func (c *Publisher) syncNamespace(ctx context.Context, key string) (err error) {
 
 	switch {
 	case apierrors.IsNotFound(err):
-		_, err = c.client.Cluster(clusterName).CoreV1().ConfigMaps(name).Create(ctx, &v1.ConfigMap{
+		_, err = c.client.Cluster(clusterName.Path()).CoreV1().ConfigMaps(name).Create(ctx, &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        RootCACertConfigMapName,
 				Annotations: map[string]string{DescriptionAnnotation: Description},
@@ -257,7 +257,7 @@ func (c *Publisher) syncNamespace(ctx context.Context, key string) (err error) {
 	}
 	cm.Annotations[DescriptionAnnotation] = Description
 
-	_, err = c.client.Cluster(clusterName).CoreV1().ConfigMaps(name).Update(ctx, cm, metav1.UpdateOptions{})
+	_, err = c.client.Cluster(clusterName.Path()).CoreV1().ConfigMaps(name).Update(ctx, cm, metav1.UpdateOptions{})
 	return err
 }
 
