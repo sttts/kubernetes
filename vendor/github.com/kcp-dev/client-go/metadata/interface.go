@@ -28,12 +28,12 @@ import (
 )
 
 type ClusterInterface interface {
-	Cluster(logicalcluster.Name) metadata.Interface
+	Cluster(logicalcluster.Path) metadata.Interface
 	Resource(resource schema.GroupVersionResource) ResourceClusterInterface
 }
 
 type ResourceClusterInterface interface {
-	Cluster(logicalcluster.Name) metadata.Getter
+	Cluster(logicalcluster.Path) metadata.Getter
 	List(ctx context.Context, opts metav1.ListOptions) (*metav1.PartialObjectMetadataList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }

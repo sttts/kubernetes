@@ -8,7 +8,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/emicklei/go-restful v2.9.5+incompatible
 	github.com/gogo/protobuf v1.3.2
-	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
+	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1
@@ -30,7 +30,7 @@ replace (
 	github.com/google/go-cmp => github.com/google/go-cmp v0.5.5
 
 	github.com/kcp-dev/apimachinery => github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56
-	github.com/kcp-dev/client-go => github.com/p0lyn0mial/client-go v0.0.0-20221205142109-65bc4b8b4841
+	github.com/kcp-dev/client-go => github.com/p0lyn0mial/client-go v0.0.0-20221205150201-dfa4fc4b06bb
 	github.com/kcp-dev/logicalcluster/v3 => github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226
 	github.com/stretchr/testify => github.com/stretchr/testify v1.7.0
 	golang.org/x/net => golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd

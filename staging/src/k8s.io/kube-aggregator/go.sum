@@ -289,7 +289,6 @@ github.com/jstemmer/go-junit-report v0.9.1/go.mod h1:Brl9GWCQeLvo8nXZwPNNblvFj/X
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
 github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
-github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1 h1:6EMfOioekQNrpcHEK7k2ANBWogFMlf+3xTB3CC4k+2s=
 github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1/go.mod h1:lfWJL764jKFJxZWOGuFuT3PCCLPo6lV5Cl8P7u9T05g=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=
@@ -357,8 +356,8 @@ github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1y
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56 h1:XxRBHVw8nfR2hS4PrwpfLmGTFHW4fpRmK2o6wtLY5k0=
 github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56/go.mod h1:XEv+UQlH7NT41TOZYRK+LRo2URcwYjP8GQqOqtBk0RI=
-github.com/p0lyn0mial/client-go v0.0.0-20221205142109-65bc4b8b4841 h1:i//BsIdz3Mfou7lY70S31aKa7DEhksUKAG3/k3oBTrs=
-github.com/p0lyn0mial/client-go v0.0.0-20221205142109-65bc4b8b4841/go.mod h1:kLMJgfd5gpWZv2y42vrn1W7WgeFpBlDV3vcJCqx4qxk=
+github.com/p0lyn0mial/client-go v0.0.0-20221205150201-dfa4fc4b06bb h1:hxhAOWnBMTkLdxIJbvKh0jUKkZp51t7/+bbdxYhb67g=
+github.com/p0lyn0mial/client-go v0.0.0-20221205150201-dfa4fc4b06bb/go.mod h1:kLMJgfd5gpWZv2y42vrn1W7WgeFpBlDV3vcJCqx4qxk=
 github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226 h1:zS7dh4JYSew1wAimDQjOQLndo/65hwXzeZHnt0Kl5IM=
 github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226/go.mod h1:6rb68Tntup98cRr9+50rvSDxUbfqrC1yQ/T6RiZcSgA=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=

@@ -39,8 +39,8 @@ type ClusterClientset struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *ClusterClientset) Cluster(name logicalcluster.Name) metadata.Interface {
-	return c.clientCache.ClusterOrDie(name)
+func (c *ClusterClientset) Cluster(path logicalcluster.Path) metadata.Interface {
+	return c.clientCache.ClusterOrDie(path)
 }
 
 func (c *ClusterClientset) Resource(resource schema.GroupVersionResource) ResourceClusterInterface {
@@ -107,8 +107,8 @@ type ClusterResourceClient struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *ClusterResourceClient) Cluster(name logicalcluster.Name) metadata.Getter {
-	if name == logicalcluster.Wildcard {
+func (c *ClusterResourceClient) Cluster(name logicalcluster.Path) metadata.Getter {
+	if name == logicalcluster.WildcardPath {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
@@ -117,10 +117,10 @@ func (c *ClusterResourceClient) Cluster(name logicalcluster.Name) metadata.Gette
 
 // List returns the entire collection of all resources across all clusters.
 func (c *ClusterResourceClient) List(ctx context.Context, opts metav1.ListOptions) (*metav1.PartialObjectMetadataList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Resource(c.resource).List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Resource(c.resource).List(ctx, opts)
 }
 
 // Watch begins to watch all resources across all clusters.
 func (c *ClusterResourceClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).Resource(c.resource).Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).Resource(c.resource).Watch(ctx, opts)
 }
