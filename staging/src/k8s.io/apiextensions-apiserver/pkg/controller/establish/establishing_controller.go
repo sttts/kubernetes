@@ -145,7 +145,7 @@ func (ec *EstablishingController) sync(key string) error {
 	apiextensionshelpers.SetCRDCondition(crd, establishedCondition)
 
 	// Update server with new CRD condition.
-	_, err = ec.crdClient.CustomResourceDefinitions().Cluster(clusterName).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
+	_, err = ec.crdClient.CustomResourceDefinitions().Cluster(clusterName.Path()).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		// deleted or changed in the meantime, we'll get called again
 		return nil

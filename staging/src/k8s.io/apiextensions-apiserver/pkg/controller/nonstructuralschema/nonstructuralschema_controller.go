@@ -169,7 +169,7 @@ func (c *ConditionController) sync(key string) error {
 		apiextensionshelpers.SetCRDCondition(crd, *cond)
 	}
 
-	_, err = c.crdClient.CustomResourceDefinitions().Cluster(clusterName).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
+	_, err = c.crdClient.CustomResourceDefinitions().Cluster(clusterName.Path()).UpdateStatus(context.TODO(), crd, metav1.UpdateOptions{})
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		// deleted or changed in the meantime, we'll get called again
 		return nil
