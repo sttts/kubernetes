@@ -45,7 +45,7 @@ func adjustClusterNameIfWildcard(shard genericapirequest.Shard, cluster *generic
 			klog.Warningf("shard=%s cluster=%s invalid key=%s had %d parts, not %d", shard, cluster, keyWithoutPrefix, len(parts), minLen)
 			return logicalcluster.Name{}
 		}
-		return logicalcluster.New(parts[i])
+		return logicalcluster.NewName(parts[i])
 	}
 
 	switch {
