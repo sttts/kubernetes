@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/kcp-dev/logicalcluster/v3"
 	"k8s.io/klog/v2"
 
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
