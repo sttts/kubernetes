@@ -222,7 +222,7 @@ func (c *Publisher) syncNamespace(ctx context.Context, key string) (err error) {
 
 	switch {
 	case apierrors.IsNotFound(err):
-		_, err = c.client.Cluster(clusterName).CoreV1().ConfigMaps(name).Create(ctx, &v1.ConfigMap{
+		_, err = c.client.Cluster(clusterName.Path()).CoreV1().ConfigMaps(name).Create(ctx, &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        RootCACertConfigMapName,
 				Annotations: map[string]string{DescriptionAnnotation: Description},
@@ -257,7 +257,7 @@ func (c *Publisher) syncNamespace(ctx context.Context, key string) (err error) {
 	}
 	cm.Annotations[DescriptionAnnotation] = Description
 
-	_, err = c.client.Cluster(clusterName).CoreV1().ConfigMaps(name).Update(ctx, cm, metav1.UpdateOptions{})
+	_, err = c.client.Cluster(clusterName.Path()).CoreV1().ConfigMaps(name).Update(ctx, cm, metav1.UpdateOptions{})
 	return err
 }
 

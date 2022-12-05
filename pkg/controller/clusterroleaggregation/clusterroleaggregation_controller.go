@@ -145,7 +145,7 @@ func (c *ClusterRoleAggregationController) applyClusterRoles(ctx context.Context
 		WithRules(toApplyPolicyRules(newPolicyRules)...)
 
 	opts := metav1.ApplyOptions{FieldManager: "clusterrole-aggregation-controller", Force: true}
-	_, err := c.clusterRoleClient.ClusterRoles().Cluster(logicalcluster.From(sharedClusterRole)).Apply(ctx, clusterRoleApply, opts)
+	_, err := c.clusterRoleClient.ClusterRoles().Cluster(logicalcluster.From(sharedClusterRole).Path()).Apply(ctx, clusterRoleApply, opts)
 	return err
 }
 
@@ -155,7 +155,7 @@ func (c *ClusterRoleAggregationController) updateClusterRoles(ctx context.Contex
 	for _, rule := range newPolicyRules {
 		clusterRole.Rules = append(clusterRole.Rules, *rule.DeepCopy())
 	}
-	_, err := c.clusterRoleClient.ClusterRoles().Cluster(logicalcluster.From(sharedClusterRole)).Update(ctx, clusterRole, metav1.UpdateOptions{})
+	_, err := c.clusterRoleClient.ClusterRoles().Cluster(logicalcluster.From(sharedClusterRole).Path()).Update(ctx, clusterRole, metav1.UpdateOptions{})
 	return err
 }
 

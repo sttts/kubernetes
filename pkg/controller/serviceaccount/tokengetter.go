@@ -48,7 +48,7 @@ type serviceAccountTokenClusterGetter struct {
 
 func (s *serviceAccountTokenClusterGetter) Cluster(name logicalcluster.Name) serviceaccount.ServiceAccountTokenGetter {
 	return NewGetterFromClient(
-		s.client.Cluster(name),
+		s.client.Cluster(name.Path()),
 		s.secretLister.Cluster(name),
 		s.serviceAccountLister.Cluster(name),
 		nil,
