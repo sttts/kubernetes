@@ -111,7 +111,7 @@ func (a *APIServerHandler) ListedPaths(clusterName logicalcluster.Name) []string
 		handledPaths = append(handledPaths, ws.RootPath())
 	}
 
-	for _, path := range a.NonGoRestfulMux.ListedPaths(logicalcluster.New("")) {
+	for _, path := range a.NonGoRestfulMux.ListedPaths(logicalcluster.NewName("")) {
 		if a.PathValidForCluster == nil || a.PathValidForCluster(path, clusterName) {
 			handledPaths = append(handledPaths, path)
 		}
