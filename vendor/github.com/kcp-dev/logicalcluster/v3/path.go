@@ -24,8 +24,8 @@ import (
 )
 
 var (
-	// Wildcard is the name indicating cross-workspace requests.
-	Wildcard = Path{"*"}
+	// WildcardPath is the Path indicating cross-workspace requests.
+	WildcardPath = Path{"*"}
 
 	// None is the name indicating a cluster-unaware context.
 	None = New("")

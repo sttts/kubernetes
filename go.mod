@@ -55,7 +55,7 @@ require (
 	github.com/kcp-dev/apimachinery v0.0.0-20221205120156-b90e084cbd56
 	github.com/kcp-dev/client-go v0.0.0-20221205103028-e6b916c38744
 	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
-	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221205133720-98ab92d3ce2a
+	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226
 	github.com/libopenstorage/openstorage v1.0.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/lpabon/godbc v0.1.1 // indirect
@@ -307,7 +307,7 @@ replace (
 	github.com/kcp-dev/apimachinery => github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56
 	github.com/kcp-dev/client-go => github.com/p0lyn0mial/client-go v0.0.0-20221205103028-e6b916c38744
 	github.com/kcp-dev/logicalcluster/v2 => github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
-	github.com/kcp-dev/logicalcluster/v3 => github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205133720-98ab92d3ce2a
+	github.com/kcp-dev/logicalcluster/v3 => github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226
 	github.com/kisielk/errcheck => github.com/kisielk/errcheck v1.5.0
 	github.com/kisielk/gotool => github.com/kisielk/gotool v1.0.0
 	github.com/konsorten/go-windows-terminal-sequences => github.com/konsorten/go-windows-terminal-sequences v1.0.2

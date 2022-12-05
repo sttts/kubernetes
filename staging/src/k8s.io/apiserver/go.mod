@@ -21,7 +21,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/kcp-dev/apimachinery v0.0.0-20221205120156-b90e084cbd56
 	github.com/kcp-dev/client-go v0.0.0-20221205103028-e6b916c38744
-	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221205133720-98ab92d3ce2a
+	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 	github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
@@ -65,7 +65,7 @@ replace (
 
 	github.com/kcp-dev/apimachinery => github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56
 	github.com/kcp-dev/client-go => github.com/p0lyn0mial/client-go v0.0.0-20221205103028-e6b916c38744
-	github.com/kcp-dev/logicalcluster/v3 => github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205133720-98ab92d3ce2a
+	github.com/kcp-dev/logicalcluster/v3 => github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205140724-b21d40759226
 	github.com/stretchr/testify => github.com/stretchr/testify v1.7.0
 	golang.org/x/net => golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/sys => golang.org/x/sys v0.0.0-20220209214540-3681064d5158

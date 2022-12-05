@@ -19,6 +19,9 @@ package logicalcluster
 import "regexp"
 
 var (
+	// Wildcard is the Name indicating cross-workspace requests.
+	Wildcard = Name{"*"}
+
 	clusterNameRegExp = regexp.MustCompile(clusterNameString)
 )
 
