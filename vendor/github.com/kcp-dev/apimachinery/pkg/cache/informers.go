@@ -17,7 +17,7 @@ limitations under the License.
 package cache
 
 import (
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 	"k8s.io/client-go/tools/cache"
 )
 
