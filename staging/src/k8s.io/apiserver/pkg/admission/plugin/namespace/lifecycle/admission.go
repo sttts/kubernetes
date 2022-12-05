@@ -23,8 +23,8 @@ import (
 	"time"
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	kcpkubernetesclientset "github.com/kcp-dev/client-go/kubernetes"
 	kcpkubernetesinformers "github.com/kcp-dev/client-go/informers"
+	kcpkubernetesclientset "github.com/kcp-dev/client-go/kubernetes"
 	kcpcorev1listers "github.com/kcp-dev/client-go/listers/core/v1"
 	"k8s.io/klog/v2"
 
@@ -160,7 +160,7 @@ func (l *Lifecycle) Admit(ctx context.Context, a admission.Attributes, o admissi
 	// refuse to operate on non-existent namespaces
 	if !exists || forceLiveLookup {
 		// as a last resort, make a call directly to storage
-		namespace, err = l.client.Cluster(clusterName).CoreV1().Namespaces().Get(ctx, a.GetNamespace(), metav1.GetOptions{})
+		namespace, err = l.client.Cluster(clusterName.Path()).CoreV1().Namespaces().Get(ctx, a.GetNamespace(), metav1.GetOptions{})
 		switch {
 		case errors.IsNotFound(err):
 			return err
