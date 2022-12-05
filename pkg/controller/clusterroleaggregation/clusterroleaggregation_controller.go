@@ -23,10 +23,10 @@ import (
 	"time"
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	kcprbacclient "github.com/kcp-dev/client-go/kubernetes/typed/rbac/v1"
 	kcprbacinformers "github.com/kcp-dev/client-go/informers/rbac/v1"
+	kcprbacclient "github.com/kcp-dev/client-go/kubernetes/typed/rbac/v1"
 	kcprbaclisters "github.com/kcp-dev/client-go/listers/rbac/v1"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"

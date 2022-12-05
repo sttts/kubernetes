@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"k8s.io/apiserver/pkg/audit"
 	"k8s.io/klog/v2"
