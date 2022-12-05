@@ -53,7 +53,7 @@ require (
 	github.com/heketi/tests v0.0.0-20151005000721-f3775cbcefd6 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20190723014705-7c296d48a2b5
 	github.com/kcp-dev/apimachinery v0.0.0-20221205120156-b90e084cbd56
-	github.com/kcp-dev/client-go v0.0.0-20221025140308-a18ccea074a6
+	github.com/kcp-dev/client-go v0.0.0-20221205103028-e6b916c38744
 	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
 	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221205112657-d838b9d84605
 	github.com/libopenstorage/openstorage v1.0.0
@@ -305,7 +305,7 @@ replace (
 	github.com/karrick/godirwalk => github.com/karrick/godirwalk v1.16.1
 
 	github.com/kcp-dev/apimachinery => github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56
-	github.com/kcp-dev/client-go => github.com/kcp-dev/client-go v0.0.0-20221025140308-a18ccea074a6
+	github.com/kcp-dev/client-go => github.com/p0lyn0mial/client-go v0.0.0-20221205103028-e6b916c38744
 	github.com/kcp-dev/logicalcluster/v2 => github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
 	github.com/kcp-dev/logicalcluster/v3 => github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205112657-d838b9d84605
 	github.com/kisielk/errcheck => github.com/kisielk/errcheck v1.5.0

@@ -13,7 +13,7 @@ require (
 	github.com/google/gofuzz v1.1.0
 	github.com/google/uuid v1.1.2
 	github.com/kcp-dev/apimachinery v0.0.0-20221205120156-b90e084cbd56
-	github.com/kcp-dev/client-go v0.0.0-20221025140308-a18ccea074a6
+	github.com/kcp-dev/client-go v0.0.0-20221205103028-e6b916c38744
 	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
 	github.com/kcp-dev/logicalcluster/v3 v3.0.0-20221205112657-d838b9d84605
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
@@ -45,6 +45,7 @@ replace (
 	github.com/google/go-cmp => github.com/google/go-cmp v0.5.5
 
 	github.com/kcp-dev/apimachinery => github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56
+	github.com/kcp-dev/client-go => github.com/p0lyn0mial/client-go v0.0.0-20221205103028-e6b916c38744
 	github.com/kcp-dev/logicalcluster/v3 => github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205112657-d838b9d84605
 	github.com/stretchr/testify => github.com/stretchr/testify v1.7.0
 	golang.org/x/net => golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
