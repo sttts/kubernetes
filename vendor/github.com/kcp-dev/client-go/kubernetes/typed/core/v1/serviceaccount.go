@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type ServiceAccountsClusterGetter interface {
 // ServiceAccountClusterInterface can operate on ServiceAccounts across all clusters,
 // or scope down to one cluster and return a ServiceAccountsNamespacer.
 type ServiceAccountClusterInterface interface {
-	Cluster(logicalcluster.Name) ServiceAccountsNamespacer
+	Cluster(logicalcluster.Path) ServiceAccountsNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*corev1.ServiceAccountList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type serviceAccountsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *serviceAccountsClusterInterface) Cluster(name logicalcluster.Name) ServiceAccountsNamespacer {
+func (c *serviceAccountsClusterInterface) Cluster(name logicalcluster.Path) ServiceAccountsNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type ServiceAccountsNamespacer interface {
 
 type serviceAccountsNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *serviceAccountsNamespacer) Namespace(namespace string) corev1client.ServiceAccountInterface {

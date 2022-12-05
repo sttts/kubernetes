@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	autoscalingv2beta2 "k8s.io/client-go/kubernetes/typed/autoscaling/v2beta2"
 	"k8s.io/client-go/rest"
@@ -37,14 +37,14 @@ type AutoscalingV2beta2ClusterInterface interface {
 }
 
 type AutoscalingV2beta2ClusterScoper interface {
-	Cluster(logicalcluster.Name) autoscalingv2beta2.AutoscalingV2beta2Interface
+	Cluster(logicalcluster.Path) autoscalingv2beta2.AutoscalingV2beta2Interface
 }
 
 type AutoscalingV2beta2ClusterClient struct {
 	clientCache kcpclient.Cache[*autoscalingv2beta2.AutoscalingV2beta2Client]
 }
 
-func (c *AutoscalingV2beta2ClusterClient) Cluster(name logicalcluster.Name) autoscalingv2beta2.AutoscalingV2beta2Interface {
+func (c *AutoscalingV2beta2ClusterClient) Cluster(name logicalcluster.Path) autoscalingv2beta2.AutoscalingV2beta2Interface {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}

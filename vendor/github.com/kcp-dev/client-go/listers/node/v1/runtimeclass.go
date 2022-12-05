@@ -23,7 +23,7 @@ package v1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	nodev1 "k8s.io/api/node/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,14 @@ import (
 )
 
 // RuntimeClassClusterLister can list RuntimeClasses across all workspaces, or scope down to a RuntimeClassLister for one workspace.
+// All objects returned here must be treated as read-only.
 type RuntimeClassClusterLister interface {
+	// List lists all RuntimeClasses in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*nodev1.RuntimeClass, err error)
+	// Cluster returns a lister that can list and get RuntimeClasses in one workspace.
 	Cluster(cluster logicalcluster.Name) nodev1listers.RuntimeClassLister
+	RuntimeClassClusterListerExpansion
 }
 
 type runtimeClassClusterLister struct {
@@ -43,6 +48,10 @@ type runtimeClassClusterLister struct {
 }
 
 // NewRuntimeClassClusterLister returns a new RuntimeClassClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewRuntimeClassClusterLister(indexer cache.Indexer) *runtimeClassClusterLister {
 	return &runtimeClassClusterLister{indexer: indexer}
 }
@@ -68,24 +77,9 @@ type runtimeClassLister struct {
 
 // List lists all RuntimeClasses in the indexer for a workspace.
 func (s *runtimeClassLister) List(selector labels.Selector) (ret []*nodev1.RuntimeClass, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*nodev1.RuntimeClass)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*nodev1.RuntimeClass))
+	})
 	return ret, err
 }
 

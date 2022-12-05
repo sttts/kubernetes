@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type RolesClusterGetter interface {
 // RoleClusterInterface can operate on Roles across all clusters,
 // or scope down to one cluster and return a RolesNamespacer.
 type RoleClusterInterface interface {
-	Cluster(logicalcluster.Name) RolesNamespacer
+	Cluster(logicalcluster.Path) RolesNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*rbacv1beta1.RoleList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type rolesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *rolesClusterInterface) Cluster(name logicalcluster.Name) RolesNamespacer {
+func (c *rolesClusterInterface) Cluster(name logicalcluster.Path) RolesNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type RolesNamespacer interface {
 
 type rolesNamespacer struct {
 	clientCache kcpclient.Cache[*rbacv1beta1client.RbacV1beta1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *rolesNamespacer) Namespace(namespace string) rbacv1beta1client.RoleInterface {

@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type IngressesClusterGetter interface {
 // IngressClusterInterface can operate on Ingresses across all clusters,
 // or scope down to one cluster and return a IngressesNamespacer.
 type IngressClusterInterface interface {
-	Cluster(logicalcluster.Name) IngressesNamespacer
+	Cluster(logicalcluster.Path) IngressesNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*networkingv1beta1.IngressList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type ingressesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *ingressesClusterInterface) Cluster(name logicalcluster.Name) IngressesNamespacer {
+func (c *ingressesClusterInterface) Cluster(name logicalcluster.Path) IngressesNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type IngressesNamespacer interface {
 
 type ingressesNamespacer struct {
 	clientCache kcpclient.Cache[*networkingv1beta1client.NetworkingV1beta1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *ingressesNamespacer) Namespace(namespace string) networkingv1beta1client.IngressInterface {

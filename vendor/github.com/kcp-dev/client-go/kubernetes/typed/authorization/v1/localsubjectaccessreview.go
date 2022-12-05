@@ -23,7 +23,7 @@ package v1
 
 import (
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	authorizationv1client "k8s.io/client-go/kubernetes/typed/authorization/v1"
 )
@@ -36,7 +36,7 @@ type LocalSubjectAccessReviewsClusterGetter interface {
 
 // LocalSubjectAccessReviewClusterInterface can scope down to one cluster and return a LocalSubjectAccessReviewsNamespacer.
 type LocalSubjectAccessReviewClusterInterface interface {
-	Cluster(logicalcluster.Name) LocalSubjectAccessReviewsNamespacer
+	Cluster(logicalcluster.Path) LocalSubjectAccessReviewsNamespacer
 }
 
 type localSubjectAccessReviewsClusterInterface struct {
@@ -44,7 +44,7 @@ type localSubjectAccessReviewsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *localSubjectAccessReviewsClusterInterface) Cluster(name logicalcluster.Name) LocalSubjectAccessReviewsNamespacer {
+func (c *localSubjectAccessReviewsClusterInterface) Cluster(name logicalcluster.Path) LocalSubjectAccessReviewsNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -59,7 +59,7 @@ type LocalSubjectAccessReviewsNamespacer interface {
 
 type localSubjectAccessReviewsNamespacer struct {
 	clientCache kcpclient.Cache[*authorizationv1client.AuthorizationV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *localSubjectAccessReviewsNamespacer) Namespace(namespace string) authorizationv1client.LocalSubjectAccessReviewInterface {

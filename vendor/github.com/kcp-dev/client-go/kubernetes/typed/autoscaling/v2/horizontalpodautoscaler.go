@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type HorizontalPodAutoscalersClusterGetter interface {
 // HorizontalPodAutoscalerClusterInterface can operate on HorizontalPodAutoscalers across all clusters,
 // or scope down to one cluster and return a HorizontalPodAutoscalersNamespacer.
 type HorizontalPodAutoscalerClusterInterface interface {
-	Cluster(logicalcluster.Name) HorizontalPodAutoscalersNamespacer
+	Cluster(logicalcluster.Path) HorizontalPodAutoscalersNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*autoscalingv2.HorizontalPodAutoscalerList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type horizontalPodAutoscalersClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *horizontalPodAutoscalersClusterInterface) Cluster(name logicalcluster.Name) HorizontalPodAutoscalersNamespacer {
+func (c *horizontalPodAutoscalersClusterInterface) Cluster(name logicalcluster.Path) HorizontalPodAutoscalersNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type HorizontalPodAutoscalersNamespacer interface {
 
 type horizontalPodAutoscalersNamespacer struct {
 	clientCache kcpclient.Cache[*autoscalingv2client.AutoscalingV2Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *horizontalPodAutoscalersNamespacer) Namespace(namespace string) autoscalingv2client.HorizontalPodAutoscalerInterface {

@@ -23,20 +23,24 @@ package v1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 // PodClusterLister can list Pods across all workspaces, or scope down to a PodLister for one workspace.
+// All objects returned here must be treated as read-only.
 type PodClusterLister interface {
+	// List lists all Pods in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*corev1.Pod, err error)
+	// Cluster returns a lister that can list and get Pods in one workspace.
 	Cluster(cluster logicalcluster.Name) corev1listers.PodLister
+	PodClusterListerExpansion
 }
 
 type podClusterLister struct {
@@ -44,6 +48,11 @@ type podClusterLister struct {
 }
 
 // NewPodClusterLister returns a new PodClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewPodClusterLister(indexer cache.Indexer) *podClusterLister {
 	return &podClusterLister{indexer: indexer}
 }
@@ -69,24 +78,9 @@ type podLister struct {
 
 // List lists all Pods in the indexer for a workspace.
 func (s *podLister) List(selector labels.Selector) (ret []*corev1.Pod, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*corev1.Pod)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*corev1.Pod))
+	})
 	return ret, err
 }
 
@@ -104,28 +98,9 @@ type podNamespaceLister struct {
 
 // List lists all Pods in the indexer for a given workspace and namespace.
 func (s *podNamespaceLister) List(selector labels.Selector) (ret []*corev1.Pod, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	var list []interface{}
-	if s.namespace == metav1.NamespaceAll {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	} else {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*corev1.Pod)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.cluster, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*corev1.Pod))
+	})
 	return ret, err
 }
 

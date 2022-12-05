@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type PodsClusterGetter interface {
 // PodClusterInterface can operate on Pods across all clusters,
 // or scope down to one cluster and return a PodsNamespacer.
 type PodClusterInterface interface {
-	Cluster(logicalcluster.Name) PodsNamespacer
+	Cluster(logicalcluster.Path) PodsNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*corev1.PodList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type podsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *podsClusterInterface) Cluster(name logicalcluster.Name) PodsNamespacer {
+func (c *podsClusterInterface) Cluster(name logicalcluster.Path) PodsNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type PodsNamespacer interface {
 
 type podsNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *podsNamespacer) Namespace(namespace string) corev1client.PodInterface {

@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type ResourceQuotasClusterGetter interface {
 // ResourceQuotaClusterInterface can operate on ResourceQuotas across all clusters,
 // or scope down to one cluster and return a ResourceQuotasNamespacer.
 type ResourceQuotaClusterInterface interface {
-	Cluster(logicalcluster.Name) ResourceQuotasNamespacer
+	Cluster(logicalcluster.Path) ResourceQuotasNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*corev1.ResourceQuotaList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type resourceQuotasClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *resourceQuotasClusterInterface) Cluster(name logicalcluster.Name) ResourceQuotasNamespacer {
+func (c *resourceQuotasClusterInterface) Cluster(name logicalcluster.Path) ResourceQuotasNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type ResourceQuotasNamespacer interface {
 
 type resourceQuotasNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *resourceQuotasNamespacer) Namespace(namespace string) corev1client.ResourceQuotaInterface {

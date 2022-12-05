@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type ValidatingWebhookConfigurationsClusterGetter interface {
 // ValidatingWebhookConfigurationClusterInterface can operate on ValidatingWebhookConfigurations across all clusters,
 // or scope down to one cluster and return a admissionregistrationv1beta1client.ValidatingWebhookConfigurationInterface.
 type ValidatingWebhookConfigurationClusterInterface interface {
-	Cluster(logicalcluster.Name) admissionregistrationv1beta1client.ValidatingWebhookConfigurationInterface
+	Cluster(logicalcluster.Path) admissionregistrationv1beta1client.ValidatingWebhookConfigurationInterface
 	List(ctx context.Context, opts metav1.ListOptions) (*admissionregistrationv1beta1.ValidatingWebhookConfigurationList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type validatingWebhookConfigurationsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *validatingWebhookConfigurationsClusterInterface) Cluster(name logicalcluster.Name) admissionregistrationv1beta1client.ValidatingWebhookConfigurationInterface {
+func (c *validatingWebhookConfigurationsClusterInterface) Cluster(name logicalcluster.Path) admissionregistrationv1beta1client.ValidatingWebhookConfigurationInterface {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}

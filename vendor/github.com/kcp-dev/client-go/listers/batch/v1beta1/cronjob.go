@@ -23,20 +23,24 @@ package v1beta1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	batchv1beta1listers "k8s.io/client-go/listers/batch/v1beta1"
 	"k8s.io/client-go/tools/cache"
 )
 
 // CronJobClusterLister can list CronJobs across all workspaces, or scope down to a CronJobLister for one workspace.
+// All objects returned here must be treated as read-only.
 type CronJobClusterLister interface {
+	// List lists all CronJobs in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*batchv1beta1.CronJob, err error)
+	// Cluster returns a lister that can list and get CronJobs in one workspace.
 	Cluster(cluster logicalcluster.Name) batchv1beta1listers.CronJobLister
+	CronJobClusterListerExpansion
 }
 
 type cronJobClusterLister struct {
@@ -44,6 +48,11 @@ type cronJobClusterLister struct {
 }
 
 // NewCronJobClusterLister returns a new CronJobClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewCronJobClusterLister(indexer cache.Indexer) *cronJobClusterLister {
 	return &cronJobClusterLister{indexer: indexer}
 }
@@ -69,24 +78,9 @@ type cronJobLister struct {
 
 // List lists all CronJobs in the indexer for a workspace.
 func (s *cronJobLister) List(selector labels.Selector) (ret []*batchv1beta1.CronJob, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*batchv1beta1.CronJob)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*batchv1beta1.CronJob))
+	})
 	return ret, err
 }
 
@@ -104,28 +98,9 @@ type cronJobNamespaceLister struct {
 
 // List lists all CronJobs in the indexer for a given workspace and namespace.
 func (s *cronJobNamespaceLister) List(selector labels.Selector) (ret []*batchv1beta1.CronJob, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	var list []interface{}
-	if s.namespace == metav1.NamespaceAll {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	} else {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*batchv1beta1.CronJob)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.cluster, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*batchv1beta1.CronJob))
+	})
 	return ret, err
 }
 

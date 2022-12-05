@@ -23,20 +23,24 @@ package v1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 // DeploymentClusterLister can list Deployments across all workspaces, or scope down to a DeploymentLister for one workspace.
+// All objects returned here must be treated as read-only.
 type DeploymentClusterLister interface {
+	// List lists all Deployments in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*appsv1.Deployment, err error)
+	// Cluster returns a lister that can list and get Deployments in one workspace.
 	Cluster(cluster logicalcluster.Name) appsv1listers.DeploymentLister
+	DeploymentClusterListerExpansion
 }
 
 type deploymentClusterLister struct {
@@ -44,6 +48,11 @@ type deploymentClusterLister struct {
 }
 
 // NewDeploymentClusterLister returns a new DeploymentClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
+// - has the kcpcache.ClusterAndNamespaceIndex as an index
 func NewDeploymentClusterLister(indexer cache.Indexer) *deploymentClusterLister {
 	return &deploymentClusterLister{indexer: indexer}
 }
@@ -69,24 +78,9 @@ type deploymentLister struct {
 
 // List lists all Deployments in the indexer for a workspace.
 func (s *deploymentLister) List(selector labels.Selector) (ret []*appsv1.Deployment, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*appsv1.Deployment)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*appsv1.Deployment))
+	})
 	return ret, err
 }
 
@@ -104,28 +98,9 @@ type deploymentNamespaceLister struct {
 
 // List lists all Deployments in the indexer for a given workspace and namespace.
 func (s *deploymentNamespaceLister) List(selector labels.Selector) (ret []*appsv1.Deployment, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	var list []interface{}
-	if s.namespace == metav1.NamespaceAll {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	} else {
-		list, err = s.indexer.ByIndex(kcpcache.ClusterAndNamespaceIndexName, kcpcache.ClusterAndNamespaceIndexKey(s.cluster, s.namespace))
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*appsv1.Deployment)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
+	err = kcpcache.ListAllByClusterAndNamespace(s.indexer, s.cluster, s.namespace, selector, func(i interface{}) {
+		ret = append(ret, i.(*appsv1.Deployment))
+	})
 	return ret, err
 }
 

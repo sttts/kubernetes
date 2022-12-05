@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type ConfigMapsClusterGetter interface {
 // ConfigMapClusterInterface can operate on ConfigMaps across all clusters,
 // or scope down to one cluster and return a ConfigMapsNamespacer.
 type ConfigMapClusterInterface interface {
-	Cluster(logicalcluster.Name) ConfigMapsNamespacer
+	Cluster(logicalcluster.Path) ConfigMapsNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*corev1.ConfigMapList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type configMapsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *configMapsClusterInterface) Cluster(name logicalcluster.Name) ConfigMapsNamespacer {
+func (c *configMapsClusterInterface) Cluster(name logicalcluster.Path) ConfigMapsNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type ConfigMapsNamespacer interface {
 
 type configMapsNamespacer struct {
 	clientCache kcpclient.Cache[*corev1client.CoreV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *configMapsNamespacer) Namespace(namespace string) corev1client.ConfigMapInterface {

@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type CSIStorageCapacitiesClusterGetter interface {
 // CSIStorageCapacityClusterInterface can operate on CSIStorageCapacities across all clusters,
 // or scope down to one cluster and return a CSIStorageCapacitiesNamespacer.
 type CSIStorageCapacityClusterInterface interface {
-	Cluster(logicalcluster.Name) CSIStorageCapacitiesNamespacer
+	Cluster(logicalcluster.Path) CSIStorageCapacitiesNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*storagev1.CSIStorageCapacityList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type cSIStorageCapacitiesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *cSIStorageCapacitiesClusterInterface) Cluster(name logicalcluster.Name) CSIStorageCapacitiesNamespacer {
+func (c *cSIStorageCapacitiesClusterInterface) Cluster(name logicalcluster.Path) CSIStorageCapacitiesNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type CSIStorageCapacitiesNamespacer interface {
 
 type cSIStorageCapacitiesNamespacer struct {
 	clientCache kcpclient.Cache[*storagev1client.StorageV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *cSIStorageCapacitiesNamespacer) Namespace(namespace string) storagev1client.CSIStorageCapacityInterface {

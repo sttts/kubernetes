@@ -23,7 +23,7 @@ package v1
 
 import (
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	authorizationv1client "k8s.io/client-go/kubernetes/typed/authorization/v1"
 )
@@ -36,7 +36,7 @@ type SelfSubjectAccessReviewsClusterGetter interface {
 
 // SelfSubjectAccessReviewClusterInterface can scope down to one cluster and return a authorizationv1client.SelfSubjectAccessReviewInterface.
 type SelfSubjectAccessReviewClusterInterface interface {
-	Cluster(logicalcluster.Name) authorizationv1client.SelfSubjectAccessReviewInterface
+	Cluster(logicalcluster.Path) authorizationv1client.SelfSubjectAccessReviewInterface
 }
 
 type selfSubjectAccessReviewsClusterInterface struct {
@@ -44,7 +44,7 @@ type selfSubjectAccessReviewsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *selfSubjectAccessReviewsClusterInterface) Cluster(name logicalcluster.Name) authorizationv1client.SelfSubjectAccessReviewInterface {
+func (c *selfSubjectAccessReviewsClusterInterface) Cluster(name logicalcluster.Path) authorizationv1client.SelfSubjectAccessReviewInterface {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}

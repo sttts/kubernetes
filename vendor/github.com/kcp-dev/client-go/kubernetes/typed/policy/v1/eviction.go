@@ -23,7 +23,7 @@ package v1
 
 import (
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	policyv1client "k8s.io/client-go/kubernetes/typed/policy/v1"
 )
@@ -36,7 +36,7 @@ type EvictionsClusterGetter interface {
 
 // EvictionClusterInterface can scope down to one cluster and return a EvictionsNamespacer.
 type EvictionClusterInterface interface {
-	Cluster(logicalcluster.Name) EvictionsNamespacer
+	Cluster(logicalcluster.Path) EvictionsNamespacer
 }
 
 type evictionsClusterInterface struct {
@@ -44,7 +44,7 @@ type evictionsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *evictionsClusterInterface) Cluster(name logicalcluster.Name) EvictionsNamespacer {
+func (c *evictionsClusterInterface) Cluster(name logicalcluster.Path) EvictionsNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -59,7 +59,7 @@ type EvictionsNamespacer interface {
 
 type evictionsNamespacer struct {
 	clientCache kcpclient.Cache[*policyv1client.PolicyV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *evictionsNamespacer) Namespace(namespace string) policyv1client.EvictionInterface {

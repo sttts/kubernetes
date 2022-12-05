@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	internalv1alpha1 "k8s.io/api/apiserverinternal/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type StorageVersionsClusterGetter interface {
 // StorageVersionClusterInterface can operate on StorageVersions across all clusters,
 // or scope down to one cluster and return a internalv1alpha1client.StorageVersionInterface.
 type StorageVersionClusterInterface interface {
-	Cluster(logicalcluster.Name) internalv1alpha1client.StorageVersionInterface
+	Cluster(logicalcluster.Path) internalv1alpha1client.StorageVersionInterface
 	List(ctx context.Context, opts metav1.ListOptions) (*internalv1alpha1.StorageVersionList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type storageVersionsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *storageVersionsClusterInterface) Cluster(name logicalcluster.Name) internalv1alpha1client.StorageVersionInterface {
+func (c *storageVersionsClusterInterface) Cluster(name logicalcluster.Path) internalv1alpha1client.StorageVersionInterface {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}

@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type StatefulSetsClusterGetter interface {
 // StatefulSetClusterInterface can operate on StatefulSets across all clusters,
 // or scope down to one cluster and return a StatefulSetsNamespacer.
 type StatefulSetClusterInterface interface {
-	Cluster(logicalcluster.Name) StatefulSetsNamespacer
+	Cluster(logicalcluster.Path) StatefulSetsNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*appsv1.StatefulSetList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type statefulSetsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *statefulSetsClusterInterface) Cluster(name logicalcluster.Name) StatefulSetsNamespacer {
+func (c *statefulSetsClusterInterface) Cluster(name logicalcluster.Path) StatefulSetsNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type StatefulSetsNamespacer interface {
 
 type statefulSetsNamespacer struct {
 	clientCache kcpclient.Cache[*appsv1client.AppsV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *statefulSetsNamespacer) Namespace(namespace string) appsv1client.StatefulSetInterface {

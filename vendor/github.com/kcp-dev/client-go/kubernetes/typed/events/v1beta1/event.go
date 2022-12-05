@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	eventsv1beta1 "k8s.io/api/events/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type EventsClusterGetter interface {
 // EventClusterInterface can operate on Events across all clusters,
 // or scope down to one cluster and return a EventsNamespacer.
 type EventClusterInterface interface {
-	Cluster(logicalcluster.Name) EventsNamespacer
+	Cluster(logicalcluster.Path) EventsNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*eventsv1beta1.EventList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type eventsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *eventsClusterInterface) Cluster(name logicalcluster.Name) EventsNamespacer {
+func (c *eventsClusterInterface) Cluster(name logicalcluster.Path) EventsNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type EventsNamespacer interface {
 
 type eventsNamespacer struct {
 	clientCache kcpclient.Cache[*eventsv1beta1client.EventsV1beta1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *eventsNamespacer) Namespace(namespace string) eventsv1beta1client.EventInterface {

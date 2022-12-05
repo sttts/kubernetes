@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type EndpointSlicesClusterGetter interface {
 // EndpointSliceClusterInterface can operate on EndpointSlices across all clusters,
 // or scope down to one cluster and return a EndpointSlicesNamespacer.
 type EndpointSliceClusterInterface interface {
-	Cluster(logicalcluster.Name) EndpointSlicesNamespacer
+	Cluster(logicalcluster.Path) EndpointSlicesNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*discoveryv1.EndpointSliceList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type endpointSlicesClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *endpointSlicesClusterInterface) Cluster(name logicalcluster.Name) EndpointSlicesNamespacer {
+func (c *endpointSlicesClusterInterface) Cluster(name logicalcluster.Path) EndpointSlicesNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type EndpointSlicesNamespacer interface {
 
 type endpointSlicesNamespacer struct {
 	clientCache kcpclient.Cache[*discoveryv1client.DiscoveryV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *endpointSlicesNamespacer) Namespace(namespace string) discoveryv1client.EndpointSliceInterface {

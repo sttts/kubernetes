@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type VolumeAttachmentsClusterGetter interface {
 // VolumeAttachmentClusterInterface can operate on VolumeAttachments across all clusters,
 // or scope down to one cluster and return a storagev1beta1client.VolumeAttachmentInterface.
 type VolumeAttachmentClusterInterface interface {
-	Cluster(logicalcluster.Name) storagev1beta1client.VolumeAttachmentInterface
+	Cluster(logicalcluster.Path) storagev1beta1client.VolumeAttachmentInterface
 	List(ctx context.Context, opts metav1.ListOptions) (*storagev1beta1.VolumeAttachmentList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type volumeAttachmentsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *volumeAttachmentsClusterInterface) Cluster(name logicalcluster.Name) storagev1beta1client.VolumeAttachmentInterface {
+func (c *volumeAttachmentsClusterInterface) Cluster(name logicalcluster.Path) storagev1beta1client.VolumeAttachmentInterface {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}

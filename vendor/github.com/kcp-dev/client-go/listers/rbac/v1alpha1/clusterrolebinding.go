@@ -23,7 +23,7 @@ package v1alpha1
 
 import (
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,14 @@ import (
 )
 
 // ClusterRoleBindingClusterLister can list ClusterRoleBindings across all workspaces, or scope down to a ClusterRoleBindingLister for one workspace.
+// All objects returned here must be treated as read-only.
 type ClusterRoleBindingClusterLister interface {
+	// List lists all ClusterRoleBindings in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*rbacv1alpha1.ClusterRoleBinding, err error)
+	// Cluster returns a lister that can list and get ClusterRoleBindings in one workspace.
 	Cluster(cluster logicalcluster.Name) rbacv1alpha1listers.ClusterRoleBindingLister
+	ClusterRoleBindingClusterListerExpansion
 }
 
 type clusterRoleBindingClusterLister struct {
@@ -43,6 +48,10 @@ type clusterRoleBindingClusterLister struct {
 }
 
 // NewClusterRoleBindingClusterLister returns a new ClusterRoleBindingClusterLister.
+// We assume that the indexer:
+// - is fed by a cross-workspace LIST+WATCH
+// - uses kcpcache.MetaClusterNamespaceKeyFunc as the key function
+// - has the kcpcache.ClusterIndex as an index
 func NewClusterRoleBindingClusterLister(indexer cache.Indexer) *clusterRoleBindingClusterLister {
 	return &clusterRoleBindingClusterLister{indexer: indexer}
 }
@@ -68,24 +77,9 @@ type clusterRoleBindingLister struct {
 
 // List lists all ClusterRoleBindings in the indexer for a workspace.
 func (s *clusterRoleBindingLister) List(selector labels.Selector) (ret []*rbacv1alpha1.ClusterRoleBinding, err error) {
-	selectAll := selector == nil || selector.Empty()
-
-	list, err := s.indexer.ByIndex(kcpcache.ClusterIndexName, kcpcache.ClusterIndexKey(s.cluster))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range list {
-		obj := list[i].(*rbacv1alpha1.ClusterRoleBinding)
-		if selectAll {
-			ret = append(ret, obj)
-		} else {
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				ret = append(ret, obj)
-			}
-		}
-	}
-
+	err = kcpcache.ListAllByCluster(s.indexer, s.cluster, selector, func(i interface{}) {
+		ret = append(ret, i.(*rbacv1alpha1.ClusterRoleBinding))
+	})
 	return ret, err
 }
 

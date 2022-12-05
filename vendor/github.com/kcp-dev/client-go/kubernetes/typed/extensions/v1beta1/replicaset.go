@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type ReplicaSetsClusterGetter interface {
 // ReplicaSetClusterInterface can operate on ReplicaSets across all clusters,
 // or scope down to one cluster and return a ReplicaSetsNamespacer.
 type ReplicaSetClusterInterface interface {
-	Cluster(logicalcluster.Name) ReplicaSetsNamespacer
+	Cluster(logicalcluster.Path) ReplicaSetsNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*extensionsv1beta1.ReplicaSetList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type replicaSetsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *replicaSetsClusterInterface) Cluster(name logicalcluster.Name) ReplicaSetsNamespacer {
+func (c *replicaSetsClusterInterface) Cluster(name logicalcluster.Path) ReplicaSetsNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type ReplicaSetsNamespacer interface {
 
 type replicaSetsNamespacer struct {
 	clientCache kcpclient.Cache[*extensionsv1beta1client.ExtensionsV1beta1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *replicaSetsNamespacer) Namespace(namespace string) extensionsv1beta1client.ReplicaSetInterface {

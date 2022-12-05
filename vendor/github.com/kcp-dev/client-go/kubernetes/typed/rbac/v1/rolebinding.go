@@ -25,7 +25,7 @@ import (
 	"context"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type RoleBindingsClusterGetter interface {
 // RoleBindingClusterInterface can operate on RoleBindings across all clusters,
 // or scope down to one cluster and return a RoleBindingsNamespacer.
 type RoleBindingClusterInterface interface {
-	Cluster(logicalcluster.Name) RoleBindingsNamespacer
+	Cluster(logicalcluster.Path) RoleBindingsNamespacer
 	List(ctx context.Context, opts metav1.ListOptions) (*rbacv1.RoleBindingList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
@@ -52,7 +52,7 @@ type roleBindingsClusterInterface struct {
 }
 
 // Cluster scopes the client down to a particular cluster.
-func (c *roleBindingsClusterInterface) Cluster(name logicalcluster.Name) RoleBindingsNamespacer {
+func (c *roleBindingsClusterInterface) Cluster(name logicalcluster.Path) RoleBindingsNamespacer {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
@@ -77,7 +77,7 @@ type RoleBindingsNamespacer interface {
 
 type roleBindingsNamespacer struct {
 	clientCache kcpclient.Cache[*rbacv1client.RbacV1Client]
-	name        logicalcluster.Name
+	name        logicalcluster.Path
 }
 
 func (n *roleBindingsNamespacer) Namespace(namespace string) rbacv1client.RoleBindingInterface {

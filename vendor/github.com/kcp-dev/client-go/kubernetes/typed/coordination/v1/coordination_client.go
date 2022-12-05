@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	kcpclient "github.com/kcp-dev/apimachinery/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	coordinationv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/client-go/rest"
@@ -37,14 +37,14 @@ type CoordinationV1ClusterInterface interface {
 }
 
 type CoordinationV1ClusterScoper interface {
-	Cluster(logicalcluster.Name) coordinationv1.CoordinationV1Interface
+	Cluster(logicalcluster.Path) coordinationv1.CoordinationV1Interface
 }
 
 type CoordinationV1ClusterClient struct {
 	clientCache kcpclient.Cache[*coordinationv1.CoordinationV1Client]
 }
 
-func (c *CoordinationV1ClusterClient) Cluster(name logicalcluster.Name) coordinationv1.CoordinationV1Interface {
+func (c *CoordinationV1ClusterClient) Cluster(name logicalcluster.Path) coordinationv1.CoordinationV1Interface {
 	if name == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
