@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	kcpcache "github.com/kcp-dev/apimachinery/pkg/cache"
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	upstreaminformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
 		apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
