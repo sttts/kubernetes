@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kcp-dev/logicalcluster/v2"
 	"k8s.io/apiserver/pkg/apis/audit"
 	auditinstall "k8s.io/apiserver/pkg/apis/audit/install"
 	auditpkg "k8s.io/apiserver/pkg/audit"
