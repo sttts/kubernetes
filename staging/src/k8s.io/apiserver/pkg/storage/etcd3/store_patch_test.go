@@ -19,7 +19,7 @@ package etcd3
 import (
 	"testing"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 )
 

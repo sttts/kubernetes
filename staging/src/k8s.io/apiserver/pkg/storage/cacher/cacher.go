@@ -24,8 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kcp-dev/logicalcluster/v2"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

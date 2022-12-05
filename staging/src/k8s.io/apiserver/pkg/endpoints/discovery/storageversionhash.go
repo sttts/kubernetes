@@ -20,7 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // StorageVersionHash calculates the storage version hash for a

@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 type clusterKey int

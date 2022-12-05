@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"

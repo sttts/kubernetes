@@ -20,8 +20,8 @@ import (
 	"net/http"
 
 	restful "github.com/emicklei/go-restful"
+	"github.com/kcp-dev/logicalcluster/v3"
 	"k8s.io/klog/v2"
-	"github.com/kcp-dev/logicalcluster/v2"
 
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/server/mux"

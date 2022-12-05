@@ -3,7 +3,7 @@ package cacher
 import (
 	"context"
 
-	"github.com/kcp-dev/logicalcluster/v2"
+	"github.com/kcp-dev/logicalcluster/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
