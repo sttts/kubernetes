@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kcp-dev/logicalcluster/v3"
 	"k8s.io/klog/v2"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
