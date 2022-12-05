@@ -121,7 +121,7 @@ func (p *openAPIServiceProvider) ServeHTTP(resp http.ResponseWriter, req *http.R
 		p.defaultOpenAPIServiceHandler.ServeHTTP(resp, req)
 		return
 	}
-	handler, found := p.handlers[cluster.Path]
+	handler, found := p.handlers[cluster.Name]
 	if !found {
 		resp.WriteHeader(404)
 		return

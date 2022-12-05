@@ -110,7 +110,7 @@ func (t *Tester) TestCluster() logicalcluster.Name {
 // TestContext returns a namespaced context that will be used when making storage calls.
 // Namespace is determined by TestNamespace()
 func (t *Tester) TestContext() context.Context {
-	return genericapirequest.WithCluster(genericapirequest.WithNamespace(genericapirequest.NewContext(), t.TestNamespace()), genericapirequest.Cluster{Path: t.TestCluster()})
+	return genericapirequest.WithCluster(genericapirequest.WithNamespace(genericapirequest.NewContext(), t.TestNamespace()), genericapirequest.Cluster{Name: t.TestCluster()})
 }
 
 func (t *Tester) getObjectMetaOrFail(obj runtime.Object) metav1.Object {
@@ -410,7 +410,7 @@ func (t *Tester) testCreateHasMetadata(valid runtime.Object) {
 
 func (t *Tester) testCreateIgnoresContextNamespace(valid runtime.Object, opts metav1.CreateOptions) {
 	// Ignore non-empty namespace in context
-	ctx := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Path: t.TestCluster()}), "not-default2")
+	ctx := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Name: t.TestCluster()}), "not-default2")
 
 	// Ideally, we'd get an error back here, but at least verify the namespace wasn't persisted
 	created, err := t.storage.(rest.Creater).Create(ctx, valid.DeepCopyObject(), rest.ValidateAllObjectFunc, &opts)
@@ -429,7 +429,7 @@ func (t *Tester) testCreateIgnoresMismatchedNamespace(valid runtime.Object, opts
 
 	// Ignore non-empty namespace in object meta
 	objectMeta.SetNamespace("not-default")
-	ctx := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Path: t.TestCluster()}), "not-default2")
+	ctx := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Name: t.TestCluster()}), "not-default2")
 
 	// Ideally, we'd get an error back here, but at least verify the namespace wasn't persisted
 	created, err := t.storage.(rest.Creater).Create(ctx, valid.DeepCopyObject(), rest.ValidateAllObjectFunc, &opts)
@@ -1223,14 +1223,14 @@ func (t *Tester) testGetDifferentNamespace(obj runtime.Object) {
 	objMeta := t.getObjectMetaOrFail(obj)
 	objMeta.SetName(t.namer(5))
 
-	ctx1 := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Path: t.TestCluster()}), "bar3")
+	ctx1 := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Name: t.TestCluster()}), "bar3")
 	objMeta.SetNamespace(genericapirequest.NamespaceValue(ctx1))
 	_, err := t.storage.(rest.Creater).Create(ctx1, obj, rest.ValidateAllObjectFunc, &metav1.CreateOptions{})
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	ctx2 := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Path: t.TestCluster()}), "bar4")
+	ctx2 := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Name: t.TestCluster()}), "bar4")
 	objMeta.SetNamespace(genericapirequest.NamespaceValue(ctx2))
 	_, err = t.storage.(rest.Creater).Create(ctx2, obj, rest.ValidateAllObjectFunc, &metav1.CreateOptions{})
 	if err != nil {
@@ -1284,8 +1284,8 @@ func (t *Tester) testGetFound(obj runtime.Object) {
 }
 
 func (t *Tester) testGetMimatchedNamespace(obj runtime.Object) {
-	ctx1 := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Path: t.TestCluster()}), "bar1")
-	ctx2 := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Path: t.TestCluster()}), "bar2")
+	ctx1 := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Name: t.TestCluster()}), "bar1")
+	ctx2 := genericapirequest.WithNamespace(genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{Name: t.TestCluster()}), "bar2")
 	objMeta := t.getObjectMetaOrFail(obj)
 	objMeta.SetName(t.namer(4))
 	objMeta.SetNamespace(genericapirequest.NamespaceValue(ctx1))

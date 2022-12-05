@@ -195,7 +195,7 @@ func (c *CRDFinalizer) deleteInstances(crd *apiextensionsv1.CustomResourceDefini
 	}
 
 	ctx := genericapirequest.WithCluster(genericapirequest.NewContext(), genericapirequest.Cluster{
-		Path: logicalcluster.From(crd).Path(),
+		Name: logicalcluster.From(crd).Path(),
 	})
 
 	allResources, err := crClient.List(ctx, nil)

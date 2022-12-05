@@ -32,8 +32,8 @@ const (
 )
 
 type Cluster struct {
-	// Name holds a logical cluster path
-	Path logicalcluster.Path
+	// Name holds a cluster name.
+	Name logicalcluster.Name
 
 	// HACK: only for testing wildcard semantics
 	// If true the query applies to all clusters
@@ -75,7 +75,7 @@ func ValidClusterFrom(ctx context.Context) (*Cluster, error) {
 	if cluster == nil {
 		return nil, buildClusterError("no cluster in the request context", ctx)
 	}
-	if cluster.Path.Empty() && !cluster.Wildcard {
+	if cluster.Name.Empty() && !cluster.Wildcard {
 		return nil, buildClusterError("cluster path is empty in the request context", ctx)
 	}
 	return cluster, nil
@@ -88,12 +88,8 @@ func ClusterNameFrom(ctx context.Context) (logicalcluster.Name, error) {
 	if err != nil {
 		return logicalcluster.Name{}, err
 	}
-	if cluster.Path.Empty() {
-		return logicalcluster.Name{}, buildClusterError("cluster path is empty in the request context", ctx)
+	if cluster.Name.Empty() {
+		return logicalcluster.Name{}, buildClusterError("cluster name is empty in the request context", ctx)
 	}
-	clusterName, ok := cluster.Path.Name()
-	if !ok {
-		return logicalcluster.Name{}, buildClusterError(fmt.Sprintf("unable to extract a cluster name from the cluster path: %v", cluster.Path.String()), ctx)
-	}
-	return clusterName, nil
+	return cluster.Name, nil
 }

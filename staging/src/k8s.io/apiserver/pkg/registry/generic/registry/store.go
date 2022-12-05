@@ -251,7 +251,7 @@ func NoNamespaceKeyRootFunc(ctx context.Context, prefix string) string {
 		key += "/" + shard.String()
 	}
 	if !cluster.Wildcard {
-		key += "/" + cluster.Path.String()
+		key += "/" + cluster.Name.String()
 	}
 	return key
 }

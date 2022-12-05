@@ -229,7 +229,7 @@ func TestWatchError(t *testing.T) {
 	invalidCodec := &testCodec{apitesting.TestCodec(codecs, examplev1.SchemeGroupVersion)}
 	client := testserver.RunEtcd(t, nil)
 	invalidStore := newStore(client, invalidCodec, newPod, "", schema.GroupResource{Resource: "pods"}, &prefixTransformer{prefix: []byte("test!")}, true, newTestLeaseManagerConfig())
-	ctx := genericapirequest.WithCluster(context.Background(), genericapirequest.Cluster{Path: logicalcluster.New("root")})
+	ctx := genericapirequest.WithCluster(context.Background(), genericapirequest.Cluster{Name: logicalcluster.New("root")})
 	w, err := invalidStore.Watch(ctx, "/abc", storage.ListOptions{ResourceVersion: "0", Predicate: storage.Everything})
 	if err != nil {
 		t.Fatalf("Watch failed: %v", err)
@@ -366,7 +366,7 @@ func TestProgressNotify(t *testing.T) {
 	clusterConfig.ExperimentalWatchProgressNotifyInterval = time.Second
 	client := testserver.RunEtcd(t, clusterConfig)
 	store := newStore(client, codec, newPod, "", schema.GroupResource{Resource: "pods"}, &prefixTransformer{prefix: []byte(defaultTestPrefix)}, false, newTestLeaseManagerConfig())
-	ctx := genericapirequest.WithCluster(context.Background(), genericapirequest.Cluster{Path: logicalcluster.New("root")})
+	ctx := genericapirequest.WithCluster(context.Background(), genericapirequest.Cluster{Name: logicalcluster.New("root")})
 
 	key := "/somekey"
 	input := &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "name"}}
