@@ -359,8 +359,8 @@ github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56 h1:XxRBHVw
 github.com/p0lyn0mial/apimachinery v0.0.0-20221205120156-b90e084cbd56/go.mod h1:XEv+UQlH7NT41TOZYRK+LRo2URcwYjP8GQqOqtBk0RI=
 github.com/p0lyn0mial/client-go v0.0.0-20221205103028-e6b916c38744 h1:H9Wzm3fYoR126msZWAlhkMmqCDOixebosoM/ASLBYg8=
 github.com/p0lyn0mial/client-go v0.0.0-20221205103028-e6b916c38744/go.mod h1:kLMJgfd5gpWZv2y42vrn1W7WgeFpBlDV3vcJCqx4qxk=
-github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205112657-d838b9d84605 h1:Vhb2X+6esWLEtzYqYNX3fJUzd4JhLnMb1PlxSrF934Q=
-github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205112657-d838b9d84605/go.mod h1:6rb68Tntup98cRr9+50rvSDxUbfqrC1yQ/T6RiZcSgA=
+github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205133720-98ab92d3ce2a h1:fTyw4D2XbuAYNAQNZPlcDjOXxwoehh67/twdINopQ4U=
+github.com/p0lyn0mial/logicalcluster/v3 v3.0.0-20221205133720-98ab92d3ce2a/go.mod h1:6rb68Tntup98cRr9+50rvSDxUbfqrC1yQ/T6RiZcSgA=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=

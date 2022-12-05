@@ -6,7 +6,6 @@ go 1.16
 
 require (
 	github.com/gogo/protobuf v1.3.2
-	github.com/kcp-dev/logicalcluster/v2 v2.0.0-alpha.1
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/stretchr/testify v1.7.1
 	google.golang.org/appengine v1.6.7 // indirect
