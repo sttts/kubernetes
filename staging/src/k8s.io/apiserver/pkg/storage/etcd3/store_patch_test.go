@@ -53,12 +53,12 @@ func TestAdjustClusterNameIfWildcard(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			cluster := &genericapirequest.Cluster{
-				Name:                   logicalcluster.New("root:org:ws"),
+				Path:                   logicalcluster.New("root:org:ws"),
 				PartialMetadataRequest: tc.partialMetadata,
 			}
 
 			if tc.wildcard {
-				cluster.Name = logicalcluster.Wildcard
+				cluster.Path = logicalcluster.Wildcard
 			}
 
 			key := "/registry/group/resource/identity/root:org:ws/somename"
@@ -84,35 +84,35 @@ func TestAdjustClusterNameIfWildcardWithShardSupport(t *testing.T) {
 		expectedClusterName string
 	}{
 		"not wildcard": {
-			cluster:             genericapirequest.Cluster{Name: logicalcluster.New("root:org:ws")},
+			cluster:             genericapirequest.Cluster{Path: logicalcluster.New("root:org:ws")},
 			shard:               "amber",
 			key:                 "/registry/group/resource:identity/amber/root:org:ws/somename",
 			keyPrefix:           "/registry/group/resource:identity/",
 			expectedClusterName: "root:org:ws",
 		},
 		"both wildcard": {
-			cluster:             genericapirequest.Cluster{Name: logicalcluster.Wildcard},
+			cluster:             genericapirequest.Cluster{Path: logicalcluster.Wildcard},
 			shard:               "*",
 			key:                 "/registry/group/resource:identity/amber/root:org:ws/somename",
 			keyPrefix:           "/registry/group/resource:identity/",
 			expectedClusterName: "root:org:ws",
 		},
 		"both wildcard, built-in type": {
-			cluster:             genericapirequest.Cluster{Name: logicalcluster.Wildcard},
+			cluster:             genericapirequest.Cluster{Path: logicalcluster.Wildcard},
 			shard:               "*",
 			key:                 "/registry/core/configmaps/amber/root:org:ws/somename",
 			keyPrefix:           "/registry/core/configmaps/",
 			expectedClusterName: "root:org:ws",
 		},
 		"only cluster wildcard": {
-			cluster:             genericapirequest.Cluster{Name: logicalcluster.Wildcard},
+			cluster:             genericapirequest.Cluster{Path: logicalcluster.Wildcard},
 			shard:               "amber",
 			key:                 "/registry/group/resource:identity/amber/root:org:ws/somename",
 			keyPrefix:           "/registry/group/resource:identity/amber/",
 			expectedClusterName: "root:org:ws",
 		},
 		"only shard wildcard": {
-			cluster:             genericapirequest.Cluster{Name: logicalcluster.New("root:org:ws")},
+			cluster:             genericapirequest.Cluster{Path: logicalcluster.New("root:org:ws")},
 			shard:               "*",
 			key:                 "/registry/core/configmaps/amber/root:org:ws/somename",
 			keyPrefix:           "/registry/group/resource:identity/",

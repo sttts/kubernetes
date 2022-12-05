@@ -34,5 +34,5 @@ func createClusterAwareContext(object runtime.Object) context.Context {
 		return context.Background()
 	}
 
-	return genericapirequest.WithCluster(context.Background(), genericapirequest.Cluster{Name: clusterName})
+	return genericapirequest.WithCluster(context.Background(), genericapirequest.Cluster{Path: clusterName})
 }

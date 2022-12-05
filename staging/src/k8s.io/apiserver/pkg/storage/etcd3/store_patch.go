@@ -33,8 +33,8 @@ import (
 // - CR partial metadata request: <prefix>/identity/clusterName/<remainder>
 // - any other request: <prefix>/clusterName/<remainder>.
 func adjustClusterNameIfWildcard(shard genericapirequest.Shard, cluster *genericapirequest.Cluster, crdRequest bool, keyPrefix, key string) logicalcluster.Name {
-	if cluster.Name != logicalcluster.Wildcard && !cluster.Wildcard { // TODO: fix this duplicity, as well
-		return cluster.Name
+	if cluster.Path != logicalcluster.Wildcard && !cluster.Wildcard { // TODO: fix this duplicity, as well
+		return cluster.Path
 	}
 
 	keyWithoutPrefix := strings.TrimPrefix(key, keyPrefix)

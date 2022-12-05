@@ -382,7 +382,7 @@ func NewCacherFromConfig(config Config) (*Cacher, error) {
 	// empty storage metadata usually indicate build-in resources
 	// for those we require only a WildCard cluster to be present in the ctx
 	if config.KcpExtraStorageMetadata == nil {
-		config.KcpExtraStorageMetadata = &storagebackend.KcpStorageMetadata{Cluster: genericapirequest.Cluster{Name: logicalcluster.Wildcard}}
+		config.KcpExtraStorageMetadata = &storagebackend.KcpStorageMetadata{Cluster: genericapirequest.Cluster{Path: logicalcluster.Wildcard}}
 	}
 
 	watchCache := newWatchCache(
