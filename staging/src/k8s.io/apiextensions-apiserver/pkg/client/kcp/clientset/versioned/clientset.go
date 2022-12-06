@@ -74,7 +74,7 @@ func (c *ClusterClientset) ApiextensionsV1beta1() apiextensionsv1beta1.Apiextens
 }
 // Cluster scopes this clientset to one cluster.
 func (c *ClusterClientset) Cluster(path logicalcluster.Path) client.Interface {
-	if path == logicalcluster.WildcardPath {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 	return c.clientCache.ClusterOrDie(path)

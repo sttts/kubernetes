@@ -54,7 +54,7 @@ type customResourceDefinitionsClusterInterface struct {
 
 // Cluster scopes the client down to a particular cluster.
 func (c *customResourceDefinitionsClusterInterface) Cluster(path logicalcluster.Path) apiextensionsv1beta1client.CustomResourceDefinitionInterface {
-	if path == logicalcluster.WildcardPath {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
@@ -64,10 +64,10 @@ func (c *customResourceDefinitionsClusterInterface) Cluster(path logicalcluster.
 
 // List returns the entire collection of all CustomResourceDefinitions across all clusters. 
 func (c *customResourceDefinitionsClusterInterface) List(ctx context.Context, opts metav1.ListOptions) (*apiextensionsv1beta1.CustomResourceDefinitionList, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CustomResourceDefinitions().List(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CustomResourceDefinitions().List(ctx, opts)
 }
 
 // Watch begins to watch all CustomResourceDefinitions across all clusters.
 func (c *customResourceDefinitionsClusterInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientCache.ClusterOrDie(logicalcluster.WildcardPath).CustomResourceDefinitions().Watch(ctx, opts)
+	return c.clientCache.ClusterOrDie(logicalcluster.Wildcard).CustomResourceDefinitions().Watch(ctx, opts)
 }

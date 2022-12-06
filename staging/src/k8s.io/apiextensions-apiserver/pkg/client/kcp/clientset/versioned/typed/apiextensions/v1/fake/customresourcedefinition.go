@@ -50,7 +50,7 @@ type customResourceDefinitionsClusterClient struct {
 
 // Cluster scopes the client down to a particular cluster.
 func (c *customResourceDefinitionsClusterClient) Cluster(cluster logicalcluster.Path) apiextensionsv1client.CustomResourceDefinitionInterface {
-	if cluster == logicalcluster.WildcardPath {
+	if cluster == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 
@@ -60,7 +60,7 @@ func (c *customResourceDefinitionsClusterClient) Cluster(cluster logicalcluster.
 
 // List takes label and field selectors, and returns the list of CustomResourceDefinitions that match those selectors across all clusters.
 func (c *customResourceDefinitionsClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*apiextensionsv1.CustomResourceDefinitionList, error) {
-	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(customResourceDefinitionsResource, customResourceDefinitionsKind, logicalcluster.WildcardPath, opts), &apiextensionsv1.CustomResourceDefinitionList{})
+	obj, err := c.Fake.Invokes(kcptesting.NewRootListAction(customResourceDefinitionsResource, customResourceDefinitionsKind, logicalcluster.Wildcard, opts), &apiextensionsv1.CustomResourceDefinitionList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (c *customResourceDefinitionsClusterClient) List(ctx context.Context, opts 
 
 // Watch returns a watch.Interface that watches the requested CustomResourceDefinitions across all clusters.
 func (c *customResourceDefinitionsClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(customResourceDefinitionsResource, logicalcluster.WildcardPath, opts))
+	return c.Fake.InvokesWatch(kcptesting.NewRootWatchAction(customResourceDefinitionsResource, logicalcluster.Wildcard, opts))
 }
 type customResourceDefinitionsClient struct {
 	*kcptesting.Fake

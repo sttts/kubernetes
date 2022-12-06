@@ -86,10 +86,10 @@ func ValidClusterFrom(ctx context.Context) (*Cluster, error) {
 func ClusterNameFrom(ctx context.Context) (logicalcluster.Name, error) {
 	cluster, err := ValidClusterFrom(ctx)
 	if err != nil {
-		return logicalcluster.Name{}, err
+		return "", err
 	}
 	if cluster.Name.Empty() {
-		return logicalcluster.Name{}, buildClusterError("cluster name is empty in the request context", ctx)
+		return "", buildClusterError("cluster name is empty in the request context", ctx)
 	}
 	return cluster.Name, nil
 }

@@ -47,7 +47,7 @@ type ApiextensionsV1beta1ClusterClient struct {
 }
 
 func (c *ApiextensionsV1beta1ClusterClient) Cluster(path logicalcluster.Path) apiextensionsv1beta1.ApiextensionsV1beta1Interface {
-	if path == logicalcluster.WildcardPath {
+	if path == logicalcluster.Wildcard {
 		panic("A specific cluster must be provided when scoping, not the wildcard.")
 	}
 	return c.clientCache.ClusterOrDie(path)
