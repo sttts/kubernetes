@@ -191,7 +191,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		return nil, err
 	}
 
-	rootCluster := logicalcluster.New("root")
+	rootCluster := logicalcluster.Name("root")
 
 	// Have to create this outside the post-start hook to ensure the informer is started correctly
 	rootConfigMapsInformer := c.ExtraConfig.VersionedInformers.Core().V1().ConfigMaps().Cluster(rootCluster)
@@ -204,7 +204,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 			return err
 		}
 
-		controller := clusterauthenticationtrust.NewClusterAuthenticationTrustController(m.ClusterAuthenticationInfo, kubeClient.Cluster(rootCluster), rootConfigMapsInformer)
+		controller := clusterauthenticationtrust.NewClusterAuthenticationTrustController(m.ClusterAuthenticationInfo, kubeClient.Cluster(rootCluster.Path()), rootConfigMapsInformer)
 
 		// generate a context  from stopCh. This is to avoid modifying files which are relying on apiserver
 		// TODO: See if we can pass ctx to the current method
@@ -251,7 +251,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 			}
 			controller := lease.NewController(
 				clock.RealClock{},
-				kubeClient.Cluster(rootCluster),
+				kubeClient.Cluster(rootCluster.Path()),
 				m.GenericAPIServer.APIServerID,
 				int32(c.ExtraConfig.IdentityLeaseDurationSeconds),
 				nil,
@@ -267,7 +267,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 				return err
 			}
 			go apiserverleasegc.NewAPIServerLeaseGC(
-				kubeClient.Cluster(rootCluster),
+				kubeClient.Cluster(rootCluster.Path()),
 				time.Duration(c.ExtraConfig.IdentityLeaseDurationSeconds)*time.Second,
 				metav1.NamespaceSystem,
 				KubeAPIServerIdentityLeaseLabelSelector,
