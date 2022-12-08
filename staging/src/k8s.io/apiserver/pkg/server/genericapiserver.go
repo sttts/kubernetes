@@ -26,7 +26,6 @@ import (
 
 	systemd "github.com/coreos/go-systemd/v22/daemon"
 
-	"github.com/kcp-dev/logicalcluster/v3"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +40,7 @@ import (
 	genericapi "k8s.io/apiserver/pkg/endpoints"
 	"k8s.io/apiserver/pkg/endpoints/discovery"
 	"k8s.io/apiserver/pkg/endpoints/handlers/fieldmanager"
+	genericrequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/features"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/server/healthz"
@@ -265,7 +265,7 @@ type DelegationTarget interface {
 	HealthzChecks() []healthz.HealthChecker
 
 	// ListedPaths returns the paths for supporting an index
-	ListedPaths(clusterName logicalcluster.Name) []string
+	ListedPaths(cluster *genericrequest.Cluster) []string
 
 	// NextDelegate returns the next delegationTarget in the chain of delegations
 	NextDelegate() DelegationTarget
@@ -295,8 +295,8 @@ func (s *GenericAPIServer) PreShutdownHooks() map[string]preShutdownHookEntry {
 func (s *GenericAPIServer) HealthzChecks() []healthz.HealthChecker {
 	return s.healthzChecks
 }
-func (s *GenericAPIServer) ListedPaths(clusterName logicalcluster.Name) []string {
-	return s.listedPathProvider.ListedPaths(clusterName)
+func (s *GenericAPIServer) ListedPaths(cluster *genericrequest.Cluster) []string {
+	return s.listedPathProvider.ListedPaths(cluster)
 }
 
 func (s *GenericAPIServer) NextDelegate() DelegationTarget {
@@ -356,7 +356,7 @@ func (s emptyDelegate) PreShutdownHooks() map[string]preShutdownHookEntry {
 func (s emptyDelegate) HealthzChecks() []healthz.HealthChecker {
 	return []healthz.HealthChecker{}
 }
-func (s emptyDelegate) ListedPaths(clusterName logicalcluster.Name) []string {
+func (s emptyDelegate) ListedPaths(cluster *genericrequest.Cluster) []string {
 	return []string{}
 }
 func (s emptyDelegate) NextDelegate() DelegationTarget {

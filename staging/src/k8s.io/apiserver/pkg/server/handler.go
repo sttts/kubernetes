@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
+	genericrequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/server/mux"
 )
 
@@ -104,7 +105,7 @@ func NewAPIServerHandler(name string, s runtime.NegotiatedSerializer, handlerCha
 }
 
 // ListedPaths returns the paths that should be shown under /
-func (a *APIServerHandler) ListedPaths(clusterName logicalcluster.Name) []string {
+func (a *APIServerHandler) ListedPaths(cluster *genericrequest.Cluster) []string {
 	var handledPaths []string
 	// Extract the paths handled using restful.WebService
 	for _, ws := range a.GoRestfulContainer.RegisteredWebServices() {
@@ -112,7 +113,7 @@ func (a *APIServerHandler) ListedPaths(clusterName logicalcluster.Name) []string
 	}
 
 	for _, path := range a.NonGoRestfulMux.ListedPaths(logicalcluster.Name("")) {
-		if a.PathValidForCluster == nil || a.PathValidForCluster(path, clusterName) {
+		if a.PathValidForCluster == nil || a.PathValidForCluster(path, cluster.Name) {
 			handledPaths = append(handledPaths, path)
 		}
 	}

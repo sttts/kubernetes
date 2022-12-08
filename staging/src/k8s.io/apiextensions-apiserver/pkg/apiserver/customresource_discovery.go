@@ -49,10 +49,14 @@ func (r *versionDiscoveryHandler) ServeHTTP(w http.ResponseWriter, req *http.Req
 		return
 	}
 
-	clusterName, err := genericapirequest.ClusterNameFrom(req.Context())
+	clusterName, wildcard, err := genericapirequest.ClusterNameOrWildcardFrom(req.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if wildcard {
+		// this is the only case where wildcard works for a list because this is our special CRD lister that handles it.
+		clusterName = "*"
 	}
 
 	requestedGroup := pathParts[1]
@@ -172,10 +176,14 @@ func (r *groupDiscoveryHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	clusterName, err := genericapirequest.ClusterNameFrom(req.Context())
+	clusterName, wildcard, err := genericapirequest.ClusterNameOrWildcardFrom(req.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if wildcard {
+		// this is the only case where wildcard works for a list because this is our special CRD lister that handles it.
+		clusterName = "*"
 	}
 
 	apiVersionsForDiscovery := []metav1.GroupVersionForDiscovery{}
@@ -250,9 +258,13 @@ func (r *rootDiscoveryHandler) Groups(ctx context.Context, _ *http.Request) ([]m
 	apiVersionsForDiscovery := map[string][]metav1.GroupVersionForDiscovery{}
 	versionsForDiscoveryMap := map[string]map[metav1.GroupVersion]bool{}
 
-	clusterName, err := genericapirequest.ClusterNameFrom(ctx)
+	clusterName, wildcard, err := genericapirequest.ClusterNameOrWildcardFrom(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if wildcard {
+		// this is the only case where wildcard works for a list because this is our special CRD lister that handles it.
+		clusterName = "*"
 	}
 
 	crds, err := r.crdLister.Cluster(clusterName).List(ctx, labels.Everything())

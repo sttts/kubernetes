@@ -32,11 +32,10 @@ const (
 )
 
 type Cluster struct {
-	// Name holds a cluster name.
+	// Name holds a cluster name. This is empty for wildcard requests.
 	Name logicalcluster.Name
 
-	// HACK: only for testing wildcard semantics
-	// If true the query applies to all clusters
+	// If true the query applies to all clusters. Name is empty if this is true.
 	Wildcard bool
 
 	// PartialMetadataRequest indicates if the incoming request is for partial metadata. This is set by the kcp
@@ -81,12 +80,28 @@ func ValidClusterFrom(ctx context.Context) (*Cluster, error) {
 	return cluster, nil
 }
 
+// ClusterNameOrWildcardFrom returns a cluster.Name or true for a wildcard from
+// the value of the cluster key on the ctx.
+func ClusterNameOrWildcardFrom(ctx context.Context) (logicalcluster.Name, bool, error) {
+	cluster, err := ValidClusterFrom(ctx)
+	if err != nil {
+		return "", false, err
+	}
+	if cluster.Name.Empty() && !cluster.Wildcard {
+		return "", false, buildClusterError("cluster name is empty in the request context", ctx)
+	}
+	return cluster.Name, cluster.Wildcard, nil
+}
+
 // ClusterNameFrom returns a cluster.Name from the value of the cluster key on the ctx.
 // If the cluster name is not present or cannot be constructed, then return an error.
 func ClusterNameFrom(ctx context.Context) (logicalcluster.Name, error) {
 	cluster, err := ValidClusterFrom(ctx)
 	if err != nil {
 		return "", err
+	}
+	if cluster.Wildcard {
+		return "", buildClusterError("wildcard not supported", ctx)
 	}
 	if cluster.Name.Empty() {
 		return "", buildClusterError("cluster name is empty in the request context", ctx)

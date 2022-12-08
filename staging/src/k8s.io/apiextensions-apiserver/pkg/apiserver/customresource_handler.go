@@ -279,10 +279,14 @@ func (r *crdHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	clusterName, err := apirequest.ClusterNameFrom(req.Context())
+	clusterName, wildcard, err := apirequest.ClusterNameOrWildcardFrom(req.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if wildcard {
+		// this is the only case where wildcard works for a list because this is our special CRD lister that handles it.
+		clusterName = "*"
 	}
 
 	group := requestInfo.APIGroup
