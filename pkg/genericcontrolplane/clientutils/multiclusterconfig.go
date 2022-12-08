@@ -96,11 +96,11 @@ func (mcrt *multiClusterClientConfigRoundTripper) RoundTrip(req *http.Request) (
 	if requestInfo != nil &&
 		mcrt.enabledOn.Has(requestInfo.Resource) {
 		var resourceClusterName logicalcluster.Name
-		var headerCluster logicalcluster.Name
+		var headerCluster logicalcluster.Path
 		switch requestInfo.Verb {
 		case "list", "watch":
 			if contextCluster != nil && !contextCluster.Wildcard {
-				headerCluster = contextCluster.Name
+				headerCluster = contextCluster.Name.Path()
 			} else {
 				headerCluster = logicalcluster.Wildcard
 			}
@@ -140,13 +140,13 @@ func (mcrt *multiClusterClientConfigRoundTripper) RoundTrip(req *http.Request) (
 				if contextCluster != nil && !contextCluster.Name.Empty() && contextCluster.Name != resourceClusterName {
 					return nil, errors.New("Resource cluster name " + resourceClusterName.String() + " incompatible with context cluster name " + contextCluster.Name.String())
 				}
-				headerCluster = resourceClusterName
+				headerCluster = resourceClusterName.Path()
 			} else {
 				if contextCluster != nil { //
 					if contextCluster.Wildcard {
 						return nil, errors.New("Cluster should be set for request " + requestInfo.Verb + ", but instead wildcards were provided.")
 					}
-					headerCluster = contextCluster.Name
+					headerCluster = contextCluster.Name.Path()
 				}
 			}
 		}

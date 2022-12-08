@@ -67,7 +67,7 @@ type NamespaceController struct {
 func NewNamespaceController(
 	kubeClient kcpkubernetesclientset.ClusterInterface,
 	metadataClient kcpmetadata.ClusterInterface,
-	discoverResourcesFn func(clusterName logicalcluster.Name) ([]*metav1.APIResourceList, error),
+	discoverResourcesFn func(clusterName logicalcluster.Path) ([]*metav1.APIResourceList, error),
 	namespaceInformer kcpcorev1informers.NamespaceClusterInformer,
 	resyncPeriod time.Duration,
 	finalizerToken v1.FinalizerName) *NamespaceController {

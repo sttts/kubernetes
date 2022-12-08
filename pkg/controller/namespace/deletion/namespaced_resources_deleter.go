@@ -47,7 +47,7 @@ type NamespacedResourcesDeleterInterface interface {
 // NewNamespacedResourcesDeleter returns a new NamespacedResourcesDeleter.
 func NewNamespacedResourcesDeleter(nsClient kcpcorev1client.NamespaceClusterInterface,
 	metadataClient kcpmetadata.ClusterInterface, podsGetter kcpcorev1client.PodsClusterGetter,
-	discoverResourcesFn func(clusterName logicalcluster.Name) ([]*metav1.APIResourceList, error),
+	discoverResourcesFn func(clusterName logicalcluster.Path) ([]*metav1.APIResourceList, error),
 	finalizerToken v1.FinalizerName) NamespacedResourcesDeleterInterface {
 	d := &namespacedResourcesDeleter{
 		nsClient:            nsClient,
@@ -74,7 +74,7 @@ type namespacedResourcesDeleter struct {
 	opCaches      map[logicalcluster.Name]*operationNotSupportedCache
 	opCachesMutex sync.RWMutex
 
-	discoverResourcesFn func(clusterName logicalcluster.Name) ([]*metav1.APIResourceList, error)
+	discoverResourcesFn func(clusterName logicalcluster.Path) ([]*metav1.APIResourceList, error)
 	// The finalizer token that should be removed from the namespace
 	// when all resources in that namespace have been deleted.
 	finalizerToken v1.FinalizerName
@@ -158,7 +158,7 @@ func (d *namespacedResourcesDeleter) initOpCache(clusterName logicalcluster.Name
 	// pre-fill opCache with the discovery info
 	//
 	// TODO(sttts): get rid of opCache and http 405 logic around it and trust discovery info
-	resources, err := d.discoverResourcesFn(clusterName)
+	resources, err := d.discoverResourcesFn(clusterName.Path())
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("unable to get all supported resources from server: %v", err))
 	}
@@ -543,7 +543,7 @@ func (d *namespacedResourcesDeleter) deleteAllContent(ns *v1.Namespace) (int64, 
 	estimate := int64(0)
 	klog.V(4).Infof("namespace controller - deleteAllContent - namespace: %s", namespace)
 
-	resources, err := d.discoverResourcesFn(logicalcluster.From(ns))
+	resources, err := d.discoverResourcesFn(logicalcluster.From(ns).Path())
 	if err != nil {
 		// discovery errors are not fatal.  We often have some set of resources we can operate against even if we don't have a complete list
 		errs = append(errs, err)

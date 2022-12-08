@@ -56,7 +56,7 @@ import (
 	"k8s.io/kubernetes/pkg/serviceaccount"
 )
 
-var LocalAdminCluster = logicalcluster.New("system:admin")
+var LocalAdminCluster = logicalcluster.Name("system:admin")
 
 type ServerChain struct {
 	CustomResourceDefinitions *extensionsapiserver.CustomResourceDefinitions
