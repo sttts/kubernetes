@@ -18,6 +18,12 @@ package framework
 
 import (
 	"context"
+	apiextensionsapiserver "k8s.io/apiextensions-apiserver/pkg/apiserver"
+	"k8s.io/apimachinery/pkg/runtime"
+	aggregatorscheme "k8s.io/kube-aggregator/pkg/apiserver/scheme"
+	"k8s.io/kubernetes/pkg/api/legacyscheme"
+	controlplaneapiserver "k8s.io/kubernetes/pkg/controlplane/apiserver"
+	generatedopenapi "k8s.io/kubernetes/pkg/generated/openapi"
 	"net"
 	"net/http"
 	"os"
@@ -159,7 +165,17 @@ func StartTestServer(ctx context.Context, t testing.TB, setup TestServerSetup) (
 		t.Fatalf("failed to validate ServerRunOptions: %v", utilerrors.NewAggregate(errs))
 	}
 
-	kubeAPIServerConfig, _, _, err := app.CreateKubeAPIServerConfig(completedOptions)
+	genericConfig, versionedInformers, storageFactory, err := controlplaneapiserver.BuildGenericConfig(
+		completedOptions.CompletedOptions,
+		[]*runtime.Scheme{legacyscheme.Scheme, apiextensionsapiserver.Scheme, aggregatorscheme.Scheme},
+		controlplane.DefaultAPIResourceConfigSource(),
+		generatedopenapi.GetOpenAPIDefinitions,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kubeAPIServerConfig, _, _, err := app.CreateKubeAPIServerConfig(completedOptions, genericConfig, versionedInformers, storageFactory)
 	if err != nil {
 		t.Fatal(err)
 	}
