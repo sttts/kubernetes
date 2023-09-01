@@ -134,7 +134,7 @@ func (config Config) New() (authorizer.Authorizer, authorizer.RuleResolver, erro
 				return nil, nil, err
 			}
 			authorizers = append(authorizers, webhookAuthorizer)
-			ruleResolvers = append(ruleResolvers, webhookAuthorizer)
+			ruleResolvers = append(ruleResolvers, webhookAuthorizer) // TODO(kcp:1.28): This should be resolved once apiserver rebase lands
 		case modes.ModeRBAC:
 			rbacAuthorizer := rbac.New(
 				&rbac.RoleGetter{Lister: config.VersionedInformerFactory.Rbac().V1().Roles().Lister()},
