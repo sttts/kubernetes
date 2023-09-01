@@ -122,6 +122,7 @@ func BuildAndRegisterAggregator(downloader *Downloader, delegationTarget server.
 		if handler == nil {
 			continue
 		}
+
 		// ignore errors for the empty delegate we attach at the end the chain
 		// atm the empty delegate returns 503 when the server hasn't been fully initialized
 		// and the spec downloader only silences 404s
