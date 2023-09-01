@@ -18,7 +18,6 @@ package openapi
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -32,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/kube-openapi/pkg/util"
 	"k8s.io/kube-openapi/pkg/validation/spec"
-	"k8s.io/kube-openapi/pkg/util/proto"
 )
 
 var verbs = util.NewTrie([]string{"get", "log", "read", "replace", "patch", "delete", "deletecollection", "watch", "connect", "proxy", "list", "create", "patch"})
@@ -192,16 +190,12 @@ func (d *DefinitionNamer) GetDefinitionName(name string) (string, spec.Extension
 	return friendlyName(name), nil
 }
 
-type ModelsByGKV map[schema.GroupVersionKind]proto.Schema
+type ModelsByGKV map[schema.GroupVersionKind]*spec.Schema
 
 // NewOpenAPIData creates a new `Resources` out of the openapi models
-func GetModelsByGKV(models proto.Models) (ModelsByGKV, error) {
-	result := map[schema.GroupVersionKind]proto.Schema{}
-	for _, modelName := range models.ListModels() {
-		model := models.LookupModel(modelName)
-		if model == nil {
-			return map[schema.GroupVersionKind]proto.Schema{}, errors.New("ListModels returns a model that can't be looked-up.")
-		}
+func GetModelsByGKV(models map[string]*spec.Schema) (ModelsByGKV, error) {
+	result := map[schema.GroupVersionKind]*spec.Schema{}
+	for _, model := range models {
 		gvkList := parseGroupVersionKind(model)
 		for _, gvk := range gvkList {
 			if len(gvk.Kind) > 0 {
@@ -218,13 +212,11 @@ func GetModelsByGKV(models proto.Models) (ModelsByGKV, error) {
 }
 
 // Get and parse GroupVersionKind from the extension. Returns empty if it doesn't have one.
-func parseGroupVersionKind(s proto.Schema) []schema.GroupVersionKind {
-	extensions := s.GetExtensions()
-
+func parseGroupVersionKind(s *spec.Schema) []schema.GroupVersionKind {
 	gvkListResult := []schema.GroupVersionKind{}
 
 	// Get the extensions
-	gvkExtension, ok := extensions[extensionGVK]
+	gvkExtension, ok := s.Extensions[extensionGVK]
 	if !ok {
 		return []schema.GroupVersionKind{}
 	}

@@ -26,7 +26,7 @@ import (
 type stripMetaManager struct {
 	fieldManager Manager
 
-	// stripSet is the list of fields that should never be part of a mangedFields.
+	// stripSet is the list of fields that should never be part of a managedfields.
 	stripSet *fieldpath.Set
 }
 

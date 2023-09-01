@@ -273,7 +273,7 @@ func TestValidateManagedFieldsInvalid(t *testing.T) {
 	}
 }
 
-func TestValidateMangedFieldsValid(t *testing.T) {
+func TestValidateManagedFieldsValid(t *testing.T) {
 	tests := []metav1.ManagedFieldsEntry{{
 		Operation:  metav1.ManagedFieldsOperationUpdate,
 		APIVersion: "v1",
