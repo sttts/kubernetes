@@ -45,6 +45,7 @@ import (
 	utilwaitgroup "k8s.io/apimachinery/pkg/util/waitgroup"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/apiserver/pkg/admission"
+	_ "k8s.io/apiserver/pkg/apis/apiserver/install"
 	"k8s.io/apiserver/pkg/audit"
 	"k8s.io/apiserver/pkg/authentication/authenticator"
 	"k8s.io/apiserver/pkg/authentication/authenticatorfactory"
@@ -58,6 +59,7 @@ import (
 	apiopenapi "k8s.io/apiserver/pkg/endpoints/openapi"
 	apirequest "k8s.io/apiserver/pkg/endpoints/request"
 	genericfeatures "k8s.io/apiserver/pkg/features"
+	"k8s.io/apiserver/pkg/informerfactoryhack"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/server/dynamiccertificates"
 	"k8s.io/apiserver/pkg/server/egressselector"
@@ -81,9 +83,7 @@ import (
 	"k8s.io/kube-openapi/pkg/validation/spec"
 	"k8s.io/utils/clock"
 	utilsnet "k8s.io/utils/net"
-
 	// install apis
-	_ "k8s.io/apiserver/pkg/apis/apiserver/install"
 )
 
 // hostnameFunc is a function to set the hostnameFunc of this apiserver.
@@ -795,7 +795,7 @@ func (c completedConfig) New(name string, delegationTarget DelegationTarget) (*G
 	if c.SharedInformerFactory != nil {
 		if !s.isPostStartHookRegistered(genericApiServerHookName) {
 			err := s.AddPostStartHook(genericApiServerHookName, func(context PostStartHookContext) error {
-				c.SharedInformerFactory.Start(context.StopCh)
+				informerfactoryhack.Unwrap(c.SharedInformerFactory).Start(context.StopCh)
 				return nil
 			})
 			if err != nil {
@@ -803,7 +803,7 @@ func (c completedConfig) New(name string, delegationTarget DelegationTarget) (*G
 			}
 		}
 		// TODO: Once we get rid of /healthz consider changing this to post-start-hook.
-		err := s.AddReadyzChecks(healthz.NewInformerSyncHealthz(c.SharedInformerFactory))
+		err := s.AddReadyzChecks(healthz.NewInformerSyncHealthz(informerfactoryhack.Unwrap(c.SharedInformerFactory)))
 		if err != nil {
 			return nil, err
 		}
@@ -903,12 +903,17 @@ func BuildHandlerChainWithStorageVersionPrecondition(apiHandler http.Handler, c 
 	return DefaultBuildHandlerChain(handler, c)
 }
 
-func DefaultBuildHandlerChain(apiHandler http.Handler, c *Config) http.Handler {
+func DefaultBuildHandlerChainFromAuthz(apiHandler http.Handler, c *Config) http.Handler {
 	handler := apiHandler
 
 	handler = filterlatency.TrackCompleted(handler)
 	handler = genericapifilters.WithAuthorization(handler, c.Authorization.Authorizer, c.Serializer)
 	handler = filterlatency.TrackStarted(handler, c.TracerProvider, "authorization")
+	return handler
+}
+
+func DefaultBuildHandlerChainBeforeAuthz(apiHandler http.Handler, c *Config) http.Handler {
+	handler := apiHandler
 
 	if c.FlowControl != nil {
 		workEstimatorCfg := flowcontrolrequest.DefaultWorkEstimatorConfig()
