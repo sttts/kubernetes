@@ -29,9 +29,9 @@ import (
 	"strings"
 
 	"github.com/kcp-dev/logicalcluster/v3"
+	"gopkg.in/square/go-jose.v2"
 	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
-
 	v1 "k8s.io/api/core/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/audit"
