@@ -43,7 +43,7 @@ import (
 	flowcontrolv1beta2 "k8s.io/api/flowcontrol/v1beta2"
 	flowcontrolv1beta3 "k8s.io/api/flowcontrol/v1beta3"
 	rbacv1 "k8s.io/api/rbac/v1"
-	resourcev1alpha1 "k8s.io/api/resource/v1alpha1"
+	resourcev1alpha2 "k8s.io/api/resource/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -478,7 +478,7 @@ var (
 		admissionregistrationv1alpha1.SchemeGroupVersion,
 		apiserverinternalv1alpha1.SchemeGroupVersion,
 		authenticationv1alpha1.SchemeGroupVersion,
-		resourcev1alpha1.SchemeGroupVersion,
+		resourcev1alpha2.SchemeGroupVersion,
 		//networkingapiv1alpha1.SchemeGroupVersion,
 		//storageapiv1alpha1.SchemeGroupVersion,
 		flowcontrolv1alpha1.SchemeGroupVersion,

@@ -462,6 +462,7 @@ github.com/kcp-dev/apimachinery/v2/pkg/client
 github.com/kcp-dev/apimachinery/v2/third_party/informers
 # github.com/kcp-dev/client-go v0.0.0-20230826195957-39c67dd41719
 ## explicit; go 1.19
+github.com/kcp-dev/client-go/dynamic
 github.com/kcp-dev/client-go/informers
 github.com/kcp-dev/client-go/informers/admissionregistration
 github.com/kcp-dev/client-go/informers/admissionregistration/v1
@@ -628,6 +629,7 @@ github.com/kcp-dev/client-go/listers/storage/v1
 github.com/kcp-dev/client-go/listers/storage/v1alpha1
 github.com/kcp-dev/client-go/listers/storage/v1beta1
 github.com/kcp-dev/client-go/metadata
+github.com/kcp-dev/client-go/third_party/k8s.io/client-go/dynamic
 github.com/kcp-dev/client-go/third_party/k8s.io/client-go/tools/cache
 # github.com/kcp-dev/logicalcluster/v3 v3.0.4
 ## explicit; go 1.18
@@ -1673,6 +1675,8 @@ k8s.io/apiserver/pkg/cel/library
 k8s.io/apiserver/pkg/cel/metrics
 k8s.io/apiserver/pkg/cel/openapi
 k8s.io/apiserver/pkg/cel/openapi/resolver
+k8s.io/apiserver/pkg/clientsethack
+k8s.io/apiserver/pkg/dynamichack
 k8s.io/apiserver/pkg/endpoints
 k8s.io/apiserver/pkg/endpoints/deprecation
 k8s.io/apiserver/pkg/endpoints/discovery
