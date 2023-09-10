@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes/typed/authentication/v1alpha1"
 	flowcontrolclient "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta3"
 	networkingv1alpha1 "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
-	resourcev1alpha1 "k8s.io/client-go/kubernetes/typed/resource/v1alpha1"
+	resourcev1alpha2 "k8s.io/client-go/kubernetes/typed/resource/v1alpha2"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
@@ -115,7 +115,7 @@ func (h *hack) NetworkingV1alpha1() networkingv1alpha1.NetworkingV1alpha1Interfa
 	panic("programmer error: using a cluster-unaware clientset, need to cast this to use the cluster-aware one!")
 }
 
-func (h *hack) ResourceV1alpha1() resourcev1alpha1.ResourceV1alpha1Interface {
+func (h *hack) ResourceV1alpha2() resourcev1alpha2.ResourceV1alpha2Interface {
 	panic("programmer error: using a cluster-unaware clientset, need to cast this to use the cluster-aware one!")
 }
 

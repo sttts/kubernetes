@@ -17,6 +17,9 @@ require (
 	github.com/google/gofuzz v1.2.0
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
+	github.com/kcp-dev/apimachinery/v2 v2.0.0-alpha.0.0.20230826151957-7189d0d1fe31
+	github.com/kcp-dev/client-go v0.0.0-20230826195957-39c67dd41719
+	github.com/kcp-dev/logicalcluster/v3 v3.0.4
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
