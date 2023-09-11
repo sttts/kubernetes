@@ -49,11 +49,11 @@ type privateClaims struct {
 type kubernetes struct {
 	ClusterName logicalcluster.Name `json:"clusterName,omitempty"`
 
-	Namespace string          `json:"namespace,omitempty"`
-	Svcacct   ref             `json:"serviceaccount,omitempty"`
-	Pod       *ref            `json:"pod,omitempty"`
-	Secret    *ref            `json:"secret,omitempty"`
-	WarnAfter jwt.NumericDate `json:"warnafter,omitempty"`
+	Namespace string           `json:"namespace,omitempty"`
+	Svcacct   ref              `json:"serviceaccount,omitempty"`
+	Pod       *ref             `json:"pod,omitempty"`
+	Secret    *ref             `json:"secret,omitempty"`
+	WarnAfter *jwt.NumericDate `json:"warnafter,omitempty"`
 }
 
 type ref struct {
