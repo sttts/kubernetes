@@ -16,7 +16,7 @@ limitations under the License.
 
 package cacher
 
-func (lw *cacherListerWatcher) kcpAwareResourcePrefix() string {
+func (lw *listerWatcher) kcpAwareResourcePrefix() string {
 	if lw.kcpExtraStorageMetadata.Cluster.Wildcard {
 		return lw.resourcePrefix
 	}
