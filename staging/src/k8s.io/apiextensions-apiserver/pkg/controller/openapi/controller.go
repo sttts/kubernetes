@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apiserver/pkg/server/routes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
@@ -52,7 +53,7 @@ type Controller struct {
 
 	staticSpec *spec.Swagger
 
-	openAPIService *handler.OpenAPIService
+	openAPIService routes.OpenAPIServiceProvider
 
 	// specs by name. The specs are lazily constructed on request.
 	// The lock is for the map only.
@@ -126,7 +127,7 @@ func NewController(crdInformer informers.CustomResourceDefinitionInformer) *Cont
 }
 
 // Run sets openAPIAggregationManager and starts workers
-func (c *Controller) Run(staticSpec *spec.Swagger, openAPIService *handler.OpenAPIService, stopCh <-chan struct{}) {
+func (c *Controller) Run(staticSpec *spec.Swagger, openAPIService routes.OpenAPIServiceProvider, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 	defer klog.Infof("Shutting down OpenAPI controller")

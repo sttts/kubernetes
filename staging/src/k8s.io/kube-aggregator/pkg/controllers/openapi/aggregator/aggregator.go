@@ -26,8 +26,6 @@ import (
 
 	"github.com/emicklei/go-restful/v3"
 
-	"k8s.io/klog/v2"
-
 	genericrequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/server"
 	"k8s.io/klog/v2"

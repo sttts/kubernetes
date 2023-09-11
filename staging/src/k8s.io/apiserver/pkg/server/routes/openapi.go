@@ -20,14 +20,14 @@ import (
 	"net/http"
 
 	"github.com/emicklei/go-restful/v3"
-
 	"github.com/kcp-dev/logicalcluster/v3"
-	"k8s.io/klog/v2"
 
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/server/mux"
+	"k8s.io/klog/v2"
 	builder2 "k8s.io/kube-openapi/pkg/builder"
 	"k8s.io/kube-openapi/pkg/builder3"
+	"k8s.io/kube-openapi/pkg/cached"
 	"k8s.io/kube-openapi/pkg/common"
 	"k8s.io/kube-openapi/pkg/common/restfuladapter"
 	"k8s.io/kube-openapi/pkg/handler"
@@ -53,7 +53,7 @@ type OpenAPIServiceProvider interface {
 	ForCluster(clusterName logicalcluster.Name) *handler.OpenAPIService
 	AddCuster(clusterName logicalcluster.Name)
 	RemoveCuster(clusterName logicalcluster.Name)
-	UpdateSpec(openapiSpec *spec.Swagger) error
+	UpdateSpecLazy(swagger cached.Data[*spec.Swagger])
 }
 
 type clusterAwarePathHandler struct {
@@ -127,8 +127,8 @@ func (p *openAPIServiceProvider) ServeHTTP(resp http.ResponseWriter, req *http.R
 	handler.ServeHTTP(resp, req)
 }
 
-func (o *openAPIServiceProvider) UpdateSpec(openapiSpec *spec.Swagger) (err error) {
-	return o.defaultOpenAPIService.UpdateSpec(openapiSpec)
+func (o *openAPIServiceProvider) UpdateSpecLazy(openapiSpec cached.Data[*spec.Swagger]) {
+	o.defaultOpenAPIService.UpdateSpecLazy(openapiSpec)
 }
 
 func (p *openAPIServiceProvider) Register() {
