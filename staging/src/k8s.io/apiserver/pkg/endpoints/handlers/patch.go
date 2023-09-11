@@ -421,7 +421,7 @@ type smpPatcher struct {
 
 	// Schema
 	schemaReferenceObj runtime.Object
-	fieldManager       *fieldmanager.FieldManager
+	fieldManager       *managedfields.FieldManager
 	openapiModel       proto.Schema
 }
 
