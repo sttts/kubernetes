@@ -19,9 +19,11 @@ package genericcontrolplane
 import (
 	kcpdynamic "github.com/kcp-dev/client-go/dynamic"
 	kcpkubernetesclientset "github.com/kcp-dev/client-go/kubernetes"
+
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsapiserver "k8s.io/apiextensions-apiserver/pkg/apiserver"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/conversion"
 	apiextensionsoptions "k8s.io/apiextensions-apiserver/pkg/cmd/server/options"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,6 +35,7 @@ import (
 	"k8s.io/apiserver/pkg/util/feature"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	kubeexternalinformers "k8s.io/client-go/informers"
+
 	"k8s.io/kubernetes/pkg/genericcontrolplane/options"
 )
 
@@ -96,6 +99,11 @@ func CreateAPIExtensionsConfig(
 		return nil, err
 	}
 
+	conversionFactory, err := conversion.NewCRConverterFactory(serviceResolver, authResolverWrapper)
+	if err != nil {
+		return nil, err
+	}
+
 	apiextensionsConfig := &apiextensionsapiserver.Config{
 		GenericConfig: &genericapiserver.RecommendedConfig{
 			Config:                genericConfig,
@@ -103,8 +111,8 @@ func CreateAPIExtensionsConfig(
 		},
 		ExtraConfig: apiextensionsapiserver.ExtraConfig{
 			CRDRESTOptionsGetter: crdRESTOptionsGetter,
-			MasterCount:          1, // TODO: pass this in correctly
-			ConversionFactory:    commandOptions.ConversionFactory,
+			MasterCount:          1, // pass that correctly
+			ConversionFactory:    conversionFactory,
 		},
 	}
 
