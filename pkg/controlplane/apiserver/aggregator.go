@@ -127,7 +127,7 @@ func CreateAggregatorConfig(
 	return aggregatorConfig, nil
 }
 
-func CreateAggregatorServer(aggregatorConfig aggregatorapiserver.CompletedConfig, delegateAPIServer genericapiserver.DelegationTarget, apiExtensionInformers apiextensionsinformers.SharedInformerFactory, crdAPIEnabled bool, apiVersionPriorities map[schema.GroupVersion]APIServicePriority) (*aggregatorapiserver.APIAggregator, error) {
+func CreateAggregatorServer(aggregatorConfig aggregatorapiserver.CompletedConfig, delegateAPIServer genericapiserver.DelegationTarget, crds apiextensionsinformers.CustomResourceDefinitionInformer, crdAPIEnabled bool, apiVersionPriorities map[schema.GroupVersion]APIServicePriority) (*aggregatorapiserver.APIAggregator, error) {
 	aggregatorServer, err := aggregatorConfig.NewWithDelegate(delegateAPIServer)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func CreateAggregatorServer(aggregatorConfig aggregatorapiserver.CompletedConfig
 	autoRegistrationController := autoregister.NewAutoRegisterController(aggregatorServer.APIRegistrationInformers.Apiregistration().V1().APIServices(), apiRegistrationClient)
 	apiServices := apiServicesToRegister(delegateAPIServer, autoRegistrationController, apiVersionPriorities)
 	crdRegistrationController := crdregistration.NewCRDRegistrationController(
-		apiExtensionInformers.Apiextensions().V1().CustomResourceDefinitions(),
+		crds,
 		autoRegistrationController)
 
 	// Imbue all builtin group-priorities onto the aggregated discovery
