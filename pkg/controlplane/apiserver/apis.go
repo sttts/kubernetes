@@ -19,6 +19,7 @@ package apiserver
 import (
 	"fmt"
 
+	"k8s.io/apiserver/pkg/informerfactoryhack"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
@@ -70,7 +71,7 @@ func (c *CompletedConfig) DefaultStorageProviders() ([]RESTStorageProvider, erro
 			ExtendExpiration:            c.Extra.ExtendExpiration,
 			ServiceAccountMaxExpiration: c.Extra.ServiceAccountMaxExpiration,
 			APIAudiences:                c.Generic.Authentication.APIAudiences,
-			Informers:                   c.Extra.VersionedInformers,
+			Informers:                   informerfactoryhack.Wrap(c.Extra.VersionedInformers),
 		},
 		apiserverinternalrest.StorageProvider{},
 		authenticationrest.RESTStorageProvider{Authenticator: c.Generic.Authentication.Authenticator, APIAudiences: c.Generic.Authentication.APIAudiences},

@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	apiserverfeatures "k8s.io/apiserver/pkg/features"
+	"k8s.io/apiserver/pkg/informerfactoryhack"
 	peerreconcilers "k8s.io/apiserver/pkg/reconcilers"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic"
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -132,7 +133,7 @@ func (c completedConfig) New(name string, delegationTarget genericapiserver.Dele
 		APIResourceConfigSource:   c.APIResourceConfigSource,
 		RESTOptionsGetter:         c.Generic.RESTOptionsGetter,
 		ClusterAuthenticationInfo: c.ClusterAuthenticationInfo,
-		VersionedInformers:        c.VersionedInformers,
+		VersionedInformers:        informerfactoryhack.Wrap(c.VersionedInformers),
 	}
 
 	client := kubernetes.NewForConfigOrDie(s.GenericAPIServer.LoopbackClientConfig)

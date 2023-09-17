@@ -35,6 +35,7 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/discovery/aggregated"
 	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericfeatures "k8s.io/apiserver/pkg/features"
+	"k8s.io/apiserver/pkg/informerfactoryhack"
 	"k8s.io/apiserver/pkg/reconcilers"
 	peerreconcilers "k8s.io/apiserver/pkg/reconcilers"
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -116,7 +117,7 @@ type Extra struct {
 
 	SystemNamespaces []string
 
-	VersionedInformers clientgoinformers.SharedInformerFactory
+	VersionedInformers kcpinformers.SharedInformerFactory
 }
 
 // BuildGenericConfig takes the generic controlplane apiserver options and produces
@@ -129,8 +130,7 @@ func BuildGenericConfig(
 	getOpenAPIDefinitions func(ref openapicommon.ReferenceCallback) map[string]openapicommon.OpenAPIDefinition,
 ) (
 	genericConfig *genericapiserver.Config,
-	versionedClusterInformers kcpinformers.SharedInformerFactory,
-	versionedInformers clientgoinformers.SharedInformerFactory,
+	versionedInformers kcpinformers.SharedInformerFactory,
 	storageFactory *serverstorage.DefaultStorageFactory,
 	lastErr error,
 ) {
@@ -208,15 +208,14 @@ func BuildGenericConfig(
 		lastErr = fmt.Errorf("failed to create cluster clientset: %v", err)
 		return
 	}
-	versionedInformers = clientgoinformers.NewSharedInformerFactory(clusterClient.Cluster(logicalcluster.NewPath("system:admin")), 10*time.Minute)
-	versionedClusterInformers = kcpinformers.NewSharedInformerFactory(clusterClient, 10*time.Minute)
+	versionedInformers = kcpinformers.NewSharedInformerFactory(clusterClient, 10*time.Minute)
 
 	// Authentication.ApplyTo requires already applied OpenAPIConfig and EgressSelector if present
-	if lastErr = s.Authentication.ApplyTo(&genericConfig.Authentication, genericConfig.SecureServing, genericConfig.EgressSelector, genericConfig.OpenAPIConfig, genericConfig.OpenAPIV3Config, clusterClient, versionedClusterInformers); lastErr != nil {
+	if lastErr = s.Authentication.ApplyTo(&genericConfig.Authentication, genericConfig.SecureServing, genericConfig.EgressSelector, genericConfig.OpenAPIConfig, genericConfig.OpenAPIV3Config, clusterClient, versionedInformers); lastErr != nil {
 		return
 	}
 
-	genericConfig.Authorization.Authorizer, genericConfig.RuleResolver, err = BuildAuthorizer(s, genericConfig.EgressSelector, versionedInformers)
+	genericConfig.Authorization.Authorizer, genericConfig.RuleResolver, err = BuildAuthorizer(s, genericConfig.EgressSelector, informerfactoryhack.Wrap(versionedInformers))
 	if err != nil {
 		lastErr = fmt.Errorf("invalid authorization config: %v", err)
 		return
@@ -231,7 +230,7 @@ func BuildGenericConfig(
 	}
 
 	if utilfeature.DefaultFeatureGate.Enabled(genericfeatures.APIPriorityAndFairness) && s.GenericServerRunOptions.EnablePriorityAndFairness {
-		genericConfig.FlowControl, lastErr = BuildPriorityAndFairness(s, clusterClient.Cluster(logicalcluster.NewPath("system:admin")), versionedInformers)
+		genericConfig.FlowControl, lastErr = BuildPriorityAndFairness(s, clusterClient.Cluster(logicalcluster.NewPath("system:admin")), informerfactoryhack.Wrap(versionedInformers))
 	}
 
 	if utilfeature.DefaultFeatureGate.Enabled(genericfeatures.AggregatedDiscoveryEndpoint) {
@@ -274,7 +273,7 @@ func BuildPriorityAndFairness(s controlplaneapiserver.CompletedOptions, extclien
 func CreateConfig(
 	opts controlplaneapiserver.CompletedOptions,
 	genericConfig *genericapiserver.Config,
-	versionedInformers clientgoinformers.SharedInformerFactory,
+	versionedInformers kcpinformers.SharedInformerFactory,
 	storageFactory *serverstorage.DefaultStorageFactory,
 	serviceResolver aggregatorapiserver.ServiceResolver,
 	additionalInitializers []admission.PluginInitializer,
@@ -315,7 +314,7 @@ func CreateConfig(
 		}
 		// build peer proxy config only if peer ca file exists
 		if opts.PeerCAFile != "" {
-			config.PeerProxy, err = BuildPeerProxy(versionedInformers, genericConfig.StorageVersionManager, opts.ProxyClientCertFile,
+			config.PeerProxy, err = BuildPeerProxy(informerfactoryhack.Wrap(versionedInformers), genericConfig.StorageVersionManager, opts.ProxyClientCertFile,
 				opts.ProxyClientKeyFile, opts.PeerCAFile, opts.PeerAdvertiseAddress, genericConfig.APIServerID, config.Extra.PeerEndpointLeaseReconciler, config.Generic.Serializer)
 			if err != nil {
 				return nil, nil, err
@@ -343,7 +342,7 @@ func CreateConfig(
 
 	// setup admission
 	genericAdmissionConfig := controlplaneadmission.Config{
-		ExternalInformers:    versionedInformers,
+		ExternalInformers:    informerfactoryhack.Wrap(versionedInformers),
 		LoopbackClientConfig: genericConfig.LoopbackClientConfig,
 	}
 	genericInitializers, admissionPostStartHook, err := genericAdmissionConfig.New(proxyTransport, genericConfig.EgressSelector, serviceResolver, genericConfig.TracerProvider)
@@ -360,7 +359,7 @@ func CreateConfig(
 	}
 	err = opts.Admission.ApplyTo(
 		genericConfig,
-		versionedInformers,
+		informerfactoryhack.Wrap(versionedInformers),
 		clientgoExternalClient,
 		dynamicExternalClient,
 		utilfeature.DefaultFeatureGate,
