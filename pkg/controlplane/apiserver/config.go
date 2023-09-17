@@ -69,6 +69,10 @@ import (
 	"k8s.io/kubernetes/pkg/serviceaccount"
 )
 
+// LocalAdminCluster is the default logical cluster that kube-apiserver's
+// objects, e.g. the RBAC bootstrap policy land in.
+var LocalAdminCluster = logicalcluster.Name("system:admin")
+
 // Config defines configuration for the master
 type Config struct {
 	Generic *genericapiserver.Config

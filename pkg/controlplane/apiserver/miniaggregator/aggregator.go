@@ -16,27 +16,29 @@ limitations under the License.
 
 // Package aggregator contains a server that aggregates content from a generic control
 // plane server, apiextensions server, and CustomResourceDefinitions.
-package aggregator
+package miniaggregator
 
 import (
 	"fmt"
 	"net/http"
 
 	"github.com/emicklei/go-restful/v3"
+
 	apiextensionsapiserver "k8s.io/apiextensions-apiserver/pkg/apiserver"
 	"k8s.io/apiextensions-apiserver/pkg/controller/openapi/builder"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/endpoints/handlers/negotiation"
 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/klog/v2"
 	"k8s.io/kube-aggregator/pkg/controllers/openapi/aggregator"
 	"k8s.io/kube-openapi/pkg/handler"
-	"k8s.io/kubernetes/pkg/genericcontrolplane/apis"
+
+	controlplaneapiserver "k8s.io/kubernetes/pkg/controlplane/apiserver"
 )
 
 var (
@@ -85,16 +87,16 @@ type CompletedMiniAggregatorConfig struct {
 	*completedMiniAggregatorConfig
 }
 
-// MiniAggregatorServer sits in front of the GenericControlPlane and
-// CustomResourceDefinitions servers and aggregates them.
+// MiniAggregatorServer sits in front of the Apis and
+// ApiExtensions servers and aggregates them.
 type MiniAggregatorServer struct {
 	// GenericAPIServer is the aggregator's server.
 	GenericAPIServer *genericapiserver.GenericAPIServer
-	// GenericControlPlane is the server for the minimal control plane. It serves
+	// Apis is the server for the minimal control plane. It serves
 	// APIs such as core v1, certificates.k8s.io, RBAC, etc.
-	GenericControlPlane *apis.GenericControlPlane
-	// CustomResourceDefinitions is the server for API extensions.
-	CustomResourceDefinitions *apiextensionsapiserver.CustomResourceDefinitions
+	Apis *controlplaneapiserver.Server
+	// ApiExtensions is the server for API extensions.
+	ApiExtensions *apiextensionsapiserver.CustomResourceDefinitions
 }
 
 // Complete fills in any fields not set that are required to have valid data.
@@ -116,7 +118,7 @@ func (cfg *MiniAggregatorConfig) Complete() CompletedMiniAggregatorConfig {
 // New creates a new MiniAggregatorServer.
 func (c completedMiniAggregatorConfig) New(
 	delegationTarget genericapiserver.DelegationTarget,
-	genericControlPlane *apis.GenericControlPlane,
+	apis *controlplaneapiserver.Server,
 	crds *apiextensionsapiserver.CustomResourceDefinitions,
 ) (*MiniAggregatorServer, error) {
 	genericServer, err := c.GenericConfig.New("mini-aggregator", delegationTarget)
@@ -125,9 +127,9 @@ func (c completedMiniAggregatorConfig) New(
 	}
 
 	s := &MiniAggregatorServer{
-		GenericAPIServer:          genericServer,
-		GenericControlPlane:       genericControlPlane,
-		CustomResourceDefinitions: crds,
+		GenericAPIServer: genericServer,
+		Apis:             apis,
+		ApiExtensions:    crds,
 	}
 
 	// Have to do this as a filter because of how the APIServerHandler.Director serves requests.
@@ -148,19 +150,19 @@ func (s *MiniAggregatorServer) filterAPIsRequest(req *restful.Request, resp *res
 	}
 
 	// Discovery for things like core, authentication, authorization, certificates, ...
-	gcpGroups, err := s.GenericControlPlane.GenericAPIServer.DiscoveryGroupManager.Groups(req.Request.Context(), req.Request)
+	gcpGroups, err := s.Apis.GenericAPIServer.DiscoveryGroupManager.Groups(req.Request.Context(), req.Request)
 	if err != nil {
 		http.Error(resp.ResponseWriter, fmt.Sprintf("error retrieving generic control plane discovery groups: %v", err), http.StatusInternalServerError)
 	}
 
 	// Discovery for the apiextensions group itself
-	apiextensionsGroups, err := s.CustomResourceDefinitions.GenericAPIServer.DiscoveryGroupManager.Groups(req.Request.Context(), req.Request)
+	apiextensionsGroups, err := s.ApiExtensions.GenericAPIServer.DiscoveryGroupManager.Groups(req.Request.Context(), req.Request)
 	if err != nil {
 		http.Error(resp.ResponseWriter, fmt.Sprintf("error retrieving apiextensions discovery groups: %v", err), http.StatusInternalServerError)
 	}
 
 	// Discovery for all the groups contributed by CRDs
-	crdGroups, err := s.CustomResourceDefinitions.DiscoveryGroupLister.Groups(req.Request.Context(), req.Request)
+	crdGroups, err := s.ApiExtensions.DiscoveryGroupLister.Groups(req.Request.Context(), req.Request)
 	if err != nil {
 		http.Error(resp.ResponseWriter, fmt.Sprintf("error retrieving custom resource discovery groups: %v", err), http.StatusInternalServerError)
 	}
@@ -191,29 +193,24 @@ func (s *MiniAggregatorServer) serveOpenAPI(w http.ResponseWriter, req *http.Req
 	}
 
 	// Can't use withCluster here because the GenericControlPlane doesn't have APIs coming from multiple logical clusters at this time.
-	controlPlaneSpec, _, _, err := downloader.Download(s.GenericControlPlane.GenericAPIServer.Handler.Director, "")
+	controlPlaneSpec, _, _, err := downloader.Download(s.Apis.GenericAPIServer.Handler.Director, "")
 
 	// Use withCluster here because each logical cluster can have a distinct set of APIs coming from its CRDs.
-	crdSpecs, _, _, err := downloader.Download(withCluster(s.CustomResourceDefinitions.GenericAPIServer.Handler.Director), "")
+	crdSpecs, _, _, err := downloader.Download(withCluster(s.ApiExtensions.GenericAPIServer.Handler.Director), "")
 
 	// TODO(ncdc): merging on the fly is expensive. We may need to optimize this (e.g. caching).
 	mergedSpecs, err := builder.MergeSpecs(controlPlaneSpec, crdSpecs)
-
-	openAPIVersionedService, err := handler.NewOpenAPIService(mergedSpecs)
 	if err != nil {
-		klog.Errorf("Error while building OpenAPI schema: %v", err)
+		utilruntime.HandleError(err)
 	}
 
-	handler := &singlePathHandler{}
+	h := &singlePathHandler{}
 
 	// In order to reuse the kube-openapi API as much as possible, we
 	// register the OpenAPI service in the singlePathHandler
-	err = openAPIVersionedService.RegisterOpenAPIVersionedService("/openapi/v2", handler)
-	if err != nil {
-		klog.Errorf("Error while building OpenAPI schema: %v", err)
-	}
+	handler.NewOpenAPIService(mergedSpecs).RegisterOpenAPIVersionedService("/openapi/v2", h)
 
-	handler.ServeHTTP(w, req)
+	h.ServeHTTP(w, req)
 }
 
 // singlePathHandler is a dummy PathHandler that mainly allows grabbing a http.Handler
