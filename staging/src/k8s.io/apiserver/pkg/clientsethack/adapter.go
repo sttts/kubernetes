@@ -20,21 +20,18 @@ package clientsethack
 
 import (
 	kcpkubernetesclientset "github.com/kcp-dev/client-go/kubernetes"
-	admissionregistrationv1alpha1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1alpha1"
-	"k8s.io/client-go/kubernetes/typed/authentication/v1alpha1"
-	flowcontrolclient "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta3"
-	networkingv1alpha1 "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
-	resourcev1alpha2 "k8s.io/client-go/kubernetes/typed/resource/v1alpha2"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	admissionregistrationv1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
+	admissionregistrationv1alpha1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1alpha1"
 	admissionregistrationv1beta1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1"
 	internalv1alpha1 "k8s.io/client-go/kubernetes/typed/apiserverinternal/v1alpha1"
 	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	appsv1beta1 "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
 	appsv1beta2 "k8s.io/client-go/kubernetes/typed/apps/v1beta2"
 	authenticationv1 "k8s.io/client-go/kubernetes/typed/authentication/v1"
+	"k8s.io/client-go/kubernetes/typed/authentication/v1alpha1"
 	authenticationv1beta1 "k8s.io/client-go/kubernetes/typed/authentication/v1beta1"
 	authorizationv1 "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	authorizationv1beta1 "k8s.io/client-go/kubernetes/typed/authorization/v1beta1"
@@ -45,6 +42,7 @@ import (
 	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 	batchv1beta1 "k8s.io/client-go/kubernetes/typed/batch/v1beta1"
 	certificatesv1 "k8s.io/client-go/kubernetes/typed/certificates/v1"
+	certificatesv1alpha1 "k8s.io/client-go/kubernetes/typed/certificates/v1alpha1"
 	certificatesv1beta1 "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 	coordinationv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	coordinationv1beta1 "k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
@@ -57,7 +55,9 @@ import (
 	flowcontrolv1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
 	flowcontrolv1beta1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 	flowcontrolv1beta2 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta2"
+	flowcontrolclient "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta3"
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
+	networkingv1alpha1 "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
 	networkingv1beta1 "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
 	nodev1 "k8s.io/client-go/kubernetes/typed/node/v1"
 	nodev1alpha1 "k8s.io/client-go/kubernetes/typed/node/v1alpha1"
@@ -67,6 +67,7 @@ import (
 	rbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	rbacv1alpha1 "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
 	rbacv1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
+	resourcev1alpha2 "k8s.io/client-go/kubernetes/typed/resource/v1alpha2"
 	schedulingv1 "k8s.io/client-go/kubernetes/typed/scheduling/v1"
 	schedulingv1alpha1 "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha1"
 	schedulingv1beta1 "k8s.io/client-go/kubernetes/typed/scheduling/v1beta1"
@@ -184,6 +185,10 @@ func (h *hack) BatchV1beta1() batchv1beta1.BatchV1beta1Interface {
 }
 
 func (h *hack) CertificatesV1() certificatesv1.CertificatesV1Interface {
+	panic("programmer error: using a cluster-unaware clientset, need to cast this to use the cluster-aware one!")
+}
+
+func (h *hack) CertificatesV1alpha1() certificatesv1alpha1.CertificatesV1alpha1Interface {
 	panic("programmer error: using a cluster-unaware clientset, need to cast this to use the cluster-aware one!")
 }
 
