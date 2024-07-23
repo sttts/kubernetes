@@ -124,7 +124,7 @@ func TestReconcileElectionStep(t *testing.T) {
 					Namespace: "default",
 					Name:      "component-A",
 					Annotations: map[string]string{
-						ElectedByAnnotationName: controllerName,
+						electedByAnnotationName: controllerName,
 					},
 				},
 				Spec: v1.LeaseSpec{
@@ -198,7 +198,7 @@ func TestReconcileElectionStep(t *testing.T) {
 					Namespace: "default",
 					Name:      "component-A",
 					Annotations: map[string]string{
-						ElectedByAnnotationName: controllerName,
+						electedByAnnotationName: controllerName,
 					},
 				},
 				Spec: v1.LeaseSpec{
@@ -405,7 +405,7 @@ func TestController(t *testing.T) {
 						Namespace: "kube-system",
 						Name:      "component-A",
 						Annotations: map[string]string{
-							ElectedByAnnotationName: controllerName,
+							electedByAnnotationName: controllerName,
 						},
 					},
 					Spec: v1.LeaseSpec{
@@ -464,7 +464,7 @@ func TestController(t *testing.T) {
 						Namespace: "kube-system",
 						Name:      "component-A",
 						Annotations: map[string]string{
-							ElectedByAnnotationName: controllerName,
+							electedByAnnotationName: controllerName,
 						},
 					},
 					Spec: v1.LeaseSpec{
@@ -483,7 +483,7 @@ func TestController(t *testing.T) {
 						Namespace: "kube-system",
 						Name:      "component-A",
 						Annotations: map[string]string{
-							ElectedByAnnotationName: controllerName,
+							electedByAnnotationName: controllerName,
 						},
 					},
 					Spec: v1alpha1.LeaseCandidateSpec{},
@@ -511,7 +511,7 @@ func TestController(t *testing.T) {
 						Namespace: "kube-system",
 						Name:      "component-A",
 						Annotations: map[string]string{
-							ElectedByAnnotationName: controllerName,
+							electedByAnnotationName: controllerName,
 						},
 					},
 					Spec: v1.LeaseSpec{
@@ -530,7 +530,7 @@ func TestController(t *testing.T) {
 						Namespace: "kube-system",
 						Name:      "component-A",
 						Annotations: map[string]string{
-							ElectedByAnnotationName: controllerName,
+							electedByAnnotationName: controllerName,
 						},
 					},
 					Spec: v1alpha1.LeaseCandidateSpec{},
@@ -568,7 +568,7 @@ func TestController(t *testing.T) {
 						Namespace: "kube-system",
 						Name:      "component-A",
 						Annotations: map[string]string{
-							ElectedByAnnotationName: controllerName,
+							electedByAnnotationName: controllerName,
 						},
 					},
 					Spec: v1.LeaseSpec{
