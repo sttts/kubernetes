@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"os"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
+
+	"go.uber.org/goleak"
 
 	flowcontrol "k8s.io/api/flowcontrol/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,7 +52,7 @@ var testDebugLogs = false
 
 func TestMain(m *testing.M) {
 	klog.InitFlags(nil)
-	os.Exit(m.Run())
+	goleak.VerifyTestMain(m)
 }
 
 var mandPLs = func() map[string]*flowcontrol.PriorityLevelConfiguration {
@@ -238,6 +239,7 @@ func TestConfigConsumer(t *testing.T) {
 		t.Run(fmt.Sprintf("trial%d:", i), func(t *testing.T) {
 			clientset := clientsetfake.NewSimpleClientset()
 			informerFactory := informers.NewSharedInformerFactory(clientset, 0)
+			defer informerFactory.Shutdown()
 			flowcontrolClient := clientset.FlowcontrolV1()
 			cts := &ctlrTestState{t: t,
 				fcIfc:           flowcontrolClient,
@@ -258,6 +260,7 @@ func TestConfigConsumer(t *testing.T) {
 				ExecSeatsGaugeVec:      metrics.PriorityLevelExecutionSeatsGaugeVec,
 				QueueSetFactory:        cts,
 			})
+			defer ctlr.Done()
 			cts.cfgCtlr = ctlr
 			persistingPLNames := sets.NewString()
 			trialStep := fmt.Sprintf("trial%d-0", i)
@@ -401,9 +404,11 @@ func TestAPFControllerWithGracefulShutdown(t *testing.T) {
 		t.Fatalf("WaitForCacheSync did not successfully complete, resources=%#v", names)
 	}
 
-	if err := controller.Start(ctx); err != nil {
-		t.Fatalf("error starting controller: %v", err)
-	}
+	go func() {
+		if err := controller.Run(ctx); err != nil {
+			t.Errorf("error starting controller: %v", err)
+		}
+	}()
 
 	// ensure that the controller has run its first loop.
 	err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
