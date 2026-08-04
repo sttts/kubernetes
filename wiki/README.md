@@ -160,7 +160,7 @@ Stichworte. Die Original-Papers enthalten sie vollständig — diese Seiten arbe
 
 - **[KRM vs. MAP](KRM-vs-MAP.md)** — die vollständige Gegenüberstellung: was Kubernetes anders
   macht, wo es besser ist und was fehlt. Bilanz über alle 45 Patterns.
-- **[One Schema to Rule Them All](blog/krm-through-the-lens-of-map.md)** (englisch) — dieselbe
+- **[One Schema to Rule Them All](deepdive/krm-through-the-lens-of-map.md)** (englisch) — dieselbe
   Analyse als Blogpost-Deep-Dive, mit Beispielen.
 
 ---
